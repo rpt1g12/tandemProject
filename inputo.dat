@@ -1,0 +1,26 @@
+mbk		9
+nts		0
+nscrn		1
+ndata-ndatp	11	0
+nkrk		4
+nviscous	0
+nsmf		0
+nfbco-n-nfskp	1		3		0
+nrestart	1
+reoo-tempoo	40000.0e0	273.0e0
+amach1-2-3	0.5e0		0.0e0		0.0e0
+wtemp		1.0e0
+cfl		0.95e0
+tmax-timf-tsam	60.0e0		5.0e0		5.0e0
+fltk-fltkbc	0.87e0		0.64e0
+dto		-0.01725e0
+
+! long run
+tmax-timf-tsam	35.0e0		5.0e0		5.0e0
+
+! test run
+tmax-timf-tsam	0.00001e0	5.0e0		0.0e0
+
+! very-long run
+tmax-timf-tsam	60.0e0		5.0e0		5.0e0
+
