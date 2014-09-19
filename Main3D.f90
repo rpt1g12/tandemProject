@@ -18,38 +18,37 @@
 
     mpro=npro-1; icom=MPI_COMM_WORLD; info=MPI_INFO_NULL
 
-    allocate(lxim(0:mpro),letm(0:mpro),lzem(0:mpro),lpos(0:mpro))
+    allocate(lxim(0:mpro),letm(0:mpro),lzem(0:mpro),lpos(0:mpro),vmpi(0:mpro))
     allocate(ista(MPI_STATUS_SIZE,12))
 
 !===== INPUT PARAMETERS
 
-    open(1,file='inputo.dat',shared)
-    read(1,*) cinput,mbk
-    read(1,*) cinput,nts
-    read(1,*) cinput,nscrn
-    read(1,*) cinput,ndata,ndatp
-    read(1,*) cinput,nkrk
-    read(1,*) cinput,nviscous
-    read(1,*) cinput,nsmf
-    read(1,*) cinput,nfbco,nfbcn,nfskp
-    read(1,*) cinput,nrestart
-    read(1,*) cinput,reoo,tempoo
-    read(1,*) cinput,amach1,amach2,amach3
-    read(1,*) cinput,wtemp
-    read(1,*) cinput,cfl
-    read(1,*) cinput,tmax,timf,tsam
-    read(1,*) cinput,fltk,fltkbc
-    read(1,*) cinput,dto
-    close(1)
+    open(9,file='inputo.dat',shared)
+    read(9,*) cinput,mbk
+    read(9,*) cinput,nts
+    read(9,*) cinput,nscrn,nsgnl
+    read(9,*) cinput,ndata,ndatp
+    read(9,*) cinput,nkrk
+    read(9,*) cinput,nviscous
+    read(9,*) cinput,nsmf
+    read(9,*) cinput,nfskp
+    read(9,*) cinput,nrestart
+    read(9,*) cinput,nvarout
+    read(9,*) cinput,reoo,tempoo
+    read(9,*) cinput,amach1,amach2,amach3
+    read(9,*) cinput,wtemp
+    read(9,*) cinput,cfl
+    read(9,*) cinput,tmax,timf,tsam
+    read(9,*) cinput,fltk,fltkbco,fltkbcm
+    read(9,*) cinput,dto
+    close(9)
 
-    cinput=cinput; fltk=pi*fltk; fltkbc=pi*fltkbc
+    cinput=cinput; fltk=pi*fltk; fltkbco=pi*fltkbco; fltkbcm=pi*fltkbcm
     rhooo=1; poo=1/gam; aoo=sqrt(gam*poo/rhooo); amachoo=sqrt(amach1**2+amach2**2+amach3**2)
     srefoo=111.0_nr/tempoo; srefp1dre=(srefoo+1)/reoo; sqrtrema=sqrt(reoo*amachoo); sqrtremai=1/sqrtrema
     uoo(1)=amach1*aoo; uoo(2)=amach2*aoo; uoo(3)=amach3*aoo
-    res=1.0_nr/(30*nfbcn); fex1=45*res; fex2=-9*res; fex3=res
-
+    ! rpt-Initialising the record count
     nrec=0
-
 
     allocate(times(0:ndata))
     allocate(lximb(0:mbk),letmb(0:mbk),lzemb(0:mbk),lhmb(0:mbk),mo(0:mbk),npc(0:mbk,3))
@@ -75,6 +74,7 @@
     no(4)=myid/10000; no(3)=mod(myid,10000)/1000; no(2)=mod(myid,1000)/100
     no(1)=mod(myid,100)/10; no(0)=mod(myid,10); cno=achar(no+48)
     cdata='misc/data'//cno(4)//cno(3)//cno(2)//cno(1)//cno(0)//'.dat'
+    cturb='misc/turb'//cno(4)//cno(3)//cno(2)//cno(1)//cno(0)//'.dat'
 
     call domdcomp
 
@@ -165,36 +165,39 @@
     allocate(hxx(0:lmx),hyy(0:lmx),hzz(0:lmx))
  end if
 
-    ll=nbsize(1)-1
-    allocate(drva1(0:ll,5,0:1),drvb1(0:ll,5,0:1),send1(0:ll,0:2,0:1),recv1(0:ll,0:2,0:1),cm1(0:ll,3,0:1))
-    ll=nbsize(2)-1
-    allocate(drva2(0:ll,5,0:1),drvb2(0:ll,5,0:1),send2(0:ll,0:2,0:1),recv2(0:ll,0:2,0:1),cm2(0:ll,3,0:1))
-    ll=nbsize(3)-1
-    allocate(drva3(0:ll,5,0:1),drvb3(0:ll,5,0:1),send3(0:ll,0:2,0:1),recv3(0:ll,0:2,0:1),cm3(0:ll,3,0:1))
+    ii=nbsize(1)-1; jj=nbsize(2)-1; kk=nbsize(3)-1
+    allocate(drva1(0:ii,5,0:1),drva2(0:jj,5,0:1),drva3(0:kk,5,0:1))
+    allocate(drvb1(0:ii,5,0:1),drvb2(0:jj,5,0:1),drvb3(0:kk,5,0:1))
+    allocate(send1(0:ii,0:2,0:1),send2(0:jj,0:2,0:1),send3(0:kk,0:2,0:1))
+    allocate(recv1(0:ii,0:2,0:1),recv2(0:jj,0:2,0:1),recv3(0:kk,0:2,0:1))
+    allocate(cm1(0:ii,3,0:1),cm2(0:jj,3,0:1),cm3(0:kk,3,0:1))
+    allocate(cmm1(0:ii,0:1),cmm2(0:jj,0:1),cmm3(0:kk,0:1))
 
     allocate(xu(0:lim,3),yu(0:lim,3),xl(0:lim,2),yl(0:lim,2),li(0:lim),sa(0:lim),sb(0:lim))
 
 !===== EXTRA COEFFICIENTS FOR DOMAIN BOUNDARIES
 
-    albed(:,0)=(/alpha01,beta02,alpha10,alpha12,beta13,beta20,alpha21,alpha23,beta24/)
+    albed(-2:2,0,-1)=(/zero,zero,one,alpha01,beta02/)
+    albed(-2:2,1,-1)=(/zero,alpha10,one,alpha12,beta13/)
+    albed(-2:2,2,-1)=(/beta20,alpha21,one,alpha23,beta24/)
+
+    albed(:,:,0)=albed(:,:,-1)
     abc(:,0)=(/a01,a02,a03,a04,a05,a06/)
     abc(:,1)=(/a10,a12,a13,a14,a15,a16/)
     abc(:,2)=(/a20,a21,a23,a24,a25,a26/)
 
-    albed(:,1)=(/alpha,beta,alpha,alpha,beta,beta,alpha,alpha,beta/)
+    albed(-2:2,0,1)=(/zero,zero,one,alpha,beta/)
+    albed(-2:2,1,1)=(/zero,alpha,one,alpha,beta/)
+    albed(-2:2,2,1)=(/beta,alpha,one,alpha,beta/)
 
- if(nfbco==0) then
-    call fcbco(fltk,fltkbc)
-    albef(:,0)=(/alphf01,betf02,alphf10,alphf12,betf13,betf20,alphf21,alphf23,betf24/)
-    fbc(:)=(/f20,f21,f23,f24,f25/)
- else
-    call fcbcm(fltk)
-    albef(:,0)=(/alphf01,betf02,alphf10,alphf12,betf13,betf20,alphf21,alphf23,betf24/)
- end if
-    call fcint(fltk,half)
-    albef(:,1)=(/alphf,betf,alphf,alphf,betf,betf,alphf,alphf,betf/)
+    call fcbcm(fltk,fltkbcm,albef(:,:,-1),fam(:),fbm(:),fcm(:))
+    call fcbco(fltk,fltkbco,albef(:,:,0),fbc(:))
+    call fcint(fltk,half,alphf,betf,fa,fb,fc)
+    albef(-2:2,0,1)=(/zero,zero,one,alphf,betf/)
+    albef(-2:2,1,1)=(/zero,alphf,one,alphf,betf/)
+    albef(-2:2,2,1)=(/betf,alphf,one,alphf,betf/)
 
-    pbco(:,:,:)=0; pbci(:,:,:)=0; call sbcco
+    pbco(:,:,:)=0; pbci(:,:,:)=0; call sbcco(0,-1)
  do nt=0,1; do j=0,1; ii=lmd+nt*(lmf-lmd)
     pbcot(j,nt)=sum(pbco(0:ii,j,nt))
  end do; end do
@@ -206,11 +209,15 @@
  case(1); is=0; ie=is+lxi; case(2); is=lxi+1; ie=is+let; case(3); is=lxi+let+2; ie=is+lze
  end select
  do ip=0,1; np=nbc(ip,nn)
- if((np-35)*(np-40)*(np-45)==0) then; ndf(ip,nn)=1; else; ndf(ip,nn)=0; end if
+ select case(np)
+ case(10,20,25,30); ndf(ip,0,nn)=0; ndf(ip,1,nn)=-1
+ case(35,40,45); ndf(ip,0,nn)=1; ndf(ip,1,nn)=1
+ end select
  end do
-    ns=ndf(0,nn); ne=ndf(1,nn)
-    call penta(xu(:,:),xl(:,:),albed(:,ns),albed(:,ne),alpha,beta,is,ie)
-    call penta(yu(:,:),yl(:,:),albef(:,ns),albef(:,ne),alphf,betf,is,ie)
+    ns=ndf(0,0,nn); ne=ndf(1,0,nn)
+    call penta(xu(:,:),xl(:,:),albed(:,:,ns),albed(:,:,ne),alpha,beta,is,ie)
+    ns=ndf(0,1,nn); ne=ndf(1,1,nn)
+    call penta(yu(:,:),yl(:,:),albef(:,:,ns),albef(:,:,ne),alphf,betf,is,ie)
  end do
 
 !===== GRID INPUT & CALCULATION OF GRID METRICS
@@ -224,29 +231,29 @@
     call makegrid
     call MPI_BARRIER(icom,ierr)
 
-    open(1,file=cgrid,access='stream',shared)
+    open(9,file=cgrid,access='stream',shared)
     lp=lpos(myid)
  do nn=1,3; lq=(nn-1)*ltomb
  do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-    read(1,pos=nr*(lp+lq+lio(j,k))+1) ss(l:l+lxi,nn)
+    read(9,pos=nr*(lp+lq+lio(j,k))+1) ss(l:l+lxi,nn)
  end do; end do
  end do
-    close(1)
+    close(9)
     call MPI_BARRIER(icom,ierr)
  if(myid==mo(mb)) then
-    open(1,file=cgrid); close(1,status='delete')
+    open(9,file=cgrid); close(9,status='delete')
  end if
 
-    rr(:,1)=ss(:,1); rr(:,2)=rr(:,1); rr(:,3)=rr(:,2)
-    m=1; call mpigo(0,m,ng1); call deriv(1); call deriv(2); call deriv(3)
+    rr(:,1)=ss(:,1)
+    m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
     qo(:,1)=rr(:,1); qo(:,2)=rr(:,2); qo(:,3)=rr(:,3)
 
-    rr(:,1)=ss(:,2); rr(:,2)=rr(:,1); rr(:,3)=rr(:,2)
-    m=2; call mpigo(0,m,ng1); call deriv(1); call deriv(2); call deriv(3)
+    rr(:,1)=ss(:,2)
+    m=2; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
     qa(:,1)=rr(:,1); qa(:,2)=rr(:,2); qa(:,3)=rr(:,3)
 
-    rr(:,1)=ss(:,3); rr(:,2)=rr(:,1); rr(:,3)=rr(:,2)
-    m=3; call mpigo(0,m,ng1); call deriv(1); call deriv(2); call deriv(3)
+    rr(:,1)=ss(:,3)
+    m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
     de(:,1)=rr(:,1); de(:,2)=rr(:,2); de(:,3)=rr(:,3)
 
     xim(:,1)=qa(:,2)*de(:,3)-de(:,2)*qa(:,3)
@@ -260,25 +267,25 @@
     zem(:,3)=qo(:,1)*qa(:,2)-qa(:,1)*qo(:,2)
 
 !    rr(:,3)=qa(:,2)*ss(:,3); rr(:,2)=qa(:,3)*ss(:,3)
-!    m=1; call mpigo(0,m,ng1); call deriv(3); call deriv(2); xim(:,m)=rr(:,3)-rr(:,2)
+!    m=1; call mpigo(ntdrv,nrall,n45go,m); call deriv(3,3); call deriv(2,2); xim(:,m)=rr(:,3)-rr(:,2)
 !    rr(:,3)=de(:,2)*ss(:,1); rr(:,2)=de(:,3)*ss(:,1)
-!    m=2; call mpigo(0,m,ng1); call deriv(3); call deriv(2); xim(:,m)=rr(:,3)-rr(:,2)
+!    m=2; call mpigo(ntdrv,nrall,n45go,m); call deriv(3,3); call deriv(2,2); xim(:,m)=rr(:,3)-rr(:,2)
 !    rr(:,3)=qo(:,2)*ss(:,2); rr(:,2)=qo(:,3)*ss(:,2)
-!    m=3; call mpigo(0,m,ng1); call deriv(3); call deriv(2); xim(:,m)=rr(:,3)-rr(:,2)
+!    m=3; call mpigo(ntdrv,nrall,n45go,m); call deriv(3,3); call deriv(2,2); xim(:,m)=rr(:,3)-rr(:,2)
 !
 !    rr(:,1)=qa(:,3)*ss(:,3); rr(:,3)=qa(:,1)*ss(:,3)
-!    m=1; call mpigo(0,m,ng1); call deriv(1); call deriv(3); etm(:,m)=rr(:,1)-rr(:,3)
+!    m=1; call mpigo(ntdrv,nrall,n45go,m); call deriv(1,1); call deriv(3,3); etm(:,m)=rr(:,1)-rr(:,3)
 !    rr(:,1)=de(:,3)*ss(:,1); rr(:,3)=de(:,1)*ss(:,1)
-!    m=2; call mpigo(0,m,ng1); call deriv(1); call deriv(3); etm(:,m)=rr(:,1)-rr(:,3)
+!    m=2; call mpigo(ntdrv,nrall,n45go,m); call deriv(1,1); call deriv(3,3); etm(:,m)=rr(:,1)-rr(:,3)
 !    rr(:,1)=qo(:,3)*ss(:,2); rr(:,3)=qo(:,1)*ss(:,2)
-!    m=3; call mpigo(0,m,ng1); call deriv(1); call deriv(3); etm(:,m)=rr(:,1)-rr(:,3)
+!    m=3; call mpigo(ntdrv,nrall,n45go,m); call deriv(1,1); call deriv(3,3); etm(:,m)=rr(:,1)-rr(:,3)
 !
 !    rr(:,2)=qa(:,1)*ss(:,3); rr(:,1)=qa(:,2)*ss(:,3)
-!    m=1; call mpigo(0,m,ng1); call deriv(2); call deriv(1); zem(:,m)=rr(:,2)-rr(:,1)
+!    m=1; call mpigo(ntdrv,nrall,n45go,m); call deriv(2,2); call deriv(1,1); zem(:,m)=rr(:,2)-rr(:,1)
 !    rr(:,2)=de(:,1)*ss(:,1); rr(:,1)=de(:,2)*ss(:,1)
-!    m=2; call mpigo(0,m,ng1); call deriv(2); call deriv(1); zem(:,m)=rr(:,2)-rr(:,1)
+!    m=2; call mpigo(ntdrv,nrall,n45go,m); call deriv(2,2); call deriv(1,1); zem(:,m)=rr(:,2)-rr(:,1)
 !    rr(:,2)=qo(:,1)*ss(:,2); rr(:,1)=qo(:,2)*ss(:,2)
-!    m=3; call mpigo(0,m,ng1); call deriv(2); call deriv(1); zem(:,m)=rr(:,2)-rr(:,1)
+!    m=3; call mpigo(ntdrv,nrall,n45go,m); call deriv(2,2); call deriv(1,1); zem(:,m)=rr(:,2)-rr(:,1)
 
     yaco(:)=3/(qo(:,1)*xim(:,1)+qo(:,2)*etm(:,1)+qo(:,3)*zem(:,1)&
               +qa(:,1)*xim(:,2)+qa(:,2)*etm(:,2)+qa(:,3)*zem(:,2)&
@@ -288,9 +295,12 @@
  do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
  do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
  select case(nn)
- case(1); rv(:)=yaco(l)*xim(l,:); fctr=1/sqrt(rv(1)**2+rv(2)**2+rv(3)**2); cm1(jk,:,ip)=fctr*rv(:)
- case(2); rv(:)=yaco(l)*etm(l,:); fctr=1/sqrt(rv(1)**2+rv(2)**2+rv(3)**2); cm2(jk,:,ip)=fctr*rv(:)
- case(3); rv(:)=yaco(l)*zem(l,:); fctr=1/sqrt(rv(1)**2+rv(2)**2+rv(3)**2); cm3(jk,:,ip)=fctr*rv(:)
+ case(1); rv(:)=yaco(l)*xim(l,:)
+    cmm1(jk,ip)=sqrt(rv(1)**2+rv(2)**2+rv(3)**2); fctr=1/cmm1(jk,ip); cm1(jk,:,ip)=fctr*rv(:)
+ case(2); rv(:)=yaco(l)*etm(l,:)
+    cmm2(jk,ip)=sqrt(rv(1)**2+rv(2)**2+rv(3)**2); fctr=1/cmm2(jk,ip); cm2(jk,:,ip)=fctr*rv(:)
+ case(3); rv(:)=yaco(l)*zem(l,:)
+    cmm3(jk,ip)=sqrt(rv(1)**2+rv(2)**2+rv(3)**2); fctr=1/cmm3(jk,ip); cm3(jk,:,ip)=fctr*rv(:)
  end select
  end do
  end do
@@ -301,9 +311,11 @@
     inquire(iolength=lp) varr
     open(0,file=cdata,access='direct',recl=lp)
  do nn=1,3
+ ! rpt-Increasigng the record count
  nrec=nrec+1
     varr(:)=ss(:,nn); write(0,rec=nn) varr(:)
  end do
+ ! rpt-If ngrid is 1 then store the grid metrics and increase the record count
  if (ngridv==1) then
  do nn=1,3
  nrec=nrec+1
@@ -326,17 +338,19 @@
 !===== INITIAL CONDITIONS
 
  if(nts==0) then
-    timo=0; call initialo ! Make sure that pressure is calculated.
+    n=0; ndt=0; dt=0; dts=0; dte=0; timo=0
+    call initialo ! Make sure that pressure is calculated.
  else
-    open(1,file=crestart,access='stream',shared)
-    read(1,pos=1) timo
-    lp=lpos(myid)+1
+    open(9,file=crestart,access='stream',shared)
+    read(9,pos=1) n; read(9,pos=2) ndt; read(9,pos=3) dt
+    read(9,pos=4) dts; read(9,pos=5) dte; read(9,pos=6) timo
+    lp=lpos(myid)+6
  do m=1,5; lq=(m-1)*ltomb
  do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-    read(1,pos=nr*(lp+lq+lio(j,k))+1) qa(l:l+lxi,m)
+    read(9,pos=nr*(lp+lq+lio(j,k))+1) qa(l:l+lxi,m)
  end do; end do
  end do
-    close(1)
+    close(9)
     p(:)=gamm1*(qa(:,5)-half*(qa(:,2)**2+qa(:,3)**2+qa(:,4)**2)/qa(:,1))
  end if
 
@@ -346,7 +360,13 @@
 
     wts=MPI_WTIME()
 
-    n=0; ndati=-1; dt=0
+ if(myid==0) then
+    open(1,file='signal.dat'); close(1,status='delete')
+ end if
+    call MPI_BARRIER(icom,ierr)
+    open(1,file='signal.dat',access='direct',form='formatted',recl=16,shared)
+
+    ndati=-1; nsigi=-1
  do while(timo-tmax<0.and.(dt/=0.or.n<=2))
 
  if(myid==0.and.mod(n,nscrn)==0) then
@@ -363,11 +383,7 @@
 
 !----- MOVING FRAME VELOCITY & ACCELERATION BEFORE TIME ADVANCING
 
- if(nk==1) then
-    dtko=0; dtk=0
- else
-    dtko=min(nk-2,1)*dt/(nkrk-nk+3); dtk=min(nk-1,1)*dt/(nkrk-nk+2)
- end if
+    dtko=min(max(nk-2,0),1)*dt/(nkrk-nk+3); dtk=min(nk-1,1)*dt/(nkrk-nk+2)
     call movef(dtko,dtk)
 
 !----- TEMPORARY STORAGE OF 1/DENSITY, VELOCITY & TEMPERATURE
@@ -379,10 +395,10 @@
     de(:,5)=gam*p(:)*de(:,1)
     ss(:,1)=srefp1dre*de(:,5)**1.5_nr/(de(:,5)+srefoo)
 
-!----- DETERMINATION OF TIME STEP
+!----- DETERMINATION OF TIME STEP SIZE & OUTPUT TIME
 
  if(nk==1) then
- if(mod(n,2)==1) then
+ if(mod(n,10)==1) then; ndt=n; dts=dte
  if(dto<0) then
     rr(:,1)=xim(:,1)*xim(:,1)+xim(:,2)*xim(:,2)+xim(:,3)*xim(:,3)&
            +etm(:,1)*etm(:,1)+etm(:,2)*etm(:,2)+etm(:,3)*etm(:,3)&
@@ -399,18 +415,19 @@
     call MPI_ALLREDUCE(res,fctr,1,MPI_REAL8,MPI_MAX,icom,ierr)
     ra1=half/fctr
  end if
-    dt=min(ra0,ra1)
+    dte=min(ra0,ra1)
  else
-    dt=dto
+    dte=dto
  end if
  end if
+    dt=dts+(dte-dts)*sin(0.05_nr*pi*(n-ndt))**2
 
     nout=0; res=tsam+(ndati+1)*(tmax-tsam)/ndata
  if((timo-res)*(timo+dt-res)<=0) then
-    nout=1; ndati=ndati+1; dt=res-timo
- end if
+    nout=1; ndati=ndati+1
  end if
 
+ ! rpt-If it crashes exit the loop and save last results recorded
  if (n>2.and.dt==0) then
     goto 100
  end if
@@ -420,26 +437,26 @@
  if(nviscous==1) then
     de(:,1)=ss(:,1)
 
-    rr(:,1)=de(:,2); rr(:,2)=rr(:,1); rr(:,3)=rr(:,2)
-    m=2; call mpigo(0,m,ng0); call deriv(1); call deriv(2); call deriv(3)
+    rr(:,1)=de(:,2)
+    m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
     txx(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
     hzz(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
     tzx(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
 
-    rr(:,1)=de(:,3); rr(:,2)=rr(:,1); rr(:,3)=rr(:,2)
-    m=3; call mpigo(0,m,ng0); call deriv(1); call deriv(2); call deriv(3)
+    rr(:,1)=de(:,3)
+    m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
     txy(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
     tyy(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
     hxx(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
 
-    rr(:,1)=de(:,4); rr(:,2)=rr(:,1); rr(:,3)=rr(:,2)
-    m=4; call mpigo(0,m,ng0); call deriv(1); call deriv(2); call deriv(3)
+    rr(:,1)=de(:,4)
+    m=4; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
     hyy(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
     tyz(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
     tzz(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
 
-    rr(:,1)=de(:,5); rr(:,2)=rr(:,1); rr(:,3)=rr(:,2)
-    m=5; call mpigo(0,m,ng0); call deriv(1); call deriv(2); call deriv(3)
+    rr(:,1)=de(:,5)
+    m=5; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
     ss(:,1)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
     ss(:,2)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
     ss(:,3)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
@@ -472,7 +489,7 @@
     rr(:,1)=qa(:,1)*ss(:,1)
     rr(:,2)=qa(:,1)*ss(:,2)
     rr(:,3)=qa(:,1)*ss(:,3)
-    m=1; call mpigo(0,m,ng0); call deriv(1); call deriv(2); call deriv(3)
+    m=1; call mpigo(ntdrv,nrall,n45no,m); call deriv(1,1); call deriv(2,2); call deriv(3,3)
     de(:,m)=rr(:,1)+rr(:,2)+rr(:,3)
 
     rr(:,1)=qa(:,2)*ss(:,1)+xim(:,1)*p(:)
@@ -483,7 +500,7 @@
     rr(:,2)=rr(:,2)-etm(:,1)*txx(:)-etm(:,2)*txy(:)-etm(:,3)*tzx(:)
     rr(:,3)=rr(:,3)-zem(:,1)*txx(:)-zem(:,2)*txy(:)-zem(:,3)*tzx(:)
  end if
-    m=2; call mpigo(0,m,ng0); call deriv(1); call deriv(2); call deriv(3)
+    m=2; call mpigo(ntdrv,nrall,n45no,m); call deriv(1,1); call deriv(2,2); call deriv(3,3)
     de(:,m)=rr(:,1)+rr(:,2)+rr(:,3)
 
     rr(:,1)=qa(:,3)*ss(:,1)+xim(:,2)*p(:)
@@ -494,7 +511,7 @@
     rr(:,2)=rr(:,2)-etm(:,1)*txy(:)-etm(:,2)*tyy(:)-etm(:,3)*tyz(:)
     rr(:,3)=rr(:,3)-zem(:,1)*txy(:)-zem(:,2)*tyy(:)-zem(:,3)*tyz(:)
  end if
-    m=3; call mpigo(0,m,ng0); call deriv(1); call deriv(2); call deriv(3)
+    m=3; call mpigo(ntdrv,nrall,n45no,m); call deriv(1,1); call deriv(2,2); call deriv(3,3)
     de(:,m)=rr(:,1)+rr(:,2)+rr(:,3)
 
     rr(:,1)=qa(:,4)*ss(:,1)+xim(:,3)*p(:)
@@ -505,7 +522,7 @@
     rr(:,2)=rr(:,2)-etm(:,1)*tzx(:)-etm(:,2)*tyz(:)-etm(:,3)*tzz(:)
     rr(:,3)=rr(:,3)-zem(:,1)*tzx(:)-zem(:,2)*tyz(:)-zem(:,3)*tzz(:)
  end if
-    m=4; call mpigo(0,m,ng0); call deriv(1); call deriv(2); call deriv(3)
+    m=4; call mpigo(ntdrv,nrall,n45no,m); call deriv(1,1); call deriv(2,2); call deriv(3,3)
     de(:,m)=rr(:,1)+rr(:,2)+rr(:,3)
 
     de(:,5)=qa(:,5)+p(:)
@@ -517,21 +534,28 @@
     rr(:,2)=rr(:,2)-etm(:,1)*hxx(:)-etm(:,2)*hyy(:)-etm(:,3)*hzz(:)
     rr(:,3)=rr(:,3)-zem(:,1)*hxx(:)-zem(:,2)*hyy(:)-zem(:,3)*hzz(:)
  end if
-    m=5; call mpigo(0,m,ng0); call deriv(1); call deriv(2); call deriv(3)
+    m=5; call mpigo(ntdrv,nrall,n45no,m); call deriv(1,1); call deriv(2,2); call deriv(3,3)
     de(:,m)=rr(:,1)+rr(:,2)+rr(:,3)
+
+!----- IMPLEMENTATION OF SPONGE CONDITION
+
+    call spongego
 
 !----- IMPLEMENTATION OF GCBC & GCIC
 
+    rr(:,1)=0
  do nn=1,3
  select case(nn)
- case(1); cm=>cm1; drva=>drva1; case(2); cm=>cm2; drva=>drva2; case(3); cm=>cm3; drva=>drva3
+ case(1); drva=>drva1; cm=>cm1; cmm=>cmm1
+ case(2); drva=>drva2; cm=>cm2; cmm=>cmm2
+ case(3); drva=>drva3; cm=>cm3; cmm=>cmm3
  end select
  do ip=0,1; np=nbc(ip,nn); i=ip*ijk(1,nn)
  if((np-10)*(np-20)*(np-25)*(np-30)==0) then
  do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
  do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
-    call eleme(l,cm(jk,:,ip)); call xtq2r(cm(jk,:,ip)); drva(jk,:,ip)=matmul(xt(:,:),yaco(l)*de(l,:))
-    rr(l,1)=0; rr(l,2)=1
+    call eleme(l,cm(jk,:,ip)); call xtq2r(cm(jk,:,ip))
+    drva(jk,:,ip)=matmul(xt(:,:),yaco(l)*de(l,:)); rr(l,1)=rr(l,1)+cmm(jk,ip)
  end do
  end do
  end if
@@ -554,13 +578,12 @@
  end if
  do nn=1,3
  select case(nn)
- case(1); cm=>cm1; drva=>drva1; drvb=>drvb1
- case(2); cm=>cm2; drva=>drva2; drvb=>drvb2
- case(3); cm=>cm3; drva=>drva3; drvb=>drvb3
+ case(1); drva=>drva1; drvb=>drvb1; cm=>cm1; cmm=>cmm1
+ case(2); drva=>drva2; drvb=>drvb2; cm=>cm2; cmm=>cmm2
+ case(3); drva=>drva3; drvb=>drvb3; cm=>cm3; cmm=>cmm3
  end select
  do ip=0,1; np=nbc(ip,nn); i=ip*ijk(1,nn); lp=1-2*ip
  if((np-10)*(np-20)*(np-25)*(np-30)==0) then
-    dtwi=1/(dt+1-min(n,1))
  do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
  do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
     call eleme(l,cm(jk,:,ip)); cha(:)=drva(jk,:,ip); dha(:)=drvb(jk,:,ip)
@@ -569,46 +592,25 @@
  if(lp*(vn+vs+ao)>0) then; cha(4)=-cha(5); end if
  if(lp*(vn+vs-ao)>0) then; cha(5)=-cha(4); end if
  case(20,25)
-    cha(4+ip)=cha(5-ip)+lp*aoi*qa(l,1)*(2*sum(cm(jk,:,ip)*dudtmf(:))+dtwi*(vn+vs))
+    cha(4+ip)=cha(5-ip)+lp*aoi*qa(l,1)*(2*sum(cm(jk,:,ip)*dudtmf(:))+100*(vn+vs))
  case(30)
-!    res=-4*lp*(vs+vn); fctr=half*(1+res/(ao+abs(res)))
-!    cha(1:3)=fctr*cha(1:3)+(1-fctr)*dha(1:3)
+    fctr=min(max(half*(1+lp*aoi*(vn+vs)),zero),one)
+    cha(1:3)=(1-fctr)*cha(1:3)+fctr*dha(1:3)
  if(lp*(vn+vs+ao)>0) then; cha(4)=dha(4); end if
  if(lp*(vn+vs-ao)>0) then; cha(5)=dha(5); end if
  end select
-    call xtr2q(cm(jk,:,ip)); res=1/yaco(l); drva(jk,:,ip)=res*matmul(xt(:,:),cha(:))-de(l,:)
-    rr(l,1)=rr(l,1)+1; rr(l,2)=1/rr(l,1)
+    call xtr2q(cm(jk,:,ip)); res=cmm(jk,ip)/(yaco(l)*rr(l,1))
+    de(l,:)=de(l,:)+res*matmul(xt(:,:),(cha(:)-drva(jk,:,ip)))
  end do
  end do
  end if
  end do
  end do
 
-!----- UPDATING FLUX DERIVATIVES BASED ON GCBC/GCIC
-
- do nn=1,3
- select case(nn); case(1); drva=>drva1; case(2); drva=>drva2; case(3); drva=>drva3; end select
- do ip=0,1; np=nbc(ip,nn); i=ip*ijk(1,nn)
- if((np-10)*(np-20)*(np-25)*(np-30)==0) then
- do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
- do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
-    de(l,:)=de(l,:)+rr(l,2)*drva(jk,:,ip)
- end do
- end do
- end if
- end do
- end do
-
-!----- MOVING FRAME VELOCITY & ACCELERATION AFTER TIME ADVANCING
+!----- UPDATING CONSERVATIVE VARIABLES
 
     dtko=min(nk-1,1)*dt/(nkrk-nk+2); dtk=dt/(nkrk-nk+1)
     call movef(dtko,dtk)
-
-!----- IMPLEMENTATION OF SPONGE CONDITION
-
-    call spongego
-
-!----- UPDATING CONSERVATIVE VARIABLES
 
     rr(:,1)=dtk*yaco(:)
     qa(:,1)=qo(:,1)-rr(:,1)*de(:,1)
@@ -616,6 +618,16 @@
     qa(:,3)=qo(:,3)-rr(:,1)*de(:,3)
     qa(:,4)=qo(:,4)-rr(:,1)*de(:,4)
     qa(:,5)=qo(:,5)-rr(:,1)*de(:,5)
+
+!----- FILTERING
+
+ if(mod(n,nfskp+1)==0.and.nk==nkrk) then
+ do m=1,5
+    rr(:,1)=qa(:,m)
+    call mpigo(ntflt,nrone,n45no,m); call filte(1); call filte(2); call filte(3)
+    qa(:,m)=rr(:,1)
+ end do
+ end if
 
 !----- WALL TEMPERATURE & VELOCITY CONDITION
 
@@ -668,16 +680,6 @@
  end do
  end do
 
-!----- FILTERING
-
- if(mod(n,nfskp+1)==0.and.nk==nkrk) then
-    nn1=mod(n/(nfskp+1),3)+1; nn2=mod(nn1,3)+1; nn3=mod(nn2,3)+1
- do m=1,5
-    rr(:,1)=qa(:,m); rr(:,2)=rr(:,1); rr(:,3)=rr(:,2)
-    call mpigo(1,m,ng0); call filte(nn1,m); call filte(nn2,m); call filte(nn3,m)
- end do
- end if
-
 !----- UPDATING PRESSURE
 
     p(:)=gamm1*(qa(:,5)-half*(qa(:,2)*qa(:,2)+qa(:,3)*qa(:,3)+qa(:,4)*qa(:,4))/qa(:,1))
@@ -697,9 +699,39 @@
 
 !----- RECORDING INTERMEDIATE RESULTS
 
- if(nout==1.and.(dt/=0.or.n<=2)) then
- if(myid==0) then
-    write(*,"(' saving output ',i3,' at  time =',f12.8)") ndati,timo
+ if(nout==1) then
+    times(ndati)=timo
+ select case(nvarout)
+ case(0); rr(:,1)=qa(:,1)
+ case(1); rr(:,1)=qa(:,2)/qa(:,1)+umf(1)
+ case(2); rr(:,1)=qa(:,3)/qa(:,1)+umf(2)
+ case(3); rr(:,1)=qa(:,4)/qa(:,1)+umf(3)
+ case(4); rr(:,1)=p(:)
+ case(5); rr(:,1)=gam*p(:)-1
+ case(6)
+    ss(:,1)=one/qa(:,1); de(:,1:3)=zero
+
+    rr(:,1)=ss(:,1)*qa(:,2)
+    m=1; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+    de(:,2)=de(:,2)+rr(:,1)*xim(:,3)+rr(:,2)*etm(:,3)+rr(:,3)*zem(:,3)
+    de(:,3)=de(:,3)-rr(:,1)*xim(:,2)-rr(:,2)*etm(:,2)-rr(:,3)*zem(:,2)
+
+    rr(:,1)=ss(:,1)*qa(:,3)
+    m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+    de(:,3)=de(:,3)+rr(:,1)*xim(:,1)+rr(:,2)*etm(:,1)+rr(:,3)*zem(:,1)
+    de(:,1)=de(:,1)-rr(:,1)*xim(:,3)-rr(:,2)*etm(:,3)-rr(:,3)*zem(:,3)
+
+    rr(:,1)=ss(:,1)*qa(:,4)
+    m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+    de(:,1)=de(:,1)+rr(:,1)*xim(:,2)+rr(:,2)*etm(:,2)+rr(:,3)*zem(:,2)
+    de(:,2)=de(:,2)-rr(:,1)*xim(:,1)-rr(:,2)*etm(:,1)-rr(:,3)*zem(:,1)
+
+    rr(:,1)=sqrt((de(:,1)*de(:,1)+de(:,2)*de(:,2)+de(:,3)*de(:,3))*yaco(:)*yaco(:))
+ end select
+    varr(:)=rr(:,1); write(0,rec=ndati+4) varr(:)
+ end if
+ if(timo-tsam>=0.and.mod(n,nsgnl)==0) then
+    nsigi=nsigi+1; call signalgo
  end if
     times(ndati)=timo; call intermed(3)
     varr(:)=rr(:,1); write(0,rec=ndati+nrec+5) varr(:)
@@ -717,20 +749,20 @@
     
      if(nrestart==1) then
      if(myid==mo(mb)) then
-        open(1,file=crestart); close(1,status='delete')
+        open(9,file=crestart); close(9,status='delete')
      end if
         call MPI_BARRIER(icom,ierr)
-        open(1,file=crestart,access='stream',shared)
+        open(9,file=crestart,access='stream',shared)
      if(myid==mo(mb)) then
-        write(1,pos=1) timo
+        write(9,pos=1) timo
      end if
         lp=lpos(myid)+1
      do m=1,5; lq=(m-1)*ltomb
      do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-        write(1,pos=nr*(lp+lq+lio(j,k))+1) qa(l:l+lxi,m)
+        write(9,pos=nr*(lp+lq+lio(j,k))+1) qa(l:l+lxi,m)
      end do; end do
      end do
-        close(1)
+        close(9)
      end if
   end if
 
@@ -738,25 +770,22 @@
 !===== END OF TIME MARCHING
 !==========================
 
-
  end do
-
-! Exit here if crashed
-100 continue
-nrec=nrec+4
+    close(1)
 
     wte=MPI_WTIME(); res=wte-wts
     call MPI_ALLREDUCE(res,wtime,1,MPI_REAL8,MPI_SUM,icom,ierr)
  if(myid==0) then
-    open(1,file='walltime.dat',position='append')
-    write(1,'(2es15.7)') real(npro,nr),wtime/npro
-    close(1)
+    open(9,file='walltime.dat',position='append')
+    write(9,'(2es15.7)') real(npro,nr),wtime/npro
+    close(9)
  end if
 
 
 !===== POST-PROCESSING & GENERATING TECPLOT DATA FILE
 
  if(dt==0) then
+    ! rpt-File is not closed so it can still be saved up to the last record
     !close(0,status='delete')
     write(*,*) "Overflow."
  ndata=ndati
@@ -767,62 +796,46 @@ nrec=nrec+4
  end if
     !call finalout
  if(myid==mo(mb)) then
- 
-    open(1,file=coutput); close(1,status='delete')
+    open(9,file=coutput); close(9,status='delete')
  end if
     call MPI_BARRIER(icom,ierr)
-    open(1,file=coutput,access='stream',shared)
+    open(9,file=coutput,access='stream',shared)
     lh=0
  if(myid==mo(mb)) then
-    write(1,pos=4*lh+1) '#!TDV112'; lh=lh+2
-    write(1,pos=4*lh+1) 1; lh=lh+1 ! Header Section
-    write(1,pos=4*lh+1) 0; lh=lh+1 ! File Type
-    cinput='title'; call strio(1,lh,cinput) ! File Title
-    write(1,pos=4*lh+1) int4(ndata+ndatp+nrec+1); lh=lh+1 ! Number of Variables
-    cinput='x'; call strio(1,lh,cinput)
-    cinput='y'; call strio(1,lh,cinput)
-    cinput='z'; call strio(1,lh,cinput)
-    if (ngridv==1) then
-       cinput='xix'; call strio(1,lh,cinput)
-       cinput='xiy'; call strio(1,lh,cinput)
-       cinput='xiz'; call strio(1,lh,cinput)
-       cinput='etax'; call strio(1,lh,cinput)
-       cinput='etay'; call strio(1,lh,cinput)
-       cinput='etaz'; call strio(1,lh,cinput)
-       cinput='zetax'; call strio(1,lh,cinput)
-       cinput='zetay'; call strio(1,lh,cinput)
-       cinput='zetaz'; call strio(1,lh,cinput)
-    end if
-    cinput='u'; call strio(1,lh,cinput)
-    cinput='v'; call strio(1,lh,cinput)
-    cinput='w'; call strio(1,lh,cinput)
-    cinput='rho'; call strio(1,lh,cinput)
+    write(9,pos=4*lh+1) '#!TDV112'; lh=lh+2
+    write(9,pos=4*lh+1) 1; lh=lh+1 ! Header Section
+    write(9,pos=4*lh+1) 0; lh=lh+1 ! File Type
+    cinput='title'; call strio(9,lh,cinput) ! File Title
+    write(9,pos=4*lh+1) int4(ndata+ndatp+4); lh=lh+1 ! Number of Variables
+    cinput='x'; call strio(9,lh,cinput)
+    cinput='y'; call strio(9,lh,cinput)
+    cinput='z'; call strio(9,lh,cinput)
  do n=0,ndata+ndatp
     no(2)=n/100; no(1)=mod(n,100)/10; no(0)=mod(n,10); cno=achar(no+48)
-    cinput='p'//cno(2)//cno(1)//cno(0); call strio(1,lh,cinput)
+    cinput='var'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
  end do
-    write(1,pos=4*lh+1) 299.0; lh=lh+1 ! Zone Marker
-    cinput=czone; call strio(1,lh,cinput)
-    write(1,pos=4*lh+1) -1; lh=lh+1 ! Parent Zone
-    write(1,pos=4*lh+1) -2; lh=lh+1 ! Strand ID
-    write(1,pos=4*lh+1) dble(0.0); lh=lh+2 ! Solution Time (Double)
-    write(1,pos=4*lh+1) -1; lh=lh+1 ! (Not used. Set to -1.)
-    write(1,pos=4*lh+1) 0; lh=lh+1 ! Zone Type
-    write(1,pos=4*lh+1) 0; lh=lh+1 ! Specify Var Location
-    write(1,pos=4*lh+1) 0; lh=lh+1 ! Raw Local 1-to-1 Face Neighbours Suppliled
-    write(1,pos=4*lh+1) 0; lh=lh+1 ! Number of Miscellaneous Face Neighbour Connections
-    write(1,pos=4*lh+1) int4(lximb(mb)+1); lh=lh+1 ! IMax
-    write(1,pos=4*lh+1) int4(letmb(mb)+1); lh=lh+1 ! JMax
-    write(1,pos=4*lh+1) int4(lzemb(mb)+1); lh=lh+1 ! KMax
-    write(1,pos=4*lh+1) 0; lh=lh+1 ! No Auxillary Data Pairs
-    write(1,pos=4*lh+1) 357.0; lh=lh+1 ! End of Header Marker
-    write(1,pos=4*lh+1) 299.0; lh=lh+1 ! Zone Marker
+    write(9,pos=4*lh+1) 299.0; lh=lh+1 ! Zone Marker
+    cinput=czone; call strio(9,lh,cinput)
+    write(9,pos=4*lh+1) -1; lh=lh+1 ! Parent Zone
+    write(9,pos=4*lh+1) -2; lh=lh+1 ! Strand ID
+    write(9,pos=4*lh+1) dble(0.0); lh=lh+2 ! Solution Time (Double)
+    write(9,pos=4*lh+1) -1; lh=lh+1 ! (Not used. Set to -1.)
+    write(9,pos=4*lh+1) 0; lh=lh+1 ! Zone Type
+    write(9,pos=4*lh+1) 0; lh=lh+1 ! Specify Var Location
+    write(9,pos=4*lh+1) 0; lh=lh+1 ! Raw Local 1-to-1 Face Neighbours Suppliled
+    write(9,pos=4*lh+1) 0; lh=lh+1 ! Number of Miscellaneous Face Neighbour Connections
+    write(9,pos=4*lh+1) int4(lximb(mb)+1); lh=lh+1 ! IMax
+    write(9,pos=4*lh+1) int4(letmb(mb)+1); lh=lh+1 ! JMax
+    write(9,pos=4*lh+1) int4(lzemb(mb)+1); lh=lh+1 ! KMax
+    write(9,pos=4*lh+1) 0; lh=lh+1 ! No Auxillary Data Pairs
+    write(9,pos=4*lh+1) 357.0; lh=lh+1 ! End of Header Marker
+    write(9,pos=4*lh+1) 299.0; lh=lh+1 ! Zone Marker
  do n=-nrec,ndata+ndatp
-    write(1,pos=4*lh+1) 1; lh=lh+1 ! 1 = Float / 2 = Double
+    write(9,pos=4*lh+1) 1; lh=lh+1 ! 1 = Float / 2 = Double
  end do
-    write(1,pos=4*lh+1) 0; lh=lh+1 ! No Passive Variables
-    write(1,pos=4*lh+1) 0; lh=lh+1 ! No Variable Sharing
-    write(1,pos=4*lh+1) -1; lh=lh+1 ! Zero Based Zone Number to Share
+    write(9,pos=4*lh+1) 0; lh=lh+1 ! No Passive Variables
+    write(9,pos=4*lh+1) 0; lh=lh+1 ! No Variable Sharing
+    write(9,pos=4*lh+1) -1; lh=lh+1 ! Zero Based Zone Number to Share
  do n=-nrec,ndata+ndatp
     lh=lh+2 ! Minimum Value (Double) of Variables (to be filled)
     lh=lh+2 ! Maximum Value (Double) of Variables (to be filled)
@@ -837,7 +850,7 @@ nrec=nrec+4
  do n=ns,ne; lq=(n+nrec)*ltomb
     read(0,rec=n+nrec+1) varr(:)
  do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-    write(1,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
+    write(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
  end do; end do
     varmin(n)=minval(varr(:)); varmax(n)=maxval(varr(:))
  end do
@@ -849,11 +862,11 @@ nrec=nrec+4
  if(myid==mo(mb)) then
     l=0; lq=4*(ndata+ndatp+nrec+1)
  do n=ns,ne
-    write(1,pos=4*(lp-lq+l)+1) dble(varmin(n)); l=l+2 ! 8-Bytes "Stream"
-    write(1,pos=4*(lp-lq+l)+1) dble(varmax(n)); l=l+2 ! 8-Bytes "Stream"
+    write(9,pos=4*(lp-lq+l)+1) dble(varmin(n)); l=l+2 ! 8-Bytes "Stream"
+    write(9,pos=4*(lp-lq+l)+1) dble(varmax(n)); l=l+2 ! 8-Bytes "Stream"
  end do
  end if
-    close(1)
+    close(9)
  !end if
 
 !===== END OF JOB
