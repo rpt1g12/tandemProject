@@ -771,6 +771,9 @@
 !==========================
 
  end do
+
+! rpt-tag for exiting while loop
+100 continue
     close(1)
 
     wte=MPI_WTIME(); res=wte-wts
