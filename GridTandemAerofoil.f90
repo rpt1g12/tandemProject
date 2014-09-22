@@ -36,9 +36,9 @@
 
  subroutine gridaerofoil(ngridv,nthick,litr,smgrid,domlen,span,wlew,wlea,szth1,szth2,szxt,tla,tlb,cutlb,gap,c1,c2,delt1,delt2,ximod,etamod)
 
- integer,intent(in) :: ngridv,litr,nthick,cutlb
+ integer,intent(in) :: ngridv,litr,nthick
  real(nr),intent(in) :: smgrid,domlen,span,wlew,wlea,szth1,szth2,szxt,tla,tlb,gap,c1,c2,delt1,delt2
- real(nr),intent(in) :: ximod,etamod
+ real(nr),intent(in) :: ximod,etamod,cutlb
  real(nr) :: alph
  real(nr) :: oxp,oyp
  real(nr) :: tmps,tmpe,tmpc
