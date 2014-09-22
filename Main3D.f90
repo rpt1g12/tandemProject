@@ -313,21 +313,21 @@
  do nn=1,3
  ! rpt-Increasigng the record count
  nrec=nrec+1
-    varr(:)=ss(:,nn); write(0,rec=nn) varr(:)
+    varr(:)=ss(:,nn); write(0,rec=nrec) varr(:)
  end do
  ! rpt-If ngrid is 1 then store the grid metrics and increase the record count
  if (ngridv==1) then
  do nn=1,3
  nrec=nrec+1
-    varr(:)=xim(:,nn); write(0,rec=3+nn) varr(:)
+    varr(:)=xim(:,nn); write(0,rec=nrec) varr(:)
  end do
  do nn=1,3
  nrec=nrec+1
-    varr(:)=etm(:,nn); write(0,rec=6+nn) varr(:)
+    varr(:)=etm(:,nn); write(0,rec=nrec) varr(:)
  end do
  do nn=1,3
  nrec=nrec+1
-    varr(:)=zem(:,nn); write(0,rec=9+nn) varr(:)
+    varr(:)=zem(:,nn); write(0,rec=nrec) varr(:)
  end do
  end if
 
@@ -702,6 +702,17 @@
 
  if(nout==1) then
     times(ndati)=timo
+
+    !==========SAVING VELOCITY AND DENSITY
+    i=nrec
+    do m = 2, 4
+    i=i+1
+       varr(:)=((qa(:,m)/qa(:,1))+umf(m-1)); write(0,rec=i) varr(:)
+    end do
+    i=i+1
+       varr(:)=qa(:,1); write(0,rec=i) varr(:)
+    !======================================
+
  select case(nvarout)
  case(0); rr(:,1)=qa(:,1)
  case(1); rr(:,1)=qa(:,2)/qa(:,1)+umf(1)
@@ -729,18 +740,12 @@
 
     rr(:,1)=sqrt((de(:,1)*de(:,1)+de(:,2)*de(:,2)+de(:,3)*de(:,3))*yaco(:)*yaco(:))
  end select
-    varr(:)=rr(:,1); write(0,rec=ndati+4) varr(:)
-    times(ndati)=timo; call intermed(3)
-    varr(:)=rr(:,1); write(0,rec=ndati+nrec+5) varr(:)
+    ! rpt-Because of saving metrics, record count changes
+    !varr(:)=rr(:,1); write(0,rec=ndati+4) varr(:)
+    !call intermed(3)
+    i=i+1
+    varr(:)=rr(:,1); write(0,rec=ndati+i) varr(:)
 
-    !==========SAVING VELOCITY AND DENSITY
-    i=nrec
-    do m = 2, 4
-    i=i+1
-       varr(:)=((qa(:,m)/qa(:,1))+umf(m-1)); write(0,rec=i) varr(:)
-    end do
-    i=i+1
-       varr(:)=qa(:,1); write(0,rec=i) varr(:)
 
     !===== GENERATING RESTART DATA FILE
     
@@ -771,10 +776,11 @@
 !===== END OF TIME MARCHING
 !==========================
 
-! rpt-tag for exiting while loop
-100 continue
 
  end do
+! rpt-tag for exiting while loop
+100 continue
+nrec=nrec+4
 
     close(1)
 
@@ -811,10 +817,25 @@
     write(9,pos=4*lh+1) 1; lh=lh+1 ! Header Section
     write(9,pos=4*lh+1) 0; lh=lh+1 ! File Type
     cinput='title'; call strio(9,lh,cinput) ! File Title
-    write(9,pos=4*lh+1) int4(ndata+ndatp+4); lh=lh+1 ! Number of Variables
+    write(9,pos=4*lh+1) int4(ndata+ndatp+nrec+1); lh=lh+1 ! Number of Variables
     cinput='x'; call strio(9,lh,cinput)
     cinput='y'; call strio(9,lh,cinput)
     cinput='z'; call strio(9,lh,cinput)
+    if (ngridv==1) then
+       cinput='xix'; call strio(1,lh,cinput)
+       cinput='xiy'; call strio(1,lh,cinput)
+       cinput='xiz'; call strio(1,lh,cinput)
+       cinput='etax'; call strio(1,lh,cinput)
+       cinput='etay'; call strio(1,lh,cinput)
+       cinput='etaz'; call strio(1,lh,cinput)
+       cinput='zetax'; call strio(1,lh,cinput)
+       cinput='zetay'; call strio(1,lh,cinput)
+       cinput='zetaz'; call strio(1,lh,cinput)
+    end if
+    cinput='u'; call strio(1,lh,cinput)
+    cinput='v'; call strio(1,lh,cinput)
+    cinput='w'; call strio(1,lh,cinput)
+    cinput='rho'; call strio(1,lh,cinput)
  do n=0,ndata+ndatp
     no(2)=n/100; no(1)=mod(n,100)/10; no(0)=mod(n,10); cno=achar(no+48)
     cinput='var'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
