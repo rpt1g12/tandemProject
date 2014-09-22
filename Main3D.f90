@@ -426,10 +426,11 @@
  if((timo-res)*(timo+dt-res)<=0) then
     nout=1; ndati=ndati+1
  end if
-
  ! rpt-If it crashes exit the loop and save last results recorded
  if (n>2.and.dt==0) then
     goto 100
+ end if
+
  end if
 
 !----- VISCOUS SHEAR STRESSES & HEAT FLUXES
@@ -729,10 +730,6 @@
     rr(:,1)=sqrt((de(:,1)*de(:,1)+de(:,2)*de(:,2)+de(:,3)*de(:,3))*yaco(:)*yaco(:))
  end select
     varr(:)=rr(:,1); write(0,rec=ndati+4) varr(:)
- end if
- if(timo-tsam>=0.and.mod(n,nsgnl)==0) then
-    nsigi=nsigi+1; call signalgo
- end if
     times(ndati)=timo; call intermed(3)
     varr(:)=rr(:,1); write(0,rec=ndati+nrec+5) varr(:)
 
@@ -748,32 +745,37 @@
     !===== GENERATING RESTART DATA FILE
     
      if(nrestart==1) then
-     if(myid==mo(mb)) then
-        open(9,file=crestart); close(9,status='delete')
-     end if
-        call MPI_BARRIER(icom,ierr)
-        open(9,file=crestart,access='stream',shared)
-     if(myid==mo(mb)) then
-        write(9,pos=1) timo
-     end if
-        lp=lpos(myid)+1
-     do m=1,5; lq=(m-1)*ltomb
-     do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-        write(9,pos=nr*(lp+lq+lio(j,k))+1) qa(l:l+lxi,m)
-     end do; end do
-     end do
-        close(9)
+        if(myid==mo(mb)) then
+           open(9,file=crestart); close(9,status='delete')
+        end if
+           call MPI_BARRIER(icom,ierr)
+           open(9,file=crestart,access='stream',shared)
+        if(myid==mo(mb)) then
+           write(9,pos=1) timo
+        end if
+           lp=lpos(myid)+1
+        do m=1,5; lq=(m-1)*ltomb
+        do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+           write(9,pos=nr*(lp+lq+lio(j,k))+1) qa(l:l+lxi,m)
+        end do; end do
+        end do
+           close(9)
      end if
   end if
+
+ if(timo-tsam>=0.and.mod(n,nsgnl)==0) then
+    nsigi=nsigi+1; call signalgo
+ end if
 
 !==========================
 !===== END OF TIME MARCHING
 !==========================
 
- end do
-
 ! rpt-tag for exiting while loop
 100 continue
+
+ end do
+
     close(1)
 
     wte=MPI_WTIME(); res=wte-wts
