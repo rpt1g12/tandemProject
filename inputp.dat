@@ -1,6 +1,7 @@
 lxi0-to-4	200	100	100	100	200
 let0		200
 lze0		25
+nbody-nthick	0	0
 ngridv		1
 npbxi0-to-9	6	2	2	2	4	6	2	2	2	4
 npbet0-to-9	4	4	4	4	4	4	4	4	4	4	
@@ -11,16 +12,16 @@ ximod-etamod	1.0e0		1.0e0
 span-wlew-wlea	0.25e0		0.125e0		0.0e0
 gap-chord1-2	1.5e0		1.0e0		1.0e0
 delt1-2(deg)	6.0e0		8.0e0		
-szth1-th2-xt-co	2.0e0		2.0e0		4.0e0		12.0e0
+szth1-th2-xt-co	2.0e0		2.0e0		4.0e0		3.0e0
 tgusto		5.0e0
 ck1-2-3		0.001e0		0.0e0		0.0e0
 amp2-3		0.0e0		0.0e0
 vk1-2		0.5e0		0.0e0
-slit		3.2e0
-tlg0-g1-gw	0.125e0		0.4e0		1.0e0
-tlm0-m1-mw	0.125e0		0.4e0		1.0e0
-tamg1-2-3	0.00e0		0.00e0		0.00e0
-tamm1-2-3	0.00e0		0.00e0		0.00e0
+slit-gaus-cfit	3.0e0		0.79287415e0	1.6e0
+tlg0-g1-gw	0.12439771e0	0.22129887e0	3.88180135e0
+tlm0-m1-mw	0.11186394e0	0.11862196e0	0.33701377e0
+tamg1-2-3	0.01505403e0	0.01743821e0	0.01279687e0
+tamm1-2-3	0.01282233e0	0.01107917e0	0.01939838e0
 
 ! 20n10p
 npbxi0-to-9	12	2	3	2	6	12	2	3	2	6

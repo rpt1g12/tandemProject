@@ -34,9 +34,9 @@
 
 !===== GRID GENERATION
 
- subroutine gridaerofoil(ngridv,litr,smgrid,domlen,span,wlew,wlea,szth1,szth2,szxt,tla,tlb,gap,c1,c2,delt1,delt2,ximod,etamod)
+ subroutine gridaerofoil(ngridv,nthick,litr,smgrid,domlen,span,wlew,wlea,szth1,szth2,szxt,tla,tlb,cutlb,gap,c1,c2,delt1,delt2,ximod,etamod)
 
- integer,intent(in) :: ngridv,litr
+ integer,intent(in) :: ngridv,litr,nthick,cutlb
  real(nr),intent(in) :: smgrid,domlen,span,wlew,wlea,szth1,szth2,szxt,tla,tlb,gap,c1,c2,delt1,delt2
  real(nr),intent(in) :: ximod,etamod
  real(nr) :: alph
