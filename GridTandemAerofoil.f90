@@ -117,8 +117,8 @@ end select
     am=2; xjct=half*(xo+1.0e0); err=1
     
     do while(abs(err)>sml)
-       ip=lxis+ll; im=(lxib-ll)/2; call gridf(xp(:,n),pxi,xo,xjct,sho,am,0,lxit,im/2,im,ip)
-       ip=ip+im; im=lxib-ll-im; call gridf(xp(:,n),pxi,xjct,1.0_nr,pxi(ip),am,0,lxit,im/2,im,ip)
+       ip=lxis+ll; im=(lxib-ll)/2; call ogridf(xp(:,n),pxi,xo,xjct,sho,am,0,lxit,im/2,im,ip)
+       ip=ip+im; im=lxib-ll-im; call ogridf(xp(:,n),pxi,xjct,1.0_nr,pxi(ip),am,0,lxit,im/2,im,ip)
        err=pxi(ip+im)/she1-1; xjct=xjct+half*err*she1
     end do
     do i=lxis+ll+1,lxie-1
@@ -140,11 +140,11 @@ end do
     n=1
     sho=tla/litr; ll=2*litr!0!lxi0-2*(lxi0*sho-(-half-xa))/(sho-shs)
     am=2; xo=xa+ll*sho
-    ip=0; im=ll; call gridf(xp(:,n),pxi,xa,xo,sho,am,0,lxit,im/2,im,ip)
+    ip=0; im=ll; call ogridf(xp(:,n),pxi,xa,xo,sho,am,0,lxit,im/2,im,ip)
     xjct=half*(xo+xb); err=1
  do while(abs(err)>sml)
-    ip=ll; im=(lxi0-ll)/2; call gridf(xp(:,n),pxi,xo,xjct,sho,am,0,lxit,im/2,im,ip)
-    ip=ip+im; im=lxi0-ll-im; call gridf(xp(:,n),pxi,xjct,xb,pxi(ip),am,0,lxit,im/2,im,ip)
+    ip=ll; im=(lxi0-ll)/2; call ogridf(xp(:,n),pxi,xo,xjct,sho,am,0,lxit,im/2,im,ip)
+    ip=ip+im; im=lxi0-ll-im; call ogridf(xp(:,n),pxi,xjct,xb,pxi(ip),am,0,lxit,im/2,im,ip)
     err=pxi(ip+im)/shs1-1; xjct=xjct+half*err*shs1
  end do
  if(k==0) then
@@ -154,17 +154,17 @@ end do
  tmpa=xp(lxie1,n); tmpb=xp(lxis3,n)
  xjct=(tmpa+tmpb)*half; err=1
  do while(abs(err)>sml)
-    ip=lxis2; im=lxi2/2; call gridf(xp(:,n),pxi,tmpa,xjct,she1,am,0,lxit,im/2,im,ip)
-    ip=ip+im; im=lxi2-im; call gridf(xp(:,n),pxi,xjct,tmpb,pxi(ip),am,0,lxit,im/2,im,ip)
+    ip=lxis2; im=lxi2/2; call ogridf(xp(:,n),pxi,tmpa,xjct,she1,am,0,lxit,im/2,im,ip)
+    ip=ip+im; im=lxi2-im; call ogridf(xp(:,n),pxi,xjct,tmpb,pxi(ip),am,0,lxit,im/2,im,ip)
     err=pxi(ip+im)/she1-1; xjct=xjct+half*err*shs1
  end do
     tmpa=xp(lxie3,n); tmpb=xf
-    ip=lxis4; im=lxi4-lxisz; call gridf(xp(:,n),pxi,tmpa,tmpb,she1,am,0,lxit,im/2,im,ip)
+    ip=lxis4; im=lxi4-lxisz; call ogridf(xp(:,n),pxi,tmpa,tmpb,she1,am,0,lxit,im/2,im,ip)
     tmpa=xf; tmpb=xg
     xjct=(tmpa+tmpb)*half; err=1
  do while(abs(err)>sml)
-    ip=lxis4+(lxi4-lxisz); im=lxisz/2; call gridf(xp(:,n),pxi,tmpa,xjct,pxi(ip),am,0,lxit,im,im,ip)
-    ip=ip+im; im=lxisz-im; call gridf(xp(:,n),pxi,xjct,tmpb,pxi(ip),am,0,lxit,im/2,im,ip)
+    ip=lxis4+(lxi4-lxisz); im=lxisz/2; call ogridf(xp(:,n),pxi,tmpa,xjct,pxi(ip),am,0,lxit,im,im,ip)
+    ip=ip+im; im=lxisz-im; call ogridf(xp(:,n),pxi,xjct,tmpb,pxi(ip),am,0,lxit,im/2,im,ip)
     err=pxi(ip+im)/sho-1; xjct=xjct+half*err*sho
  end do
  do m=1,3
@@ -199,40 +199,40 @@ end do
  else
     sho=tla/litr; 
     am=2; xo=xa+ll*sho;
-    ip=0; im=ll; call gridf(xp(:,n),pxi,xa,xo,sho,am,0,lxit,im/2,im,ip)
+    ip=0; im=ll; call ogridf(xp(:,n),pxi,xa,xo,sho,am,0,lxit,im/2,im,ip)
     tmpa=xb-rs; tmpb=xp(lxie1,1)+re
     xjct=half*(xo+tmpa); err=1
  do while(abs(err)>sml)
-    ip=ll; im=(lxi0-ll)/2; call gridf(xp(:,n),pxi,xo,xjct,sho,am,0,lxit,im/2,im,ip)
-    ip=ip+im; im=lxi0-ll-im; call gridf(xp(:,n),pxi,xjct,tmpa,pxi(ip),am,0,lxit,im/2,im,ip)
+    ip=ll; im=(lxi0-ll)/2; call ogridf(xp(:,n),pxi,xo,xjct,sho,am,0,lxit,im/2,im,ip)
+    ip=ip+im; im=lxi0-ll-im; call ogridf(xp(:,n),pxi,xjct,tmpa,pxi(ip),am,0,lxit,im/2,im,ip)
     err=pxi(ip+im)/(2*shs1)-1; xjct=xjct+half*err*(2*shs1)
  end do
     xjct=half*(tmpa+tmpb); err=1
  do while(abs(err)>sml)
-    ip=lxis1; im=lxi1/2; call gridf(xp(:,n),pxi,tmpa,xjct,2*shs1,am,0,lxit,0,im,ip)
-    ip=ip+im; im=lxi1-im; call gridf(xp(:,n),pxi,xjct,tmpb,pxi(ip),am,0,lxit,im/2,im,ip)
+    ip=lxis1; im=lxi1/2; call ogridf(xp(:,n),pxi,tmpa,xjct,2*shs1,am,0,lxit,0,im,ip)
+    ip=ip+im; im=lxi1-im; call ogridf(xp(:,n),pxi,xjct,tmpb,pxi(ip),am,0,lxit,im/2,im,ip)
     err=pxi(ip+im)/she1-1; xjct=xjct+half*err*she1
  end do
     tmpa=tmpb; tmpb=xp(lxis3,1)-rs
     xjct=half*(tmpa+tmpb); err=1
  do while(abs(err)>sml)
-    ip=lxis2; im=lxi2/2; call gridf(xp(:,n),pxi,tmpa,xjct,she1,am,0,lxit,0,im,ip)
-    ip=ip+im; im=lxi2-im; call gridf(xp(:,n),pxi,xjct,tmpb,pxi(ip),am,0,lxit,im/2,im,ip)
+    ip=lxis2; im=lxi2/2; call ogridf(xp(:,n),pxi,tmpa,xjct,she1,am,0,lxit,0,im,ip)
+    ip=ip+im; im=lxi2-im; call ogridf(xp(:,n),pxi,xjct,tmpb,pxi(ip),am,0,lxit,im/2,im,ip)
     err=pxi(ip+im)/(2*shs1)-1; xjct=xjct+half*err*she1
  end do
     tmpa=tmpb; tmpb=xp(lxie3,1)+re
     xjct=half*(tmpa+tmpb); err=1
  do while(abs(err)>sml)
-    ip=lxis3; im=lxi3/2; call gridf(xp(:,n),pxi,tmpa,xjct,2*shs1,am,0,lxit,0,im,ip)
-    ip=ip+im; im=lxi3-im; call gridf(xp(:,n),pxi,xjct,tmpb,pxi(ip),am,0,lxit,im/2,im,ip)
+    ip=lxis3; im=lxi3/2; call ogridf(xp(:,n),pxi,tmpa,xjct,2*shs1,am,0,lxit,0,im,ip)
+    ip=ip+im; im=lxi3-im; call ogridf(xp(:,n),pxi,xjct,tmpb,pxi(ip),am,0,lxit,im/2,im,ip)
     err=pxi(ip+im)/she1-1; xjct=xjct+half*err*she1
  end do
-    ip=lxis4; im=lxi4-lxisz; call gridf(xp(:,n),pxi,tmpb,xf,she1,am,0,lxit,im/2,im,ip)
+    ip=lxis4; im=lxi4-lxisz; call ogridf(xp(:,n),pxi,tmpb,xf,she1,am,0,lxit,im/2,im,ip)
     tmpa=xf; tmpb=xg
     xjct=(tmpa+tmpb)*half; err=1
  do while(abs(err)>sml)
-    ip=lxis4+(lxi4-lxisz); im=lxisz/2; call gridf(xp(:,n),pxi,tmpa,xjct,pxi(ip),am,0,lxit,im,im,ip)
-    ip=ip+im; im=lxisz-im; call gridf(xp(:,n),pxi,xjct,tmpb,pxi(ip),am,0,lxit,im/2,im,ip)
+    ip=lxis4+(lxi4-lxisz); im=lxisz/2; call ogridf(xp(:,n),pxi,tmpa,xjct,pxi(ip),am,0,lxit,im,im,ip)
+    ip=ip+im; im=lxisz-im; call ogridf(xp(:,n),pxi,xjct,tmpb,pxi(ip),am,0,lxit,im/2,im,ip)
     err=pxi(ip+im)/sho-1; xjct=xjct+half*err*sho
  end do
  end if
@@ -247,8 +247,8 @@ end do
  select case(m); case(0); xo=xa; case(5); xo=xf; end select
     am=2; yjct=half*yd; err=1
  do while(abs(err)>sml)
-    jp=lets1; jm=ll/2; call gridf(yq(:,m),qet,0.0_nr,yjct,shs2,am,0,lett,jm/2,jm,jp) !etamod will reduce the normal spacing
-    jp=jp+jm; jm=ll-jm; call gridf(yq(:,m),qet,yjct,yd,qet(jp),am,0,lett,jm/2,jm,jp)
+    jp=lets1; jm=ll/2; call ogridf(yq(:,m),qet,0.0_nr,yjct,shs2,am,0,lett,jm/2,jm,jp) !etamod will reduce the normal spacing
+    jp=jp+jm; jm=ll-jm; call ogridf(yq(:,m),qet,yjct,yd,qet(jp),am,0,lett,jm/2,jm,jp)
     err=qet(jp+jm)/sho-1; yjct=yjct+half*err*sho
  end do
  do j=0,lete0
@@ -291,11 +291,11 @@ end do
      end select
      am=2; err=1; 
      do while(abs(err)>sml)
-        jp=lets; jm=ll/2; call gridf(yq(:,m),qet,tmpa,yjct,tmps,am,0,lett,jm/2,jm,jp)
-        jp=jp+jm; jm=ll-jm; call gridf(yq(:,m),qet,yjct,tmpb,qet(jp),am,0,lett,jm/2,jm,jp)
+        jp=lets; jm=ll/2; call ogridf(yq(:,m),qet,tmpa,yjct,tmps,am,0,lett,jm/2,jm,jp)
+        jp=jp+jm; jm=ll-jm; call ogridf(yq(:,m),qet,yjct,tmpb,qet(jp),am,0,lett,jm/2,jm,jp)
         err=qet(jp+jm)/tmpe-1; yjct=yjct+half*err*tmpe
      end do
-        !jp=jp+jm; jm=let0-ll; call gridf(yq(:,m),qet,2*tlb,yd,qet(jp),am,0,lett,jm/2,jm,jp)
+        !jp=jp+jm; jm=let0-ll; call ogridf(yq(:,m),qet,2*tlb,yd,qet(jp),am,0,lett,jm/2,jm,jp)
      !do j=0,lete0
      !   yq(j,m)=-yq(lett-j,m)
      !end do
