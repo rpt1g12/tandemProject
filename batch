@@ -3,7 +3,7 @@
 
 # Set default resource requirements for job
 # These can be overridden on the qsub command line.
-#PBS -l nodes=8:ppn=16
+#PBS -l nodes=2:ppn=16
 #PBS -l walltime=12:00:00
 
 # Change to directory from which job was submitted.
