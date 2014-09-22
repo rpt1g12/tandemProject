@@ -77,7 +77,7 @@
  real(nr),dimension(:,:),allocatable :: ran,sit,ait
  real(nr),dimension(:),allocatable :: xit,yit,zit
  real(nr),dimension(:),allocatable :: asz,bsz,csz,dsz
- real(nr),dimension(:),allocatable :: times,varmin,varmax
+ real(nr),dimension(:),allocatable :: times,varmin,varmax,vmpi
  real(4),dimension(:),allocatable :: varr
 
  real(nr),dimension(:,:,:),pointer :: drva,drvb,send,recv,cm
