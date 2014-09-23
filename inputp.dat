@@ -4,7 +4,7 @@ lze0		25
 nbody-nthick	0	0
 ngridv		1
 npbxi0-to-9	3	1	1	1	2	3	1	1	1	2
-npbet0-to-9	2	2	2	2	2	2	2	2	2	2	
+npbet0-to-9	1	1	1	1	1	1	1	1	1	1	
 npbze0-to-9	1	1	1	1	1	1	1	1	1	1
 nito-nits-litr	0	16	10
 smgrid-domlen	0.0075e0	7.0e0

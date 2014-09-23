@@ -702,6 +702,9 @@
 
  if(nout==1) then
     times(ndati)=timo
+    if(myid==0) then
+       write(*,"('**saved results** => n =',i8,'   time =',f12.5)") n,timo
+    end if
 
     !==========SAVING VELOCITY AND DENSITY
     i=nrec
