@@ -157,7 +157,8 @@
 
     allocate(qo(0:lmx,5),qa(0:lmx,5),de(0:lmx,5))
     allocate(xim(0:lmx,3),etm(0:lmx,3),zem(0:lmx,3),rr(0:lmx,3),ss(0:lmx,3))
-    allocate(p(0:lmx),yaco(0:lmx),varr(0:lmx))
+    ! rpt-dA allocation added
+    allocate(p(0:lmx),yaco(0:lmx),varr(0:lmx),dA(0:lmx))
 
  if(nviscous==1) then
     allocate(txx(0:lmx),tyy(0:lmx),tzz(0:lmx))
@@ -255,6 +256,9 @@
     rr(:,1)=ss(:,3)
     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
     de(:,1)=rr(:,1); de(:,2)=rr(:,2); de(:,3)=rr(:,3)
+
+    call clComp(0,1)
+    call clComp(0,2)
 
     xim(:,1)=qa(:,2)*de(:,3)-de(:,2)*qa(:,3)
     xim(:,2)=de(:,2)*qo(:,3)-qo(:,2)*de(:,3)

@@ -67,6 +67,8 @@
 
  real(nr),dimension(:,:),allocatable :: xim,etm,zem
  real(nr),dimension(:),allocatable :: p,yaco
+ ! rpt-Area array declaration
+ real(nr),dimension(:),allocatable :: dA
 
  real(nr),dimension(:,:),allocatable :: rr,ss
 
