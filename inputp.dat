@@ -4,14 +4,14 @@ lze0		25
 nbody-nthick	1	1
 ngridv		1
 npbxi0-to-9	3	1	1	1	2	3	1	1	1	2
-npbet0-to-9	2	2	2	2	2	2	2	2	2	2	
+npbet0-to-9	1	1	1	1	1	1	1	1	1	1	
 npbze0-to-9	1	1	1	1	1	1	1	1	1	1
-nito-nits-litr	0	16	10
+nito-nits-litr	0	1	10
 smgrid-domlen	0.0075e0	7.0e0
 ximod-etamod	1.0e0		1.0e0
 span-wlew-wlea	0.25e0		0.125e0		0.0e0
 gap-chord1-2	1.5e0		1.0e0		1.0e0
-delt1-2(deg)	6.0e0		8.0e0		
+delt1-2(deg)	0.0e0		0.0e0		
 szth1-th2-xt-co	2.0e0		2.0e0		4.0e0		12.0e0
 tgusto		5.0e0
 ck1-2-3		0.001e0		0.0e0		0.0e0

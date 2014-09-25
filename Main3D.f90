@@ -8,6 +8,7 @@
  use subroutineso
  use subroutines3d
  use problemcase
+ use rpt
  implicit none
 
 !===== PREPARATION FOR PARALLEL COMPUTING
@@ -257,8 +258,6 @@
     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
     de(:,1)=rr(:,1); de(:,2)=rr(:,2); de(:,3)=rr(:,3)
 
-    call clComp(0,1)
-    call clComp(0,2)
 
     xim(:,1)=qa(:,2)*de(:,3)-de(:,2)*qa(:,3)
     xim(:,2)=de(:,2)*qo(:,3)-qo(:,2)*de(:,3)
@@ -294,6 +293,9 @@
     yaco(:)=3/(qo(:,1)*xim(:,1)+qo(:,2)*etm(:,1)+qo(:,3)*zem(:,1)&
               +qa(:,1)*xim(:,2)+qa(:,2)*etm(:,2)+qa(:,3)*zem(:,2)&
               +de(:,1)*xim(:,3)+de(:,2)*etm(:,3)+de(:,3)*zem(:,3))
+
+    call clComp(0,1)
+    !call clComp(0,2)
 
  do nn=1,3; do ip=0,1; i=ip*ijk(1,nn)
  do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
