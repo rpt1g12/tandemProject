@@ -381,7 +381,8 @@
  call clComp(1,2,2)
 
  if(myid==0.and.mod(n,nscrn)==0) then
-    write(*,"(' n =',i8,'   time =',f12.5)") n,timo
+    write(*,"(' n =',i8,'   time =',f12.5,' Cl1=',f9.5,', Cl2=',f9.5,', ClT=',f9.5)") &
+    n,timo,cl(1),cl(2),cl(1)+cl(2)
  end if
 
     qo(:,:)=qa(:,:)

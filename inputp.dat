@@ -3,7 +3,7 @@ let0		200
 lze0		25
 nbody-nthick	1	1
 ngridv		1
-npbxi0-to-9	1	1	1	1	1	1	1	1	1	1
+npbxi0-to-9	3	1	1	1	2	3	1	1	1	2
 npbet0-to-9	1	1	1	1	1	1	1	1	1	1	
 npbze0-to-9	1	1	1	1	1	1	1	1	1	1
 nito-nits-litr	0	1	10

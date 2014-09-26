@@ -18,6 +18,8 @@ implicit none
    logical :: flag
    real(nr) :: g11, g33, g13,coef,ninv
    real(nr) :: sumA,tsumA
+   real(nr) :: dinp
+
 
    ! Define aerofoil blocks
    select case(ele)
@@ -43,7 +45,7 @@ implicit none
    end if
 
    ! Initialise values
-   cl=0;sumA=0;tsumA=0;flag=.false.
+   cl(ele)=0;sumA=0;tsumA=0;flag=.false.
    g11=0;g33=g11;g13=g33
 
    if ((mb==bblock).AND.(jp==npc(mb,2)-1)) then
@@ -84,10 +86,12 @@ implicit none
       CALL MPI_SEND(sumA,1,MPI_REAL8,mp,10,MPI_COMM_WORLD,ierr)
    end if
    case(1) ! Compute Cl
+   ! Compute Dynamic pressure
+   dinp=two/(umf(1)*umf(1)+umf(2)*umf(2)+umf(3)*umf(3))
    do k=0,ijk(2,2)
    do i=0,ijk(3,2); l=indx3(j,k,i,2)
       ninv = 1.0_nr/sqrt(etm(l,1)*etm(l,1)+etm(l,2)*etm(l,2)+etm(l,3)*etm(l,3))
-      sumA = sumA + p(l)*coef*etm(l,dir)*ninv*dA(l)
+      sumA = sumA + dinp*p(l)*coef*etm(l,dir)*ninv*dA(l)
    end do
    end do
    if (myid==mp) then
@@ -95,19 +99,25 @@ implicit none
       CALL MPI_RECV(tsumA,1,MPI_REAL8,MPI_ANY_SOURCE,10,MPI_COMM_WORLD,ista,ierr)
       sumA=sumA+tsumA
       end do
-      if (n==0) then
-        open(8,file='misc/cl'//achar(mp+48)//achar(ele+48)//'.dat') 
-        write(8,*) 'variables=t,cl'
-      end if
-      write(8,'(2f8.5)') timo,sumA
+      tsumA=sumA
    else
       CALL MPI_SEND(sumA,1,MPI_REAL8,mp,10,MPI_COMM_WORLD,ierr)
    end if
-   case(2) ! close file
-   if (myid==mp) then
-     close(8)
-   end if
    end select
+   end if
+
+   CALL MPI_REDUCE(tsumA,cl(ele),1,MPI_REAL8,MPI_SUM,0,icom,ierr)
+   
+   if (myid==0) then
+     if (mode==2) then
+     close(9+ele)
+     else
+       if (n==0) then
+          open(9+ele,file='misc/cl'//achar(ele+48)//'.dat')
+          write(9+ele,*) 'variables=t,Cl'
+       end if
+          write(9+ele,'(2f8.5)') timo,cl(ele)
+     end if
    end if
 
    
