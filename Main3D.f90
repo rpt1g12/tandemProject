@@ -258,6 +258,9 @@
     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
     de(:,1)=rr(:,1); de(:,2)=rr(:,2); de(:,3)=rr(:,3)
 
+    call clComp(0,1,2)
+    call clComp(0,2,2)
+    
 
     xim(:,1)=qa(:,2)*de(:,3)-de(:,2)*qa(:,3)
     xim(:,2)=de(:,2)*qo(:,3)-qo(:,2)*de(:,3)
@@ -268,6 +271,7 @@
     zem(:,1)=qa(:,1)*de(:,2)-de(:,1)*qa(:,2)
     zem(:,2)=de(:,1)*qo(:,2)-qo(:,1)*de(:,2)
     zem(:,3)=qo(:,1)*qa(:,2)-qa(:,1)*qo(:,2)
+
 
 !    rr(:,3)=qa(:,2)*ss(:,3); rr(:,2)=qa(:,3)*ss(:,3)
 !    m=1; call mpigo(ntdrv,nrall,n45go,m); call deriv(3,3); call deriv(2,2); xim(:,m)=rr(:,3)-rr(:,2)
@@ -294,8 +298,6 @@
               +qa(:,1)*xim(:,2)+qa(:,2)*etm(:,2)+qa(:,3)*zem(:,2)&
               +de(:,1)*xim(:,3)+de(:,2)*etm(:,3)+de(:,3)*zem(:,3))
 
-    call clComp(0,1)
-    !call clComp(0,2)
 
  do nn=1,3; do ip=0,1; i=ip*ijk(1,nn)
  do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
@@ -374,6 +376,9 @@
 
     ndati=-1; nsigi=-1
  do while(timo-tmax<0.and.(dt/=0.or.n<=2))
+
+ call clComp(1,1,2)
+ call clComp(1,2,2)
 
  if(myid==0.and.mod(n,nscrn)==0) then
     write(*,"(' n =',i8,'   time =',f12.5)") n,timo
@@ -792,6 +797,8 @@
 nrec=nrec+4
 
     close(1)
+    call clComp(2,1,2)
+    call clComp(2,2,2)
 
     wte=MPI_WTIME(); res=wte-wts
     call MPI_ALLREDUCE(res,wtime,1,MPI_REAL8,MPI_SUM,icom,ierr)

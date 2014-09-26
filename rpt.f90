@@ -6,21 +6,23 @@ module  rpt
 
 use mainvar3d
 use subroutineso
+use mpi
 
 contains
 
-subroutine clComp(mode,ele)
+subroutine clComp(mode,ele,dir)
+implicit none
    
-   integer, intent(in) :: mode,ele
+   integer, intent(in) :: mode,ele,dir
    integer :: bblock,tblock
    logical :: flag
-   real(nr) :: g11, g33, g13
-   real(nr) :: sumA
+   real(nr) :: g11, g33, g13,coef,ninv
+   real(nr) :: sumA,tsumA
 
    ! Define aerofoil blocks
    select case(ele)
    case(1)
-   bblock = 2; tblock = 7
+   bblock = 1; tblock = 6
    case(2)
    bblock = 3; tblock = 8
    end select
@@ -33,8 +35,16 @@ subroutine clComp(mode,ele)
    ! Find master of the block
    mp = mo(mb)
 
-   ! Initialise area
-   sumA=0;g11=0;flag=.false.
+   ! Find top or bottom
+   if (mb==bblock) then
+      coef=-one
+   elseif (mb==tblock) then
+      coef=one
+   end if
+
+   ! Initialise values
+   cl=0;sumA=0;tsumA=0;flag=.false.
+   g11=0;g33=g11;g13=g33
 
    if ((mb==bblock).AND.(jp==npc(mb,2)-1)) then
    j=ijk(1,2); flag=.true.
@@ -51,25 +61,56 @@ subroutine clComp(mode,ele)
       g33 = qo(l,3)*qo(l,3)+qa(l,3)*qa(l,3)+de(l,3)*de(l,3)
       g13 = qo(l,1)*qo(l,3)+qa(l,1)*qa(l,3)+de(l,1)*de(l,3)
       dA(l) = sqrt(g11*g33-g13*g13)
-      if ((ip==0).or.(ip==npc(mb,1)-1)) then
-        if (i==0.or.i==ijk(3,2)) then
+      if ((ip==0).and.(i==0)) then
         dA(l) = dA(l)*half
-        end if
-        if ((kp==0).or.(ip==npc(mb,3)-1)) then
-        if (k==0.or.k==ijk(3,2)) then
+      elseif ((ip==npc(mb,1)-1).and.(i==ijk(3,2))) then
         dA(l) = dA(l)*half
-        end if
-        end if
+      end if
+      if ((kp==0).and.(k==0)) then
+        dA(l) = dA(l)*half
+      elseif ((kp==npc(mb,3)-1).and.(k==ijk(2,2))) then
+        dA(l) = dA(l)*half
       end if
    end do
    end do
    sumA = sum(dA)
    if (myid==mp) then
-     write(*,*) 'block',mb,'A =',sumA
+      do m = 1, (npc(mb,1)*npc(mb,3)-1)
+      CALL MPI_RECV(tsumA,1,MPI_REAL8,MPI_ANY_SOURCE,10,MPI_COMM_WORLD,ista,ierr)
+      sumA=sumA+tsumA
+      end do
+      write(*,*) 'block',mb,'A =',sumA
+   else
+      CALL MPI_SEND(sumA,1,MPI_REAL8,mp,10,MPI_COMM_WORLD,ierr)
+   end if
+   case(1) ! Compute Cl
+   do k=0,ijk(2,2)
+   do i=0,ijk(3,2); l=indx3(j,k,i,2)
+      ninv = 1.0_nr/sqrt(etm(l,1)*etm(l,1)+etm(l,2)*etm(l,2)+etm(l,3)*etm(l,3))
+      sumA = sumA + p(l)*coef*etm(l,dir)*ninv*dA(l)
+   end do
+   end do
+   if (myid==mp) then
+      do m = 1, (npc(mb,1)*npc(mb,3)-1)
+      CALL MPI_RECV(tsumA,1,MPI_REAL8,MPI_ANY_SOURCE,10,MPI_COMM_WORLD,ista,ierr)
+      sumA=sumA+tsumA
+      end do
+      if (n==0) then
+        open(8,file='misc/cl'//achar(mp+48)//achar(ele+48)//'.dat') 
+        write(8,*) 'variables=t,cl'
+      end if
+      write(8,'(2f8.5)') timo,sumA
+   else
+      CALL MPI_SEND(sumA,1,MPI_REAL8,mp,10,MPI_COMM_WORLD,ierr)
+   end if
+   case(2) ! close file
+   if (myid==mp) then
+     close(8)
    end if
    end select
    end if
 
+   
 end subroutine clComp
 
 end module rpt

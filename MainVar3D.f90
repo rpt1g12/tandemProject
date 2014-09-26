@@ -16,6 +16,7 @@
 
  real(nr),parameter :: pi=3.141592653589793_nr
  real(nr),parameter :: zero=0,one=1,half=0.5_nr,sqrt2=sqrt(2.0_nr),sqrt2i=1/sqrt2,sml=1.0e-6_nr
+ real(nr),parameter :: two=2,quarter=0.25_nr
  real(nr),parameter :: gam=1.4_nr,gamm1=gam-1,ham=1/gam,hamm1=1/gamm1
  real(nr),parameter :: prndtl=0.71_nr,gamm1prndtli=1/(gamm1*prndtl)
 
@@ -117,6 +118,8 @@
  real(nr),dimension(-2:2) :: alag,blag,tlag
  real(nr),dimension(3) :: ve,dm,rv,uoo,umf,dudtmf,fex
  real(nr),dimension(0:2) :: fam,fbm,fcm,rof
+ ! rpt - cl and cd added
+ real(nr),dimension(1:2) :: cl,cd
  real(nr) :: alphf,betf,fa,fb,fc
  real(nr) :: ra0,ra1,ra2,ra3,res,fctr,dfdt
  real(nr) :: reoo,tempoo,amach1,amach2,amach3,wtemp,cfl,tmax,timf,fltk,fltkbco,fltkbcm,dto
