@@ -91,7 +91,7 @@ implicit none
    do k=0,ijk(2,2)
    do i=0,ijk(3,2); l=indx3(j,k,i,2)
       ninv = 1.0_nr/sqrt(etm(l,1)*etm(l,1)+etm(l,2)*etm(l,2)+etm(l,3)*etm(l,3))
-      sumA = sumA + dinp*p(l)*coef*etm(l,dir)*ninv*dA(l)
+      sumA = sumA + dinp*(-p(l))*coef*etm(l,dir)*ninv*dA(l)
    end do
    end do
    if (myid==mp) then
