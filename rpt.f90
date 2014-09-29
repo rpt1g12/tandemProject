@@ -114,9 +114,9 @@ implicit none
      else
        if (n==0) then
           open(9+ele,file='misc/cl'//achar(ele+48)//'.dat')
-          write(9+ele,*) 'variables=t,Cl'
+          write(9+ele,"('VARIABLES= t, C<sub>l',I1,'</sub>')") ele 
        end if
-          write(9+ele,'(2f8.5)') timo,cl(ele)
+          write(9+ele,'(f8.5,"   ",f10.5)') timo,cl(ele)
      end if
    end if
 
