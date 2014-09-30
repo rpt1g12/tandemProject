@@ -11,7 +11,7 @@ smgrid-domlen	0.0075e0	5.5e0
 ximod-etamod	1.0e0		1.0e0
 span-wlew-wlea	0.25e0		0.125e0		0.0e0
 gap-chord1-2	2.0e0		1.0e0		1.0e0
-delt1-2(deg)	4.0e0		6.0e0		
+delt1-2(deg)	0.0e0		0.0e0		
 szth1-th2-xt-co	2.0e0		2.0e0		4.0e0		12.0e0
 tgusto		5.0e0
 ck1-2-3		0.001e0		0.0e0		0.0e0
