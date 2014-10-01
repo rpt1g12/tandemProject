@@ -26,7 +26,7 @@ implicit none
    ! Define aerofoil blocks
    select case(ele)
    case(1)
-   bblock = 2; tblock = 7
+   bblock = 1; tblock = 6
    case(2)
    bblock = 3; tblock = 8
    end select
@@ -36,8 +36,7 @@ implicit none
    jp=mod((myid-mo(mb))/npc(mb,1),npc(mb,2))
    kp=mod((myid-mo(mb))/(npc(mb,1)*npc(mb,2)),npc(mb,3))
 
-   ! Find master of the block
-   mp = mo(mb)
+
 
    ! Find top or bottom
    if (mb==bblock) then
@@ -51,10 +50,15 @@ implicit none
    g11=0;g33=g11;g13=g33
 
    if ((mb==bblock).AND.(jp==npc(mb,2)-1)) then
+   ! Find master of the block
+   mp = mo(mb) + npc(mb,1)*(npc(mb,2)-1)
    j=ijk(1,2); flag=.true.
    elseif ((mb==tblock).AND.(jp==0)) then
    j=0; flag=.true.
+   ! Find master of the block
+   mp = mo(mb)
    end if
+
 
    if (flag) then
    select case(mode)
