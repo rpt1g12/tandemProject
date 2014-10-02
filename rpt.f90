@@ -11,12 +11,14 @@ use mpi
 contains
 
 subroutine clComp(mode,ele,dir)
+
+use problemcase, only: span
 implicit none
    
    integer, intent(in) :: mode,ele,dir
    integer :: bblock,tblock
    logical :: flag
-   real(nr) :: g11, g33, g13,coef,ninv
+   real(nr) :: g11, g33, g13,coef,normal
    real(nr) :: sumA,tsumA
    real(nr) :: dinp
 
@@ -34,8 +36,7 @@ implicit none
    jp=mod((myid-mo(mb))/npc(mb,1),npc(mb,2))
    kp=mod((myid-mo(mb))/(npc(mb,1)*npc(mb,2)),npc(mb,3))
 
-   ! Find master of the block
-   mp = mo(mb)
+
 
    ! Find top or bottom
    if (mb==bblock) then
@@ -49,10 +50,15 @@ implicit none
    g11=0;g33=g11;g13=g33
 
    if ((mb==bblock).AND.(jp==npc(mb,2)-1)) then
+   ! Find master of the block
+   mp = mo(mb) + npc(mb,1)*(npc(mb,2)-1)
    j=ijk(1,2); flag=.true.
    elseif ((mb==tblock).AND.(jp==0)) then
    j=0; flag=.true.
+   ! Find master of the block
+   mp = mo(mb)
    end if
+
 
    if (flag) then
    select case(mode)
@@ -87,13 +93,14 @@ implicit none
    end if
    case(1) ! Compute Cl
    ! Compute Dynamic pressure
-   dinp=two/(umf(1)*umf(1)+umf(2)*umf(2)+umf(3)*umf(3))
+   dinp=two/(amachoo*amachoo*span)
    do k=0,ijk(2,2)
    do i=0,ijk(3,2); l=indx3(j,k,i,2)
-      ninv = 1.0_nr/sqrt(etm(l,1)*etm(l,1)+etm(l,2)*etm(l,2)+etm(l,3)*etm(l,3))
-      sumA = sumA + dinp*(-p(l))*coef*etm(l,dir)*ninv*dA(l)
+      normal = etm(l,dir)*coef/sqrt(etm(l,1)*etm(l,1)+etm(l,2)*etm(l,2)+etm(l,3)*etm(l,3))
+      sumA = sumA + (p(l))*normal*dA(l)
    end do
    end do
+   sumA = sumA * dinp
    if (myid==mp) then
       do m = 1, (npc(mb,1)*npc(mb,3)-1)
       CALL MPI_RECV(tsumA,1,MPI_REAL8,MPI_ANY_SOURCE,10,MPI_COMM_WORLD,ista,ierr)
