@@ -122,6 +122,7 @@ implicit none
        if (n==0) then
           open(9+ele,file='misc/cl'//achar(ele+48)//'.dat')
           write(9+ele,"('VARIABLES= t, C<sub>l',I1,'</sub>')") ele 
+          write(9+ele,"('ZONES T= Cl',I1)") ele 
        end if
           write(9+ele,'(f8.5,"   ",f10.5)') timo,cl(ele)
      end if
