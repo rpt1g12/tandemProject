@@ -12,7 +12,7 @@ contains
 
 subroutine clComp(mode,ele,dir)
 
-use problemcase, only: span
+use problemcase, only: span,delt1,delt2
 implicit none
    
    integer, intent(in) :: mode,ele,dir
@@ -21,6 +21,12 @@ implicit none
    real(nr) :: g11, g33, g13,coef,normal
    real(nr) :: sumA,tsumA
    real(nr) :: dinp
+   integer :: ddelt1,ddelt2
+   character :: char1,char2,char3
+   character, dimension (4) :: cdelt1,cdelt2
+
+   ddelt1=delt1*1800.0_nr/pi
+   ddelt2=delt2*1800.0_nr/pi
 
 
    ! Define aerofoil blocks
@@ -120,9 +126,17 @@ implicit none
      close(9+ele)
      else
        if (n==0) then
+          cdelt1(1)=achar((ddelt1/100)+48); 
+          cdelt1(2)=achar((mod(ddelt1,100)/10)+48); 
+          cdelt1(3)= '.'
+          cdelt1(4)=achar((mod(ddelt1,10))+48); 
+          cdelt2(1)=achar((int(ddelt2)/100)+48); 
+          cdelt2(2)=achar((mod(ddelt2,100)/10)+48); 
+          cdelt2(3)= '.'
+          cdelt2(4)=achar((mod(ddelt2,10))+48); 
           open(9+ele,file='misc/cl'//achar(ele+48)//'.dat')
           write(9+ele,"('VARIABLES= t, C<sub>l',I1,'</sub>')") ele 
-          write(9+ele,"('ZONES T= Cl',I1)") ele 
+          write(9+ele,"('ZONE T= Cl',I1,'A',4a,'_',4a)") ele,cdelt1,cdelt2
        end if
           write(9+ele,'(f8.5,"   ",f10.5)') timo,cl(ele)
      end if
