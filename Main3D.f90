@@ -387,6 +387,7 @@
     n,timo,cl(1,2),cl(2,2)
  end if
 
+
     qo(:,:)=qa(:,:)
 
 !-----------------------------------
@@ -439,6 +440,11 @@
     nout=0; res=tsam+(ndati+1)*(tmax-tsam)/ndata
  if((timo-res)*(timo+dt-res)<=0) then
     nout=1; ndati=ndati+1
+ end if
+ ! rpt-If cl goes to infty the calculation is crashed and 
+ !     needs to save result to check what happened
+ if ((cl(1,2).ne.cl(1,2)).or.(cl(2,2).ne.cl(2,2))) then
+   nout = 1; ndati = ndati+1;
  end if
  ! rpt-If it crashes exit the loop and save last results recorded
  if (n>2.and.dt==0) then
@@ -714,6 +720,7 @@
 
 !----- RECORDING INTERMEDIATE RESULTS
 
+
  if(nout==1) then
     times(ndati)=timo
  if(myid==0) then
@@ -800,6 +807,7 @@
 nrec=nrec+4
 
     close(1)
+    ! rpt-Close cl and cd files
     call clComp(2,1,2)
     call clComp(2,2,2)
 
