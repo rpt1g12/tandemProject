@@ -1,5 +1,8 @@
 !**********************
 !***** RPT MODULE *****
+! Mode 0: Compute Area
+! Mode 1: Compute Force coefficient
+! Mode 2: Close file
 !**********************
 
 module  rpt
@@ -22,9 +25,11 @@ implicit none
    real(nr) :: sumA,tsumA
    real(nr) :: dinp
    integer :: ddelt1,ddelt2
+   integer :: wunit
    character :: char1,char2,char3
    character, dimension (4) :: cdelt1,cdelt2
 
+   wunit=10*(dir)+(ele-1)
    ddelt1=delt1*1800.0_nr/pi
    ddelt2=delt2*1800.0_nr/pi
 
@@ -52,7 +57,7 @@ implicit none
    end if
 
    ! Initialise values
-   cl(ele)=0;sumA=0;tsumA=0;flag=.false.
+   cl(ele,dir)=0;sumA=0;tsumA=0;flag=.false.
    g11=0;g33=g11;g13=g33
 
    if ((mb==bblock).AND.(jp==npc(mb,2)-1)) then
@@ -119,11 +124,11 @@ implicit none
    end select
    end if
 
-   CALL MPI_REDUCE(tsumA,cl(ele),1,MPI_REAL8,MPI_SUM,0,icom,ierr)
+   CALL MPI_REDUCE(tsumA,cl(ele,dir),1,MPI_REAL8,MPI_SUM,0,icom,ierr)
    
    if (myid==0) then
      if (mode==2) then
-     close(9+ele)
+     close(wunit)
      else
        if (n==0) then
           cdelt1(1)=achar((ddelt1/100)+48); 
@@ -134,11 +139,18 @@ implicit none
           cdelt2(2)=achar((mod(ddelt2,100)/10)+48); 
           cdelt2(3)= '.'
           cdelt2(4)=achar((mod(ddelt2,10))+48); 
-          open(9+ele,file='misc/cl'//achar(ele+48)//'.dat')
-          write(9+ele,"('VARIABLES= t, C<sub>l',I1,'</sub>')") ele 
-          write(9+ele,"('ZONE T= Cl',I1,'A',4a,'_',4a)") ele,cdelt1,cdelt2
+          select case(dir)
+          case(2)
+          open(wunit,file='misc/cl'//achar(ele+48)//'.dat')
+          write(wunit,"('VARIABLES= t, C<sub>l',I1,'</sub>')") ele 
+          write(wunit,"('ZONE T= Cl',I1,'A',4a,'_',4a)") ele,cdelt1,cdelt2
+          case(1)
+          open(wunit,file='misc/cd'//achar(ele+48)//'.dat')
+          write(wunit,"('VARIABLES= t, C<sub>d',I1,'</sub>')") ele 
+          write(wunit,"('ZONE T= Cd',I1,'A',4a,'_',4a)") ele,cdelt1,cdelt2
+          end select
        end if
-          write(9+ele,'(f8.5,"   ",f10.5)') timo,cl(ele)
+          write(wunit,'(f8.5,"   ",f10.5)') timo,cl(ele,dir)
      end if
    end if
 

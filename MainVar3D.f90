@@ -118,8 +118,8 @@
  real(nr),dimension(-2:2) :: alag,blag,tlag
  real(nr),dimension(3) :: ve,dm,rv,uoo,umf,dudtmf,fex
  real(nr),dimension(0:2) :: fam,fbm,fcm,rof
- ! rpt - cl and cd added
- real(nr),dimension(1:2) :: cl,cd
+ ! rpt - cl added
+ real(nr),dimension(1:2,1:3) :: cl
  real(nr) :: alphf,betf,fa,fb,fc
  real(nr) :: ra0,ra1,ra2,ra3,res,fctr,dfdt
  real(nr) :: reoo,tempoo,amach1,amach2,amach3,wtemp,cfl,tmax,timf,fltk,fltkbco,fltkbcm,dto
