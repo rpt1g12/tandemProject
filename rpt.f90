@@ -124,7 +124,11 @@ implicit none
    end select
    end if
 
-   CALL MPI_REDUCE(tsumA,cl(ele,dir),1,MPI_REAL8,MPI_SUM,0,icom,ierr)
+   CALL MPI_ALLREDUCE(tsumA,cl(ele,dir),1,MPI_REAL8,MPI_SUM,icom,ierr)
+
+   if (n==5) then
+      cl(ele,dir)=sqrt(-one)
+   end if
    
    if (myid==0) then
      if (mode==2) then

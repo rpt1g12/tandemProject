@@ -444,11 +444,7 @@
  ! rpt-If cl goes to infty the calculation is crashed and 
  !     needs to save result to check what happened
  if ((cl(1,2).ne.cl(1,2)).or.(cl(2,2).ne.cl(2,2))) then
-   nout = 1; ndati = ndati+1;
- end if
- ! rpt-If it crashes exit the loop and save last results recorded
- if (n>2.and.dt==0) then
-    goto 100
+   nout = 2; ndati = ndati+1;
  end if
 
  end if
@@ -721,10 +717,13 @@
 !----- RECORDING INTERMEDIATE RESULTS
 
 
- if(nout==1) then
+ if(nout==1.or.nout==2) then
     times(ndati)=timo
  if(myid==0) then
-    write(*,"('===> saving output ',i3,' at  time =',f12.8)") ndati,timo
+    write(*,"('===> saving output ',i3,' at time =',f12.8)") ndati,timo
+ end if
+ if (nout==2) then
+    qa(:,:)=qo(:,:)   
  end if
 
     !==========SAVING VELOCITY AND DENSITY
@@ -769,6 +768,10 @@
     !call intermed(3)
     i=i+1
     varr(:)=rr(:,1); write(0,rec=ndati+i) varr(:)
+
+    if (nout==2) then
+       goto 100
+    end if
 
 
     !===== GENERATING RESTART DATA FILE
@@ -822,10 +825,12 @@ nrec=nrec+4
 
 !===== POST-PROCESSING & GENERATING TECPLOT DATA FILE
 
- if(dt==0) then
+ if(dt==0.or.nout==2) then
     ! rpt-File is not closed so it can still be saved up to the last record
     !close(0,status='delete')
+    if (myid==0) then
     write(*,*) "Overflow."
+    end if
  ndata=ndati
  end if
  !else
