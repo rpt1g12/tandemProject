@@ -835,6 +835,7 @@ nrec=nrec+4
  end if
  !else
  if(myid==0) then
+    write(*,'("Simulation time was ",f6.2," hours")') wtime/(3600_nr*npro)
     write(*,*) "Writing Output files..."
  end if
     !call finalout
