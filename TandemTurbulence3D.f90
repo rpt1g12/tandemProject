@@ -348,16 +348,19 @@
 
  subroutine junction
 
- integer :: te
- real(nr), dimension(0:lze) :: velx,vely,velz
+ ! If trailing edge treatment is needed
+ !integer :: te
+ !real(nr), dimension(0:lze) :: velx,vely,velz
 
     is=mbk; ie=0; kk=5*(lze+1)-1
     kp=mod((myid-mo(mb))/(npc(mb,1)*npc(mb,2)),npc(mb,3))
     ns=mo(is)+(kp+1)*npc(is,2)*npc(is,1)-1; ne=mo(ie)+kp*npc(ie,2)*npc(ie,1)
  do nn=0,3; itag=nn
  select case(nn);
- case(0); mp=ns; te=0; case(1); mp=ne; te=1
- case(2); mp=ns; te=0; case(3); mp=ne; te=1
+ case(0); mp=ns; !te=0;
+ case(1); mp=ne; !te=0;
+ case(2); mp=ns; !te=0;
+ case(3); mp=ne; !te=0;
  end select
  
  do np=1,4
@@ -401,23 +404,23 @@
 !    drva1(jk,3,0)=0.25_nr*(drva1(jk,1,0)+drva1(jk,1,1)+drva1(jk,2,0)+drva1(jk,2,1))
 ! end do
 ! else
-    if (te==0) then
+    !if (te==0) then
     drva1(0:kk,3,0)=0.25_nr*(drva1(0:kk,1,0)+drva1(0:kk,1,1)+drva1(0:kk,2,0)+drva1(0:kk,2,1))
-    else
-      do m=1,5; jk=(m-1)*(lze+1)
-         select case(m)
-         case(1)
-         drva1(jk:(jk+lze),3,0)=0.25_nr*(drva1(jk:(jk+lze),1,0)+drva1(jk:(jk+lze),1,1)+drva1(jk:(jk+lze),2,0)+drva1(jk:(jk+lze),2,1))
-         case(2,3,4)
-         drva1(jk:(jk+lze),3,0)=-umf(m-1)*drva1(0:lze,3,0)
-         case(5)
-         velx(0:lze)=umf(1)*drva1(0:lze,3,0)*umf(1)*drva1(0:lze,3,0)
-         vely(0:lze)=umf(2)*drva1(0:lze,3,0)*umf(2)*drva1(0:lze,3,0)
-         velz(0:lze)=umf(3)*drva1(0:lze,3,0)*umf(3)*drva1(0:lze,3,0)
-         drva1(jk:(jk+lze),3,0)=ra0*drva1(0:lze,3,0)+half*(velx(0:lze)+vely(0:lze)+velz(0:lze))/drva1(0:lze,3,0)
-         end select
-      end do
-    end if
+    !else
+    !  do m=1,5; jk=(m-1)*(lze+1)
+    !     select case(m)
+    !     case(1)
+    !     drva1(jk:(jk+lze),3,0)=0.25_nr*(drva1(jk:(jk+lze),1,0)+drva1(jk:(jk+lze),1,1)+drva1(jk:(jk+lze),2,0)+drva1(jk:(jk+lze),2,1))
+    !     case(2,3,4)
+    !     drva1(jk:(jk+lze),3,0)=-umf(m-1)*drva1(0:lze,3,0)
+    !     case(5)
+    !     velx(0:lze)=umf(1)*drva1(0:lze,3,0)*umf(1)*drva1(0:lze,3,0)
+    !     vely(0:lze)=umf(2)*drva1(0:lze,3,0)*umf(2)*drva1(0:lze,3,0)
+    !     velz(0:lze)=umf(3)*drva1(0:lze,3,0)*umf(3)*drva1(0:lze,3,0)
+    !     drva1(jk:(jk+lze),3,0)=ra0*drva1(0:lze,3,0)+half*(velx(0:lze)+vely(0:lze)+velz(0:lze))/drva1(0:lze,3,0)
+    !     end select
+    !  end do
+    !end if
 ! end if
  do np=1,4
     call MPI_SEND(drva1(0:kk,3,0),kk+1,MPI_REAL8,mjct(np),itag,icom,ierr)
