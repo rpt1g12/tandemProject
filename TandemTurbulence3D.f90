@@ -331,12 +331,14 @@
  end if
 
  do ll=0,lsz; l=lcsz(ll)
-    rr(l,:)=0
+    rr(l,:)=0; ss(l,1)=gamm1*asz(ll)*yaco(l)
  end do
  do ll=0,ltz; l=lctz(ll)
     rr(l,:)=vit(ll,:)
  end do
+!    fctr=half*gamm1
  do ll=0,lsz; l=lcsz(ll)
+!    res=(1-fctr*(rr(l,1)**2+rr(l,2)**2+rr(l,3)**2))**hamm1
     de(l,1)=de(l,1)+asz(ll)*(qa(l,1)-rhooo)
     de(l,2:4)=de(l,2:4)+bsz(ll)*(qa(l,2:4)-qa(l,1)*rr(l,:))
     de(l,5)=de(l,5)+asz(ll)*(p(l)-poo)
@@ -430,23 +432,6 @@
 
  end subroutine junction
 
-! rpt-might be useless. Before any modifications on Main3D.f90 still is needed
-!===== INTERMEDIATE RESULTS
-
- subroutine intermed(no)
- integer :: no
-
-select case(no)
-case(1);rr(:,1)=qa(:,1)
-case(2);rr(:,1)=sqrt(qa(:,2)*qa(:,2)+qa(:,3)*qa(:,3)+qa(:,4)*qa(:,4))/qa(:,1)
-case(3);rr(:,1)=p(:)
-case(4);rr(:,1)=gam*p(:)-1
-case(5);rr(:,1)=gamm1*(qo(:,5)-half*(qo(:,2)*qo(:,2)+qo(:,3)*qo(:,3)+qo(:,4)*qo(:,4))/qo(:,1))
-end select
-
-
- end subroutine intermed
-
 !===== SIGNAL RECORDING
 
  subroutine signalgo
@@ -496,7 +481,7 @@ end select
     ss(:,1)=0
  do n=0,ndata
     read(0,rec=n+4) varr(:)
-    varr(:)=varr(:)-rr(:,1)
+!    varr(:)=varr(:)-rr(:,1)
     write(0,rec=n+4) varr(:)
     ss(:,1)=ss(:,1)+delt(n)*varr(:)**2
  end do
