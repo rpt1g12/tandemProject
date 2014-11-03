@@ -8,8 +8,8 @@
 
 !===== CONSTANT PARAMETERS
 
- integer,parameter :: nr=kind(0.0d0),ntdrv=0,ntflt=1,nrall=0,nrone=1,n45no=0,n45go=1 !what are this constants?
- integer,parameter :: lmd=11,lmf=8,lmp=max(lmd,lmf),mfbi=3
+ integer,parameter :: nr=kind(0.0d0),ntdrv=0,ntflt=1,nrall=0,nrone=1,n45no=0,n45go=1
+ integer,parameter :: lmd=11,lmf=8,lmp=max(lmd,lmf),mfbi=4,mbci=5
  integer,parameter :: liofs=16,liofl=24
 
  character(len=*),parameter :: fmts='es15.8',fmtl='es23.16',fmtsa=fmts//',a',fmtla=fmtl//',a'
@@ -55,6 +55,11 @@
  real(nr),parameter :: a04=-0.2246526470654333_nr
  real(nr),parameter :: a05=0.08564940889936562_nr
  real(nr),parameter :: a06=-0.01836710059356763_nr
+
+ real(nr),parameter,dimension(3) :: fex=(/45,-9,1/)/(mfbi*30.0_nr)
+ real(nr),parameter,dimension(0:5,0:2) :: abc=(/a01,a02,a03,a04,a05,a06,&
+                                                a10,a12,a13,a14,a15,a16,&
+                                                a20,a21,a23,a24,a25,a26/)
 
 !===== ALLOCATABLE MAIN ARRAYS
 
@@ -108,21 +113,21 @@
  integer :: nts,nscrn,nsgnl,ndata,ndatp,nviscous,nkrk,nsmf,nfskp,nrestart,nvarout
 
  real(nr),dimension(0:lmp,0:1,0:1) :: pbci,pbco
- real(nr),dimension(0:5,0:2) :: abc
- real(nr),dimension(-2:2,0:2,-1:1) :: albed,albef
+ real(nr),dimension(-2:2,0:2,0:1) :: albed,albef
+ real(nr),dimension(mbci,mbci) :: cbca,cbcs
  real(nr),dimension(5,5) :: xt
  real(nr),dimension(0:1,0:1) :: pbcot
- real(nr),dimension(0:4) :: fbc
  real(nr),dimension(0:lmp) :: sap
+ real(nr),dimension(mbci) :: rbci,sbci
  real(nr),dimension(5) :: cha,dha
  real(nr),dimension(-2:2) :: alag,blag,tlag
- real(nr),dimension(3) :: ve,dm,rv,uoo,umf,dudtmf,fex
- real(nr),dimension(0:2) :: fam,fbm,fcm,rof
+ real(nr),dimension(3) :: ve,dm,rv,uoo,umf,dudtmf
+ real(nr),dimension(0:2) :: fam,fbm,fcm
  ! rpt - cl added
  real(nr),dimension(1:2,1:3) :: cl
  real(nr) :: alphf,betf,fa,fb,fc
  real(nr) :: ra0,ra1,ra2,ra3,res,fctr,dfdt
- real(nr) :: reoo,tempoo,amach1,amach2,amach3,wtemp,cfl,tmax,timf,fltk,fltkbco,fltkbcm,dto
+ real(nr) :: reoo,tempoo,amach1,amach2,amach3,wtemp,cfl,tmax,timf,fltk,dto
  real(nr) :: rhooo,poo,aoo,amachoo,srefoo,srefp1dre
  real(nr) :: dt,dts,dte,dtk,dtko,timo,tsam,wts,wte,wtime
  real(nr) :: vn,vs,hv2,ao,bo,co,ho,aoi,rhoi,progmf,sqrtrema,sqrtremai
