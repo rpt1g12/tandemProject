@@ -1,6 +1,6 @@
-!!*****
-!!***** BASIC SUBROUTINES
-!!*****
+!*****
+!***** BASIC SUBROUTINES
+!*****
 
  module subroutineso
 
@@ -21,162 +21,155 @@
  real(nr),intent(in) :: alpha,beta
 
  do i=is,ie
-    xl(i,:)=one; xu(i,:)=one
+    xl(i,:)=1; xu(i,:)=1
  end do
     i=is
-    xu(i,1)=one
+    xu(i,1)=1
     xu(i,2)=albes(1,0)
     xu(i,3)=albes(2,0)
     i=is+1
     xl(i,2)=albes(-1,1)*xu(i-1,1)
-    xu(i,1)=one/(one-xu(i-1,2)*xl(i,2))
+    xu(i,1)=1/(1-xu(i-1,2)*xl(i,2))
     xu(i,2)=albes(1,1)-xu(i-1,3)*xl(i,2)
     xu(i,3)=albes(2,1)
     i=is+2
     xl(i,1)=albes(-2,2)*xu(i-2,1)
     xl(i,2)=(albes(-1,2)-xu(i-2,2)*xl(i,1))*xu(i-1,1)
-    xu(i,1)=one/(one-xu(i-2,3)*xl(i,1)-xu(i-1,2)*xl(i,2))
+    xu(i,1)=1/(1-xu(i-2,3)*xl(i,1)-xu(i-1,2)*xl(i,2))
     xu(i,2)=albes(1,2)-xu(i-1,3)*xl(i,2)
     xu(i,3)=albes(2,2)
  do i=is+3,ie-3
     xl(i,1)=beta*xu(i-2,1)
     xl(i,2)=(alpha-xu(i-2,2)*xl(i,1))*xu(i-1,1)
-    xu(i,1)=one/(one-xu(i-2,3)*xl(i,1)-xu(i-1,2)*xl(i,2))
+    xu(i,1)=1/(1-xu(i-2,3)*xl(i,1)-xu(i-1,2)*xl(i,2))
     xu(i,2)=alpha-xu(i-1,3)*xl(i,2)
     xu(i,3)=beta
  end do
     i=ie-2
     xl(i,1)=albee(2,2)*xu(i-2,1)
     xl(i,2)=(albee(1,2)-xu(i-2,2)*xl(i,1))*xu(i-1,1)
-    xu(i,1)=one/(one-xu(i-2,3)*xl(i,1)-xu(i-1,2)*xl(i,2))
+    xu(i,1)=1/(1-xu(i-2,3)*xl(i,1)-xu(i-1,2)*xl(i,2))
     xu(i,2)=albee(-1,2)-xu(i-1,3)*xl(i,2)
     xu(i,3)=albee(-2,2)
     i=ie-1
     xl(i,1)=albee(2,1)*xu(i-2,1)
     xl(i,2)=(albee(1,1)-xu(i-2,2)*xl(i,1))*xu(i-1,1)
-    xu(i,1)=one/(one-xu(i-2,3)*xl(i,1)-xu(i-1,2)*xl(i,2))
+    xu(i,1)=1/(1-xu(i-2,3)*xl(i,1)-xu(i-1,2)*xl(i,2))
     xu(i,2)=albee(-1,1)-xu(i-1,3)*xl(i,2)
     i=ie
     xl(i,1)=albee(2,0)*xu(i-2,1)
     xl(i,2)=(albee(1,0)-xu(i-2,2)*xl(i,1))*xu(i-1,1)
-    xu(i,1)=one/(one-xu(i-2,3)*xl(i,1)-xu(i-1,2)*xl(i,2))
+    xu(i,1)=1/(1-xu(i-2,3)*xl(i,1)-xu(i-1,2)*xl(i,2))
  do i=is,ie
     xu(i,2:3)=xu(i,2:3)*xu(i,1)
  end do
 
  end subroutine penta
 
-!===== SUBROUTINE FOR BOUNDARY FILTER COEFFICIENTS: ORIGINAL VERSION
+!===== SUBROUTINE FOR BOUNDARY FILTER COEFFICIENTS
 
- subroutine fcbco(fltk,fltkbc,albef,fbc)
+ subroutine fcbcm(fltk,albef,fa,fb,fc)
  
- real(nr),intent(in) :: fltk,fltkbc
- real(nr),dimension(-2:2,0:2),intent(inout) :: albef
- real(nr),dimension(0:4),intent(inout) :: fbc
- real(nr) :: alphf,betf,af,bf,cf
-
-    res=(fltk-fltkbc)/3; ra0=fltkbc; ra1=fltkbc+res; ra2=fltkbc+2*res; albef(:,:)=0; albef(0,:)=1
-
-    call fcint(ra0,half,alphf,betf,af,bf,cf)
-    fctr=1/(1+5*alphf**3+alphf**2*(8+22*betf)+betf*(5+4*betf+60*betf**2)+5*alphf*(1+betf*(3+10*betf)))
-    albef(1,0)=(alphf*(1+alphf)*(1+4*alphf)+2*alphf*(7+3*alphf)*betf+24*(1-alphf)*betf**2-80*betf**3)*fctr
-    albef(2,0)=(alphf**3+betf+14*alphf**2*betf+60*betf**3+alphf*betf*(3+46*betf))*fctr
-
-    call fcint(ra1,half,alphf,betf,af,bf,cf)
-    fctr=1/(1+alphf**2*(9-5*betf)+alphf*(5+(35-29*betf)*betf)+betf*(5+6*(9-10*betf)*betf))
-    albef(-1,1)=(9*alphf**3+10*betf**2*(8*betf-1)+5*alphf**2*(1+8*betf)+alphf*(1+betf*(4+81*betf)))*fctr
-    albef(1,1)=(alphf*(1+alphf*(5+9*alphf))+alphf*(5+36*alphf)*betf+(55*alphf-1)*betf**2+10*betf**3)*fctr
-    albef(2,1)=betf*(1+alphf*(5+9*alphf)+5*betf+35*alphf*betf+50*betf**2)*fctr
-
-    call fcint(ra2,half,alphf,betf,af,bf,cf)
-    albef(:,2)=(/betf,alphf,one,alphf,betf/); fbc(:)=(/bf+5*cf,af-10*cf,af-5*cf,bf+cf,cf/)
-    
- end subroutine fcbco
-
-!===== SUBROUTINE FOR BOUNDARY FILTER COEFFICIENTS: MODIFIED VERSION
-
- subroutine fcbcm(fltk,fltkbc,albef,fa,fb,fc)
- 
- real(nr),intent(in) :: fltk,fltkbc
+ real(nr),intent(in) :: fltk
  real(nr),dimension(-2:2,0:2),intent(inout) :: albef
  real(nr),dimension(0:2),intent(inout) :: fa,fb,fc
- real(nr) :: alphf,betf,af,bf,cf
+ real(nr) :: alphz,betz,za,zb,zc
 
-    res=(fltk-fltkbc)/3; ra0=fltkbc; ra1=fltkbc+res; ra2=fltkbc+2*res
+    res=(fltk-pi)/3; ra0=pi; ra1=ra0+res; ra2=ra1+res
 
-    call fcint(ra0,half,alphf,betf,af,bf,cf)
-    albef(:,0)=(/zero,zero,one,alphf,betf/); fa(0)=af; fb(0)=bf; fc(0)=cf
-    call fcint(ra1,half,alphf,betf,af,bf,cf)
-    albef(:,1)=(/zero,alphf,one,alphf,betf/); fa(1)=af; fb(1)=bf; fc(1)=cf
-    call fcint(ra2,half,alphf,betf,af,bf,cf)
-    albef(:,2)=(/betf,alphf,one,alphf,betf/); fa(2)=af; fb(2)=bf; fc(2)=cf
+    call fcint(ra0,half,alphz,betz,za,zb,zc)
+    albef(:,0)=(/zero,zero,one,alphz,betz/); fa(0)=za; fb(0)=zb; fc(0)=zc
+    call fcint(ra1,half,alphz,betz,za,zb,zc)
+    albef(:,1)=(/zero,alphz,one,alphz,betz/); fa(1)=za; fb(1)=zb; fc(1)=zc
+    call fcint(ra2,half,alphz,betz,za,zb,zc)
+    albef(:,2)=(/betz,alphz,one,alphz,betz/); fa(2)=za; fb(2)=zb; fc(2)=zc
 
  end subroutine fcbcm
 
 !===== SUBROUTINE FOR INTERIOR FILTER COEFFICIENTS
 
- subroutine fcint(fltk,fltr,alphf,betf,af,bf,cf)
+ subroutine fcint(fltk,fltr,alphz,betz,za,zb,zc)
  
  real(nr),intent(in) :: fltk,fltr
- real(nr),intent(inout) :: alphf,betf,af,bf,cf
+ real(nr),intent(inout) :: alphz,betz,za,zb,zc
  real(nr),dimension(3) :: cosf
 
     cosf(1)=cos(fltk); cosf(2)=cos(2*fltk); cosf(3)=cos(3*fltk)
     fctr=1/(30+5*(7-16*fltr)*cosf(1)+2*(1+8*fltr)*cosf(2)-3*cosf(3))
-    alphf=(20*(2*fltr-1)-30*cosf(1)+12*(2*fltr-1)*cosf(2)-2*cosf(3))*fctr
-    betf=(2*(13-8*fltr)+(33-48*fltr)*cosf(1)+6*cosf(2)-cosf(3))*half*fctr
-    af=60*(1-fltr)*cos(half*fltk)**4*fctr; bf=-0.4_nr*af; cf=af/15
+    alphz=(20*(2*fltr-1)-30*cosf(1)+12*(2*fltr-1)*cosf(2)-2*cosf(3))*fctr
+    betz=(2*(13-8*fltr)+(33-48*fltr)*cosf(1)+6*cosf(2)-cosf(3))*half*fctr
+    za=60*(1-fltr)*cos(half*fltk)**4*fctr; zb=-0.4_nr*za; zc=za/15
 
  end subroutine fcint
 
 !===== SUBROUTINE FOR SUBDOMAIN-BOUNDARY COEFFICIENTS
 
- subroutine sbcco(np,nq)
+ subroutine sbcco
 
- integer,intent(in) :: np,nq
- integer,dimension(1) :: imax
- integer,dimension(:),allocatable :: ipvt
- real(nr),dimension(:),allocatable :: temp
  real(nr),dimension(:,:),allocatable :: ax,bx,rx,sx
+ real(nr),dimension(0:4) :: zv
+ real(nr) :: alphz,betz,za,zb,zc
 
  do nt=0,1; lp=2*nt-1
  if(nt==0) then; ll=lmd; is=1; ie=2*(ll+1)
-    allocate(ipvt(ie),temp(ie),ax(ie,ie),bx(ie,ie),rx(ie,ie),sx(ie,ie)); ax(:,:)=0; bx(:,:)=0
-    ax(is,is:is+2)=albed(0:2,0,np); ax(is+1,is:is+3)=albed(-1:2,1,np); ax(is+2,is:is+4)=albed(-2:2,2,np)
-    ra0=sum(abc(:,0)); bx(is,is:is+6)=(/-ra0,a01,a02,a03,a04,a05,a06/)
-    ra1=sum(abc(:,1)); bx(is+1,is:is+6)=(/a10,-ra1,a12,a13,a14,a15,a16/)
-    ra2=sum(abc(:,2)); bx(is+2,is:is+6)=(/a20,a21,-ra2,a23,a24,a25,a26/)
+    allocate(ax(ie,ie),bx(ie,ie),rx(ie,ie),sx(ie,ie)); ax(:,:)=0; bx(:,:)=0
+    ax(is,is:is+2)=albed(0:2,0,0); bx(is,is:is+6)=(/-sum(abc(:,0)),a01,a02,a03,a04,a05,a06/)
+    ax(is+1,is:is+3)=albed(-1:2,1,0); bx(is+1,is:is+6)=(/a10,-sum(abc(:,1)),a12,a13,a14,a15,a16/)
+    ax(is+2,is:is+4)=albed(-2:2,2,0); bx(is+2,is:is+6)=(/a20,a21,-sum(abc(:,2)),a23,a24,a25,a26/)
  do i=is+3,ie-3
     ax(i,i-2:i+2)=(/beta,alpha,one,alpha,beta/); bx(i,i-3:i+3)=(/-ac,-ab,-aa,zero,aa,ab,ac/)
  end do
  end if
  if(nt==1) then; ll=lmf; is=1; ie=2*(ll+1)
-    allocate(ipvt(ie),temp(ie),ax(ie,ie),bx(ie,ie),rx(ie,ie),sx(ie,ie)); ax(:,:)=0; bx(:,:)=0
-    ax(is,is:is+2)=albef(0:2,0,nq); ax(is+1,is:is+3)=albef(-1:2,1,nq); ax(is+2,is:is+4)=albef(-2:2,2,nq)
- if(nq==0) then
-    ra2=sum(fbc(:)); bx(is+2,is:is+5)=(/fbc(0),fbc(1),-ra2,fbc(2),fbc(3),fbc(4)/)
- else
-    bx(is,is:is+3)=(/-2*(fam(0)+fbm(0)+fcm(0)),fam(0),fbm(0),fcm(0)/)
-    bx(is+1,is:is+4)=(/fam(1),-2*(fam(1)+fbm(1)+fcm(1)),fam(1),fbm(1),fcm(1)/)
-    bx(is+2,is:is+5)=(/fbm(2),fam(2),-2*(fam(2)+fbm(2)+fcm(2)),fam(2),fbm(2),fcm(2)/)
-    res=fex(1)+fex(2)+fex(3)
-    bx(is,is)=bx(is,is)+fam(0)*(res+1)+fbm(0)*(2*res+1)+fcm(0)*(3*res+1)
-    bx(is+1,is)=bx(is+1,is)+fbm(1)*(res+1)+fcm(1)*(2*res+1)
-    bx(is+2,is)=bx(is+2,is)+fcm(2)*(res+1)
- do ip=1,3; ii=is+ip*mfbi
-    bx(is,ii)=bx(is,ii)-fex(ip)*(fam(0)+2*fbm(0)+3*fcm(0))
-    bx(is+1,ii)=bx(is+1,ii)-fex(ip)*(fbm(1)+2*fcm(1))
-    bx(is+2,ii)=bx(is+2,ii)-fex(ip)*fcm(2)
- end do
- end if
+    allocate(ax(ie,ie),bx(ie,ie),rx(ie,ie),sx(ie,ie)); ax(:,:)=0; bx(:,:)=0
+    call fcint(fltk,half,alphz,betz,za,zb,zc); zv(:)=(/zb+5*zc,za-10*zc,za-5*zc,zb+zc,zc/)
+
+    fctr=1/(1+5*alphz**3+alphz**2*(8+22*betz)+betz*(5+4*betz+60*betz**2)+5*alphz*(1+betz*(3+10*betz)))
+    ra0=(alphz*(1+alphz)*(1+4*alphz)+2*alphz*(7+3*alphz)*betz+24*(1-alphz)*betz**2-80*betz**3)*fctr
+    ra1=(alphz**3+betz+14*alphz**2*betz+60*betz**3+alphz*betz*(3+46*betz))*fctr
+    ax(is,is:is+2)=(/one,ra0,ra1/)
+
+    fctr=1/(1+alphz**2*(9-5*betz)+alphz*(5+(35-29*betz)*betz)+betz*(5+6*(9-10*betz)*betz))
+    ra0=(9*alphz**3+10*betz**2*(8*betz-1)+5*alphz**2*(1+8*betz)+alphz*(1+betz*(4+81*betz)))*fctr
+    ra1=(alphz*(1+alphz*(5+9*alphz))+alphz*(5+36*alphz)*betz+(55*alphz-1)*betz**2+10*betz**3)*fctr
+    ra2=betz*(1+alphz*(5+9*alphz)+5*betz+35*alphz*betz+50*betz**2)*fctr
+    ax(is+1,is:is+3)=(/ra0,one,ra1,ra2/)
+
+    ax(is+2,is:is+4)=(/betz,alphz,one,alphz,betz/)
+    bx(is+2,is:is+5)=(/zv(0),zv(1),-sum(zv(:)),zv(2),zv(3),zv(4)/)
  do i=is+3,ie-3
-    ax(i,i-2:i+2)=(/betf,alphf,one,alphf,betf/)
-    bx(i,i-3:i+3)=(/fc,fb,fa,-2*(fa+fb+fc),fa,fb,fc/)
+    ax(i,i-2:i+2)=(/betz,alphz,one,alphz,betz/); bx(i,i-3:i+3)=(/zc,zb,za,-2*(za+zb+zc),za,zb,zc/)
  end do
  end if
     ax(ie-2,ie:is:-1)=ax(is+2,:); bx(ie-2,ie:is:-1)=lp*bx(is+2,:)
     ax(ie-1,ie:is:-1)=ax(is+1,:); bx(ie-1,ie:is:-1)=lp*bx(is+1,:)
     ax(ie,ie:is:-1)=ax(is,:); bx(ie,ie:is:-1)=lp*bx(is,:)
+
+    call mtrxi(ax(:,:),sx(:,:),is,ie)
+
+    rx(:,:)=ax(:,:)
+    i=ie/2-1; rx(i,i+2)=0; rx(i+1,i+2)=0; rx(i+1,i+3)=0
+    i=ie/2+2; rx(i,i-2)=0; rx(i-1,i-2)=0; rx(i-1,i-3)=0
+    ax(:,:)=matmul(rx(:,:),matmul(sx(:,:),bx(:,:)))
+    i=ie/2+1; pbco(ll:0:-1,0,nt)=ax(i,is:is+ll); pbci(0:ll,0,nt)=ax(i,is+ll+1:ie)
+    i=ie/2+2; pbco(ll:0:-1,1,nt)=ax(i,is:is+ll); pbci(0:ll,1,nt)=ax(i,is+ll+1:ie)
+    deallocate(ax,bx,rx,sx)
+ end do
+
+ end subroutine sbcco
+
+!===== SUBROUTINE FOR MATRIX INVERSION
+
+ subroutine mtrxi(ax,sx,is,ie)
+
+ integer,intent(in) :: is,ie
+ real(nr),dimension(is:ie,is:ie),intent(in) :: ax
+ real(nr),dimension(is:ie,is:ie),intent(inout) :: sx
+
+ integer,dimension(1) :: imax
+ integer,dimension(is:ie) :: ipvt
+ real(nr),dimension(is:ie,is:ie) :: rx
+ real(nr),dimension(is:ie) :: temp
 
     rx(:,:)=ax(:,:); ipvt(:)=(/(i,i=is,ie)/)
  do i=is,ie
@@ -190,16 +183,9 @@
  end do
     rx(:,i)=-ra0*temp(:); rx(i,i)=ra0
  end do
-    sx(:,ipvt(:))=rx(:,:); rx(:,:)=ax(:,:)
-    i=ie/2-1; rx(i,i+2)=0; rx(i+1,i+2)=0; rx(i+1,i+3)=0
-    i=ie/2+2; rx(i,i-2)=0; rx(i-1,i-2)=0; rx(i-1,i-3)=0
-    ax(:,:)=matmul(rx(:,:),matmul(sx(:,:),bx(:,:)))
-    i=ie/2+1; pbco(ll:0:-1,0,nt)=ax(i,is:is+ll); pbci(0:ll,0,nt)=ax(i,is+ll+1:ie)
-    i=ie/2+2; pbco(ll:0:-1,1,nt)=ax(i,is:is+ll); pbci(0:ll,1,nt)=ax(i,is+ll+1:ie)
-    deallocate(ipvt,temp,ax,bx,rx,sx)
- end do
+    sx(:,ipvt(:))=rx(:,:)
 
- end subroutine sbcco
+ end subroutine mtrxi
 
 !===== SUBROUTINE FOR MOVING FRAME VELOCITIES
 
