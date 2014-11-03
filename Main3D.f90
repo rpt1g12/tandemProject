@@ -40,11 +40,11 @@
     read(9,*) cinput,wtemp
     read(9,*) cinput,cfl
     read(9,*) cinput,tmax,timf,tsam
-    read(9,*) cinput,fltk,fltkbco,fltkbcm
+    read(9,*) cinput,fltk
     read(9,*) cinput,dto
     close(9)
 
-    cinput=cinput; fltk=pi*fltk; fltkbco=pi*fltkbco; fltkbcm=pi*fltkbcm
+    cinput=cinput; fltk=pi*fltk
     rhooo=1; poo=1/gam; aoo=sqrt(gam*poo/rhooo); amachoo=sqrt(amach1**2+amach2**2+amach3**2)
     srefoo=111.0_nr/tempoo; srefp1dre=(srefoo+1)/reoo; sqrtrema=sqrt(reoo*amachoo); sqrtremai=1/sqrtrema
     uoo(1)=amach1*aoo; uoo(2)=amach2*aoo; uoo(3)=amach3*aoo
@@ -179,30 +179,39 @@
 
 !===== EXTRA COEFFICIENTS FOR DOMAIN BOUNDARIES
 
-    albed(-2:2,0,-1)=(/zero,zero,one,alpha01,beta02/)
-    albed(-2:2,1,-1)=(/zero,alpha10,one,alpha12,beta13/)
-    albed(-2:2,2,-1)=(/beta20,alpha21,one,alpha23,beta24/)
-
-    albed(:,:,0)=albed(:,:,-1)
-    abc(:,0)=(/a01,a02,a03,a04,a05,a06/)
-    abc(:,1)=(/a10,a12,a13,a14,a15,a16/)
-    abc(:,2)=(/a20,a21,a23,a24,a25,a26/)
+    albed(-2:2,0,0)=(/zero,zero,one,alpha01,beta02/)
+    albed(-2:2,1,0)=(/zero,alpha10,one,alpha12,beta13/)
+    albed(-2:2,2,0)=(/beta20,alpha21,one,alpha23,beta24/)
 
     albed(-2:2,0,1)=(/zero,zero,one,alpha,beta/)
     albed(-2:2,1,1)=(/zero,alpha,one,alpha,beta/)
     albed(-2:2,2,1)=(/beta,alpha,one,alpha,beta/)
 
-    call fcbcm(fltk,fltkbcm,albef(:,:,-1),fam(:),fbm(:),fcm(:))
-    call fcbco(fltk,fltkbco,albef(:,:,0),fbc(:))
+    call fcbcm(fltk,albef(:,:,0),fam(:),fbm(:),fcm(:))
     call fcint(fltk,half,alphf,betf,fa,fb,fc)
     albef(-2:2,0,1)=(/zero,zero,one,alphf,betf/)
     albef(-2:2,1,1)=(/zero,alphf,one,alphf,betf/)
     albef(-2:2,2,1)=(/betf,alphf,one,alphf,betf/)
 
-    pbco(:,:,:)=0; pbci(:,:,:)=0; call sbcco(0,-1)
+    pbco(:,:,:)=0; pbci(:,:,:)=0; call sbcco
  do nt=0,1; do j=0,1; ii=lmd+nt*(lmf-lmd)
     pbcot(j,nt)=sum(pbco(0:ii,j,nt))
  end do; end do
+
+!===== EXTRA COEFFICIENTS FOR GCBC/GCIC
+
+    cbca(:,:)=0; cbca(1,1:2)=albed(1:2,0,0); cbca(2,1:3)=albed(0:2,1,0); cbca(3,1:3)=albed(-1:1,2,0)
+ if(mbci>=4) then
+    cbca(3,4)=albed(2,2,0)
+ do i=4,mbci
+    cbca(i,i-3:i)=(/beta,alpha,one,alpha/); if(i<mbci) then; cbca(i,i+1)=beta; end if
+ end do
+ end if
+    rbci(:)=0; rbci(1:3)=(/one,albed(-1,1,0),albed(-2,2,0)/)
+    call mtrxi(cbca,cbcs,1,mbci); sbci(:)=-matmul(cbcs(:,:),rbci(:))
+ do i=1,mbci
+    sbci(i)=sbci(i)*(1-real(i,nr)/(mbci+1))
+ end do
 
 !===== PENTADIAGONAL MATRICES FOR DIFFERENCING & FILETERING
 
@@ -212,7 +221,7 @@
  end select
  do ip=0,1; np=nbc(ip,nn)
  select case(np)
- case(10,20,25,30); ndf(ip,0,nn)=0; ndf(ip,1,nn)=-1
+ case(10,20,25,30); ndf(ip,0,nn)=0; ndf(ip,1,nn)=0
  case(35,40,45); ndf(ip,0,nn)=1; ndf(ip,1,nn)=1
  end select
  end do
@@ -303,12 +312,9 @@
  do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
  do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
  select case(nn)
- case(1); rv(:)=yaco(l)*xim(l,:)
-    cmm1(jk,ip)=sqrt(rv(1)**2+rv(2)**2+rv(3)**2); fctr=1/cmm1(jk,ip); cm1(jk,:,ip)=fctr*rv(:)
- case(2); rv(:)=yaco(l)*etm(l,:)
-    cmm2(jk,ip)=sqrt(rv(1)**2+rv(2)**2+rv(3)**2); fctr=1/cmm2(jk,ip); cm2(jk,:,ip)=fctr*rv(:)
- case(3); rv(:)=yaco(l)*zem(l,:)
-    cmm3(jk,ip)=sqrt(rv(1)**2+rv(2)**2+rv(3)**2); fctr=1/cmm3(jk,ip); cm3(jk,:,ip)=fctr*rv(:)
+ case(1); rv(:)=yaco(l)*xim(l,:); fctr=1/sqrt(rv(1)**2+rv(2)**2+rv(3)**2); cm1(jk,:,ip)=fctr*rv(:)
+ case(2); rv(:)=yaco(l)*etm(l,:); fctr=1/sqrt(rv(1)**2+rv(2)**2+rv(3)**2); cm2(jk,:,ip)=fctr*rv(:)
+ case(3); rv(:)=yaco(l)*zem(l,:); fctr=1/sqrt(rv(1)**2+rv(2)**2+rv(3)**2); cm3(jk,:,ip)=fctr*rv(:)
  end select
  end do
  end do
@@ -556,28 +562,31 @@
 
 !----- IMPLEMENTATION OF SPONGE CONDITION
 
-    call spongego
+    call spongego ! Make sure that "ss(l,1)=0" is specified if sponge is NOT used.
 
-!----- IMPLEMENTATION OF GCBC & GCIC
+!----- PREPARATION FOR GCBC & GCIC
 
-    rr(:,1)=0
- do nn=1,3
+ do nn=1,3; nz=min(nn-1,1)
  select case(nn)
- case(1); drva=>drva1; cm=>cm1; cmm=>cmm1
- case(2); drva=>drva2; cm=>cm2; cmm=>cmm2
- case(3); drva=>drva3; cm=>cm3; cmm=>cmm3
+ case(1); drva=>drva1; cm=>cm1; case(2); drva=>drva2; cm=>cm2; case(3); drva=>drva3; cm=>cm3
  end select
- do ip=0,1; np=nbc(ip,nn); i=ip*ijk(1,nn)
+ do ip=0,1; np=nbc(ip,nn); i=ip*ijk(1,nn); iq=1-2*ip
  if((np-10)*(np-20)*(np-25)*(np-30)==0) then
  do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
  do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
-    call eleme(l,cm(jk,:,ip)); call xtq2r(cm(jk,:,ip))
-    drva(jk,:,ip)=matmul(xt(:,:),yaco(l)*de(l,:)); rr(l,1)=rr(l,1)+cmm(jk,ip)
+    call eleme(l,cm(jk,:,ip)); call xtq2r(cm(jk,:,ip)); drva(jk,:,ip)=matmul(xt(:,:),yaco(l)*de(l,:))
+    rr(l,1)=nz*rr(l,1)+1
+ do ii=1,mbci; ll=indx3(i+iq*ii,j,k,nn)
+    rr(ll,1)=nz*rr(ll,1)+1
+ end do
  end do
  end do
  end if
  end do
  end do
+
+!----- INTERNODE COMMNICATION FOR GCIC
+
     ir=0; itag=30
  do nn=1,3
  select case(nn)
@@ -593,31 +602,34 @@
  if(ir/=0) then
     call MPI_WAITALL(ir,ireq,ista,ierr)
  end if
+
+!----- IMPLEMENTATION OF GCBC & GCIC
+
  do nn=1,3
  select case(nn)
- case(1); drva=>drva1; drvb=>drvb1; cm=>cm1; cmm=>cmm1
- case(2); drva=>drva2; drvb=>drvb2; cm=>cm2; cmm=>cmm2
- case(3); drva=>drva3; drvb=>drvb3; cm=>cm3; cmm=>cmm3
+ case(1); drva=>drva1; drvb=>drvb1; cm=>cm1
+ case(2); drva=>drva2; drvb=>drvb2; cm=>cm2
+ case(3); drva=>drva3; drvb=>drvb3; cm=>cm3
  end select
- do ip=0,1; np=nbc(ip,nn); i=ip*ijk(1,nn); lp=1-2*ip
+ do ip=0,1; np=nbc(ip,nn); i=ip*ijk(1,nn); iq=1-2*ip
  if((np-10)*(np-20)*(np-25)*(np-30)==0) then
  do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
  do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
     call eleme(l,cm(jk,:,ip)); cha(:)=drva(jk,:,ip); dha(:)=drvb(jk,:,ip)
  select case(np)
  case(10)
- if(lp*(vn+vs+ao)>0) then; cha(4)=-cha(5); end if
- if(lp*(vn+vs-ao)>0) then; cha(5)=-cha(4); end if
+ if(iq*(vn+vs+ao)>0) then; cha(4)=-cha(5)+ss(l,1)*(p(l)-poo); end if
+ if(iq*(vn+vs-ao)>0) then; cha(5)=-cha(4)+ss(l,1)*(p(l)-poo); end if
  case(20,25)
-    cha(4+ip)=cha(5-ip)+lp*aoi*qa(l,1)*(2*sum(cm(jk,:,ip)*dudtmf(:))+100*(vn+vs))
+    cha(4+ip)=cha(5-ip)+iq*aoi*qa(l,1)*(2*sum(cm(jk,:,ip)*dudtmf(:))+100*(vn+vs))
  case(30)
-    fctr=min(max(half*(1+lp*aoi*(vn+vs)),zero),one)
-    cha(1:3)=(1-fctr)*cha(1:3)+fctr*dha(1:3)
- if(lp*(vn+vs+ao)>0) then; cha(4)=dha(4); end if
- if(lp*(vn+vs-ao)>0) then; cha(5)=dha(5); end if
+    cha(:)=half*(cha(:)+dha(:))
  end select
-    call xtr2q(cm(jk,:,ip)); res=cmm(jk,ip)/(yaco(l)*rr(l,1))
-    de(l,:)=de(l,:)+res*matmul(xt(:,:),(cha(:)-drva(jk,:,ip)))
+    call xtr2q(cm(jk,:,ip)); res=1/yaco(l); dha(:)=res*matmul(xt(:,:),(cha(:)-drva(jk,:,ip)))
+    res=1/rr(l,1); de(l,:)=de(l,:)+res*dha(:)
+ do ii=1,mbci; ll=indx3(i+iq*ii,j,k,nn)
+    res=sbci(ii)/rr(ll,1); de(ll,:)=de(ll,:)+res*dha(:)
+ end do
  end do
  end do
  end if
@@ -635,16 +647,6 @@
     qa(:,3)=qo(:,3)-rr(:,1)*de(:,3)
     qa(:,4)=qo(:,4)-rr(:,1)*de(:,4)
     qa(:,5)=qo(:,5)-rr(:,1)*de(:,5)
-
-!----- FILTERING
-
- if(mod(n,nfskp+1)==0.and.nk==nkrk) then
- do m=1,5
-    rr(:,1)=qa(:,m)
-    call mpigo(ntflt,nrone,n45no,m); call filte(1); call filte(2); call filte(3)
-    qa(:,m)=rr(:,1)
- end do
- end if
 
 !----- WALL TEMPERATURE & VELOCITY CONDITION
 
@@ -697,6 +699,16 @@
  end do
  end do
 
+!----- FILTERING
+
+ if(mod(n,nfskp+1)==0.and.nk==nkrk) then
+ do m=1,5
+    rr(:,1)=qa(:,m)
+    call mpigo(ntflt,nrone,n45no,m); call filte(1,1); call filte(2,1); call filte(3,1)
+    qa(:,m)=rr(:,1)
+ end do
+ end if
+
 !----- UPDATING PRESSURE
 
     p(:)=gamm1*(qa(:,5)-half*(qa(:,2)*qa(:,2)+qa(:,3)*qa(:,3)+qa(:,4)*qa(:,4))/qa(:,1))
@@ -744,7 +756,7 @@
  case(4); rr(:,1)=p(:)
  case(5); rr(:,1)=gam*p(:)-1
  case(6)
-    ss(:,1)=one/qa(:,1); de(:,1:3)=zero
+    ss(:,1)=1/qa(:,1); de(:,1:3)=0
 
     rr(:,1)=ss(:,1)*qa(:,2)
     m=1; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
@@ -933,6 +945,20 @@ nrec=nrec+4
  if(myid==0) then
     write(*,*) "Finished."
  end if
+
+ if(myid==mo(0)+npc(0,1)*npc(0,2)-1) then
+    rr(:,1)=0; rr(:,2)=0
+ do k=0,lze; do j=0,let; do i=1,lxi-1; l=indx3(i,j,k,1)
+    rv(1)=varr(indx3(i-1,j,k,1)); rv(2)=varr(l); rv(3)=varr(indx3(i+1,j,k,1))
+    rr(l,1)=abs(rv(1)-2*rv(2)+rv(3))/sqrt(rv(1)**2+rv(2)**2+rv(3)**2)
+ end do; end do; end do
+ do k=0,lze; do j=1,let-1; do i=0,lxi; l=indx3(i,j,k,1)
+    rv(1)=varr(indx3(i,j-1,k,1)); rv(2)=varr(l); rv(3)=varr(indx3(i,j+1,k,1))
+    rr(l,2)=abs(rv(1)-2*rv(2)+rv(3))/sqrt(rv(1)**2+rv(2)**2+rv(3)**2)
+ end do; end do; end do
+    write(*,*) max(maxval(rr(:,1)),maxval(rr(:,2)))
+ end if
+
     call MPI_FINALIZE(ierr)
 
  end program main3d
