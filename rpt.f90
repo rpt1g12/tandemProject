@@ -98,7 +98,6 @@ implicit none
       CALL MPI_RECV(tsumA,1,MPI_REAL8,MPI_ANY_SOURCE,10,MPI_COMM_WORLD,ista,ierr)
       sumA=sumA+tsumA
       end do
-      write(*,*) 'block',mb,'A =',sumA
    else
       CALL MPI_SEND(sumA,1,MPI_REAL8,mp,10,MPI_COMM_WORLD,ierr)
    end if
