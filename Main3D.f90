@@ -48,7 +48,7 @@
     rhooo=1; poo=1/gam; aoo=sqrt(gam*poo/rhooo); amachoo=sqrt(amach1**2+amach2**2+amach3**2)
     srefoo=111.0_nr/tempoo; srefp1dre=(srefoo+1)/reoo; sqrtrema=sqrt(reoo*amachoo); sqrtremai=1/sqrtrema
     uoo(1)=amach1*aoo; uoo(2)=amach2*aoo; uoo(3)=amach3*aoo
-    ! rpt-Initialising the record count
+    ! rpt-Initialising the record count not to be treated
     nrec=0
 
     allocate(times(0:ndata))
@@ -819,6 +819,7 @@
  end do
 ! rpt-tag for exiting while loop
 100 continue
+! rpt-add velocities to record
 nrec=nrec+4
 
     close(1)
@@ -850,7 +851,9 @@ nrec=nrec+4
     write(*,'("Simulation time was ",f6.2," hours")') wtime/(3600_nr*npro)
     write(*,*) "Writing Output files..."
  end if
-    !call finalout
+    if (ndatp==1) then
+    call finalout
+    end if
  if(myid==mo(mb)) then
     open(9,file=coutput); close(9,status='delete')
  end if

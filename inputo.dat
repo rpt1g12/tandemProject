@@ -1,15 +1,15 @@
 mbk		9
 nts		0
 nscrn-nsgnl	1		10
-ndata-ndatp	1 		0
+ndata-ndatp	3 		1
 nkrk		4
-nviscous	0
+nviscous	1
 nsmf		0
 nfskp		0
-nrestart	0
+nrestart	1
 nvarout		4
-reoo-tempoo	40000.0e0	273.0e0
-amach1-2-3	0.5e0		0.0e0		0.0e0
+reoo-tempoo	20000.0e0	273.0e0
+amach1-2-3	0.25e0		0.0e0		0.0e0
 wtemp		1.0e0
 cfl		0.95e0
 tmax-timf-tsam	0.00100e0	5.0e0		0.0e0

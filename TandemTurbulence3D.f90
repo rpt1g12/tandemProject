@@ -474,8 +474,8 @@
     delt(n)=fctr*(times(n+1)-times(n-1))
  end do
     rr(:,1)=0
- do n=1,ndata+1
-    read(0,rec=n+nrec) varr(:)
+ do n=0,ndata
+    read(0,rec=n+nrec+1) varr(:)
     rr(:,1)=rr(:,1)+delt(n)*varr(:)
  end do
  !   ss(:,1)=0
