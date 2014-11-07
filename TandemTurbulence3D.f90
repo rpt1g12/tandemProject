@@ -474,21 +474,22 @@
     delt(n)=fctr*(times(n+1)-times(n-1))
  end do
     rr(:,1)=0
- do n=0,ndata
-    read(0,rec=n+4) varr(:)
+ do n=1,ndata+1
+    read(0,rec=n+nrec) varr(:)
     rr(:,1)=rr(:,1)+delt(n)*varr(:)
  end do
-    ss(:,1)=0
- do n=0,ndata
-    read(0,rec=n+4) varr(:)
-!    varr(:)=varr(:)-rr(:,1)
-    write(0,rec=n+4) varr(:)
-    ss(:,1)=ss(:,1)+delt(n)*varr(:)**2
- end do
- if(ndatp==1) then
-    varr=sqrt(ss(:,1))
-    write(0,rec=ndata+5) varr(:)
- end if
+ !   ss(:,1)=0
+ !do n=0,ndata
+ !   read(0,rec=n+nrec) varr(:)
+ !   varr(:)=varr(:)-rr(:,1)
+ !   write(0,rec=n+nrec) varr(:)
+ !   ss(:,1)=ss(:,1)+delt(n)*varr(:)**2
+ !end do
+ !if(ndatp==1) then
+    !varr=sqrt(ss(:,1))
+    varr=rr(:,1)
+    write(0,rec=ndata+nrec+2) varr(:)
+ !end if
 
  end subroutine finalout
 
