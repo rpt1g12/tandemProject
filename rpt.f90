@@ -157,4 +157,126 @@ implicit none
    
 end subroutine clComp
 
+subroutine post
+
+use problemcase, only: finalout,ngridv
+   
+!===== POST-PROCESSING & GENERATING TECPLOT DATA FILE
+
+ if(dt==0.or.nout==2) then
+    ! rpt-File is not closed so it can still be saved up to the last record
+    !close(0,status='delete')
+    if (myid==0) then
+    write(*,*) "Overflow."
+    end if
+ ndata=ndati
+ end if
+ !else
+ if(myid==0) then
+    write(*,'("Simulation time was ",f6.2," hours")') wtime/(3600_nr*npro)
+    write(*,*) "Writing Output files..."
+ end if
+    if (ndatp==1) then
+    call finalout
+    end if
+ if(myid==mo(mb)) then
+    open(9,file=coutput); close(9,status='delete')
+ end if
+    call MPI_BARRIER(icom,ierr)
+    open(9,file=coutput,access='stream',shared)
+    lh=0
+ if(myid==mo(mb)) then
+    write(9,pos=4*lh+1) '#!TDV112'; lh=lh+2
+    write(9,pos=4*lh+1) 1; lh=lh+1 ! Header Section
+    write(9,pos=4*lh+1) 0; lh=lh+1 ! File Type
+    cinput='title'; call strio(9,lh,cinput) ! File Title
+    write(9,pos=4*lh+1) int4(nwrec); lh=lh+1 ! Number of Variables
+    cinput='x'; call strio(9,lh,cinput)
+    cinput='y'; call strio(9,lh,cinput)
+    cinput='z'; call strio(9,lh,cinput)
+    if (ngridv==1) then
+       cinput='xix'; call strio(9,lh,cinput)
+       cinput='xiy'; call strio(9,lh,cinput)
+       cinput='xiz'; call strio(9,lh,cinput)
+       cinput='etax'; call strio(9,lh,cinput)
+       cinput='etay'; call strio(9,lh,cinput)
+       cinput='etaz'; call strio(9,lh,cinput)
+       cinput='zetax'; call strio(9,lh,cinput)
+       cinput='zetay'; call strio(9,lh,cinput)
+       cinput='zetaz'; call strio(9,lh,cinput)
+    end if
+ do n=0,ndata
+    no(2)=n/100; no(1)=mod(n,100)/10; no(0)=mod(n,10); cno=achar(no+48)
+    cinput='r'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
+    cinput='u'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
+    cinput='v'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
+    cinput='w'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
+    cinput='p'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
+ end do
+ if (ndatp==1) then
+    cinput='r'; call strio(9,lh,cinput)
+    cinput='u'; call strio(9,lh,cinput)
+    cinput='v'; call strio(9,lh,cinput)
+    cinput='w'; call strio(9,lh,cinput)
+    cinput='p'; call strio(9,lh,cinput)
+ end if
+    write(9,pos=4*lh+1) 299.0; lh=lh+1 ! Zone Marker
+    cinput=czone; call strio(9,lh,cinput)
+    write(9,pos=4*lh+1) -1; lh=lh+1 ! Parent Zone
+    write(9,pos=4*lh+1) -2; lh=lh+1 ! Strand ID
+    write(9,pos=4*lh+1) dble(0.0); lh=lh+2 ! Solution Time (Double)
+    write(9,pos=4*lh+1) -1; lh=lh+1 ! (Not used. Set to -1.)
+    write(9,pos=4*lh+1) 0; lh=lh+1 ! Zone Type
+    write(9,pos=4*lh+1) 0; lh=lh+1 ! Specify Var Location
+    write(9,pos=4*lh+1) 0; lh=lh+1 ! Raw Local 1-to-1 Face Neighbours Suppliled
+    write(9,pos=4*lh+1) 0; lh=lh+1 ! Number of Miscellaneous Face Neighbour Connections
+    write(9,pos=4*lh+1) int4(lximb(mb)+1); lh=lh+1 ! IMax
+    write(9,pos=4*lh+1) int4(letmb(mb)+1); lh=lh+1 ! JMax
+    write(9,pos=4*lh+1) int4(lzemb(mb)+1); lh=lh+1 ! KMax
+    write(9,pos=4*lh+1) 0; lh=lh+1 ! No Auxillary Data Pairs
+    write(9,pos=4*lh+1) 357.0; lh=lh+1 ! End of Header Marker
+    write(9,pos=4*lh+1) 299.0; lh=lh+1 ! Zone Marker
+ do n=1,nwrec
+    write(9,pos=4*lh+1) 1; lh=lh+1 ! 1 = Float / 2 = Double
+ end do
+    write(9,pos=4*lh+1) 0; lh=lh+1 ! No Passive Variables
+    write(9,pos=4*lh+1) 0; lh=lh+1 ! No Variable Sharing
+    write(9,pos=4*lh+1) -1; lh=lh+1 ! Zero Based Zone Number to Share
+ do n=1,nwrec
+    lh=lh+2 ! Minimum Value (Double) of Variables (to be filled)
+    lh=lh+2 ! Maximum Value (Double) of Variables (to be filled)
+ end do
+    lhmb(mb)=lh
+ end if
+
+ ! rpt- COMPUTE MAX AND MIN
+ do mm=0,mbk
+    call MPI_BCAST(lhmb(mm),1,MPI_INTEGER,mo(mm),icom,ierr)
+ end do
+    ns=1; ne=nwrec; allocate(varmin(ns:ne),varmax(ns:ne))
+    lp=lpos(myid)+lhmb(mb)
+ do n=ns,ne; lq=(n-1)*ltomb
+    read(0,rec=n) varr(:)
+ do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+    write(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
+ end do; end do
+    varmin(n)=minval(varr(:)); varmax(n)=maxval(varr(:))
+ end do
+    close(0,status='delete')
+ do n=ns,ne
+    res=varmin(n); call MPI_ALLREDUCE(res,fctr,1,MPI_REAL8,MPI_MIN,icom,ierr); varmin(n)=fctr
+    res=varmax(n); call MPI_ALLREDUCE(res,fctr,1,MPI_REAL8,MPI_MAX,icom,ierr); varmax(n)=fctr
+ end do
+ if(myid==mo(mb)) then
+    l=0; lq=4*(nwrec)
+ do n=ns,ne
+    write(9,pos=4*(lp-lq+l)+1) dble(varmin(n)); l=l+2 ! 8-Bytes "Stream"
+    write(9,pos=4*(lp-lq+l)+1) dble(varmax(n)); l=l+2 ! 8-Bytes "Stream"
+ end do
+ end if
+    close(9)
+ !end if
+
+end subroutine post
+
 end module rpt

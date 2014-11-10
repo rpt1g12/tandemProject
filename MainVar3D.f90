@@ -148,8 +148,7 @@
 
 !===== INTEGER VARIABLES FOR MPI COMMANDS by RPT
 
- integer :: nrec
- integer :: stnrec,etnrec
+ integer :: nrec,narec,nwrec
 !=====
  end module mainvar3d
 
