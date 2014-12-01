@@ -657,7 +657,7 @@
  if((np-20)*(np-25)==0) then; ns=(25-np)/5; ne=1-ns
  do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
  do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
-    qa(l,2:4)=ns*qa(l,2:4)+ne*umf(:)*qa(l,1)
+    qa(l,2:4)=ns*qa(l,2:4)-ne*umf(:)*qa(l,1)
     qa(l,5)=ra0*qa(l,1)+half*(qa(l,2)*qa(l,2)+qa(l,3)*qa(l,3)+qa(l,4)*qa(l,4))/qa(l,1)
  end do
  end do
