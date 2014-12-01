@@ -90,7 +90,7 @@ end select
     open(2,file='aerofoil.dat')
  do n=1,2; do i=0,lnaca
     read(2,*) xnaca(i,n,m),ynaca(i,n,m)   ! read coordinates from file
-    !xnaca(i,n,m)=tmp*xnaca(i,n,m); ynaca(i,n,m)=tmp*ynaca(i,n,m)
+    xnaca(i,n,m)=tmp*xnaca(i,n,m); ynaca(i,n,m)=tmp*ynaca(i,n,m)
  end do; end do
     close(2)
  end if
@@ -114,11 +114,11 @@ end select
        xo=xp(lxis+ll,n); sho=sum(xp(lxis+ll-4:lxis+ll,n)*(/3,-16,36,-48,25/))/12
     end if
    
-    am=2; xjct=half*(xo+1.0e0); err=1
+    am=2; xjct=half*(xo+tmp); err=1
     
     do while(abs(err)>sml)
        ip=lxis+ll; im=(lxib-ll)/2; call ogridf(xp(:,n),pxi,xo,xjct,sho,am,0,lxit,im/2,im,ip)
-       ip=ip+im; im=lxib-ll-im; call ogridf(xp(:,n),pxi,xjct,1.0_nr,pxi(ip),am,0,lxit,im/2,im,ip)
+       ip=ip+im; im=lxib-ll-im; call ogridf(xp(:,n),pxi,xjct,tmp,pxi(ip),am,0,lxit,im/2,im,ip)
        err=pxi(ip+im)/she1-1; xjct=xjct+half*err*she1
     end do
     do i=lxis+ll+1,lxie-1
@@ -128,8 +128,8 @@ end select
 
     do i = lxis, lxie
     oxp=xp(i,n);oyp=yp(i,n)
-    xp(i,n) = tmp*(oxp*cos(alph)+oyp*sin(alph))+tmpa+tmpc*cos(alph);
-    yp(i,n) = tmp*(-oxp*sin(alph)+oyp*cos(alph))-tmpc*sin(alph);
+    xp(i,n) = (oxp*cos(alph)+oyp*sin(alph))+tmpa+tmpc*cos(alph);
+    yp(i,n) = (-oxp*sin(alph)+oyp*cos(alph))-tmpc*sin(alph);
     end do
     
  end do
