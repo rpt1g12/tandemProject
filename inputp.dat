@@ -1,15 +1,18 @@
 lxi0-to-4	200	150	100	150	200
-let0		200
+let0		200     20
 lze0		25
 nbody-nthick	1	1
 ngridv		1
 npbxi0-to-9	1	1	1	1	1	1	1	1	1	1
+npbxi10-to-19	1	1	1	1	1	1	1	1	1	1
 npbet0-to-9	1	1	1	1	1	1	1	1	1	1	
+npbet10-to-19	1	1	1	1	1	1	1	1	1	1	
 npbze0-to-9	1	1	1	1	1	1	1	1	1	1
-nito-nits-litr	0	1	10
+npbze10-to-19	1	1	1	1	1	1	1	1	1	1
+nito-nits-litr	1	1	10
 smgrid-domlen	0.0075e0		13e0
-ximod-etamod	0.7e0		0.2e0
-span-wlew-wlea	0.25e0		0.125e0		0.1e0
+ximod-etamod	0.8e0		0.2e0
+span-wlew-wlea	0.25e0		0.125e0		0.05e0
 gap-chord1-2	1.5e0		1.0e0		1.0e0
 delt1-2(deg)	4.0e0		4.0e0		
 szth1-th2-xt-co	2.0e0		2.0e0		4.0e0		12.0e0
@@ -24,30 +27,29 @@ tamg1-2-3	0.000e0		0.000e0		0.000e0
 tamm1-2-3	0.000e0		0.000e0		0.000e0
 cutlb		0.5e0
 
-! 20n10p
-npbxi0-to-9	12	2	3	2	6	12	2	3	2	6
-npbet0-to-9	4	4	4	4	4	4	4	4	4	4	
+! 10n16p
+npbxi0-to-9	4	3	2	3	4	4	3	2	3	4
+npbxi10-to-19	4	3	2	3	4	4	3	2	3	4
+npbet0-to-9	4	4	4	4	4	1	1	1	1	1	
+npbet10-to-19	1	1	1	1	1	4	4	4	4	4	
 npbze0-to-9	1	1	1	1	1	1	1	1	1	1
+npbze10-to-19	1	1	1	1	1	1	1	1	1	1
 
-! 1n10p
+! 6n16p
+npbxi0-to-9	4	3	2	3	4	4	3	2	3	4
+npbxi10-to-19	4	3	2	3	4	4	3	2	3	4
+npbet0-to-9	2	2	2	2	2	1	1	1	1	1	
+npbet10-to-19	1	1	1	1	1	2	2	2	2	2	
+npbze0-to-9	1	1	1	1	1	1	1	1	1	1
+npbze10-to-19	1	1	1	1	1	1	1	1	1	1
+
+! 2n10p
 npbxi0-to-9	1	1	1	1	1	1	1	1	1	1
+npbxi10-to-19	1	1	1	1	1	1	1	1	1	1
 npbet0-to-9	1	1	1	1	1	1	1	1	1	1	
+npbet10-to-19	1	1	1	1	1	1	1	1	1	1	
 npbze0-to-9	1	1	1	1	1	1	1	1	1	1
-
-! 1n16p
-npbxi0-to-9	3	1	1	1	2	3	1	1	1	2
-npbet0-to-9	1	1	1	1	1	1	1	1	1	1	
-npbze0-to-9	1	1	1	1	1	1	1	1	1	1
-
-! 2n16p
-npbxi0-to-9	3	1	1	1	2	3	1	1	1	2
-npbet0-to-9	2	2	2	2	2	2	2	2	2	2	
-npbze0-to-9	1	1	1	1	1	1	1	1	1	1
-
-! 8n16p
-npbxi0-to-9	6	2	2	2	4	6	2	2	2	4
-npbet0-to-9	4	4	4	4	4	4	4	4	4	4	
-npbze0-to-9	1	1	1	1	1	1	1	1	1	1
+npbze10-to-19	1	1	1	1	1	1	1	1	1	1
 
 ! Coarse
 lxi0-to-4	100	50	50	50	100
