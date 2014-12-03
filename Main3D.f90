@@ -69,9 +69,9 @@
 
     no(2)=mb/100; no(1)=mod(mb,100)/10; no(0)=mod(mb,10); cno=achar(no+48)
     czone='zone'//cno(2)//cno(1)//cno(0)
-    coutput='output'//cno(2)//cno(1)//cno(0)//'.plt'
+    coutput='out/output'//cno(2)//cno(1)//cno(0)//'.plt'
     cgrid='misc/grid'//cno(2)//cno(1)//cno(0)//'.dat'
-    crestart='misc/restart'//cno(2)//cno(1)//cno(0)//'.dat'
+    crestart='rsta/restart'//cno(2)//cno(1)//cno(0)//'.dat'
     no(4)=myid/10000; no(3)=mod(myid,10000)/1000; no(2)=mod(myid,1000)/100
     no(1)=mod(myid,100)/10; no(0)=mod(myid,10); cno=achar(no+48)
     cdata='misc/data'//cno(4)//cno(3)//cno(2)//cno(1)//cno(0)//'.dat'
@@ -357,16 +357,24 @@
     n=0; ndt=0; dt=0; dts=0; dte=0; timo=0
     call initialo ! Make sure that pressure is calculated.
  else
-    open(9,file=crestart,access='stream',shared)
-    read(9,pos=1) n; read(9,pos=2) ndt; read(9,pos=3) dt
-    read(9,pos=4) dts; read(9,pos=5) dte; read(9,pos=6) timo
-    lp=lpos(myid)+6
+    open(3,file=crestart,access='stream',shared)
+    lh=0
+    read(3,pos=4*lh+1) n;    lh=lh+2
+    read(3,pos=4*lh+1) ndt;  lh=lh+2
+    read(3,pos=4*lh+1) dt;   lh=lh+2
+    read(3,pos=4*lh+1) dts;  lh=lh+2
+    read(3,pos=4*lh+1) dte;  lh=lh+2
+    read(3,pos=4*lh+1) timo; lh=lh+2
+     if (myid==0) then
+        write(*,*) n,ndt,dt,dts,dte,timo
+     end if
+    lp=lpos(myid)+lh
  do m=1,5; lq=(m-1)*ltomb
  do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-    read(9,pos=nr*(lp+lq+lio(j,k))+1) qa(l:l+lxi,m)
+    read(3,pos=nr*(lp+lq+lio(j,k))+1) qa(l:l+lxi,m)
  end do; end do
  end do
-    close(9)
+    close(3)
     p(:)=gamm1*(qa(:,5)-half*(qa(:,2)**2+qa(:,3)**2+qa(:,4)**2)/qa(:,1))
  end if
 
@@ -603,7 +611,7 @@
  end do
  if(ir/=0) then
     call MPI_WAITALL(ir,ireq,ista,ierr)
- end if
+ end iF
 
 !----- IMPLEMENTATION OF GCBC & GCIC
 
@@ -787,25 +795,33 @@
        goto 100
     end if
 
-
     !===== GENERATING RESTART DATA FILE
     
      if(nrestart==1) then
-        if(myid==mo(mb)) then
-           open(9,file=crestart); close(9,status='delete')
-        end if
-           call MPI_BARRIER(icom,ierr)
-           open(9,file=crestart,access='stream',shared)
-        if(myid==mo(mb)) then
-           write(9,pos=1) timo
-        end if
-           lp=lpos(myid)+1
-        do m=1,5; lq=(m-1)*ltomb
-        do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-           write(9,pos=nr*(lp+lq+lio(j,k))+1) qa(l:l+lxi,m)
-        end do; end do
-        end do
-           close(9)
+     if (myid==0) then
+        write(*,*) 'Writting restart file..'
+     end if
+     if(myid==mo(mb)) then
+        open(3,file=crestart); close(3,status='delete')
+     end if
+        call MPI_BARRIER(icom,ierr)
+        open(3,file=crestart,access='stream',shared)
+     if(myid==mo(mb)) then
+     lh=0
+        write(3,pos=4*lh+1) n;    lh=lh+2
+        write(3,pos=4*lh+1) ndt;  lh=lh+2
+        write(3,pos=4*lh+1) dt;   lh=lh+2
+        write(3,pos=4*lh+1) dts;  lh=lh+2
+        write(3,pos=4*lh+1) dte;  lh=lh+2
+        write(3,pos=4*lh+1) timo; lh=lh+2
+     end if
+        lp=lpos(myid)+lh
+     do m=1,5; lq=(m-1)*ltomb
+     do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+        write(3,pos=nr*(lp+lq+lio(j,k))+1) qa(l:l+lxi,m)
+     end do; end do
+     end do
+        close(3)
      end if
   end if
 
