@@ -109,7 +109,7 @@
  integer(8) :: lp,lq,ltomb
  integer :: lxio,leto,lzeo,lxi,let,lze,lmx,lim
  integer :: i,ii,is,ie,ip,iq,j,jj,js,je,jp,jq,jk,k,kk,kp,l,lh,ll
- integer :: m,ma,mb,mh,mm,mp,mbk,n,ndt,nn,nk,ns,ne,np,nt,nz,ndati,nsigi,nout,nfile
+ integer :: m,ma,mb,mh,mm,mp,mbk,n,ndt,nn,nk,ns,ne,np,nt,nz,ndati,nsigi,nout,nfile,njct
  integer :: nts,nscrn,nsgnl,ndata,ndatp,nviscous,nkrk,nsmf,nfskp,nrestart,nvarout
 
  real(nr),dimension(0:lmp,0:1,0:1) :: pbci,pbco
@@ -134,7 +134,7 @@
 
  character(1),dimension(0:4) :: cno
  character(7) :: czone
- character(13) :: coutput
+ character(17) :: coutput
  character(16) :: cinput
  character(16) :: cgrid
  character(18) :: cdata,cturb
