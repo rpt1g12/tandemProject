@@ -37,9 +37,9 @@ implicit none
    ! Define aerofoil blocks
    select case(ele)
    case(1)
-   bblock = 1; tblock = 6
+   bblock = 6; tblock = 11
    case(2)
-   bblock = 3; tblock = 8
+   bblock = 8; tblock = 13
    end select
 
    ! Find parallel grid position

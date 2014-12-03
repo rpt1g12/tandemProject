@@ -365,9 +365,12 @@
     read(3,pos=4*lh+1) dts;  lh=lh+2
     read(3,pos=4*lh+1) dte;  lh=lh+2
     read(3,pos=4*lh+1) timo; lh=lh+2
-     if (myid==0) then
-        write(*,*) n,ndt,dt,dts,dte,timo
-     end if
+
+    tmp=(tsam-timo)/timo
+    if (abs(tmp)<0.1e0) then
+    tsam=timo
+    end if
+
     lp=lpos(myid)+lh
  do m=1,5; lq=(m-1)*ltomb
  do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
