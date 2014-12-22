@@ -75,6 +75,8 @@
  real(nr),dimension(:),allocatable :: p,yaco
  ! rpt-Area array declaration
  real(nr),dimension(:),allocatable :: dA
+ ! rpt-slice coordinates declaration
+ real(nr),dimension(:,:,:),allocatable :: tpwle
 
  real(nr),dimension(:,:),allocatable :: rr,ss
 

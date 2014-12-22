@@ -67,7 +67,8 @@ module gridgen
     shs=smgrid; she=shs
     shs1=ximod*smgrid; she1=shs1
     shs2=etamod*smgrid;
-    lbl=max(shs2*let1/(sin(pi4)),0.05*c1/(sin(pi4)))
+    tmp=shs2!(shs2+10*shs2)*half
+    lbl=max(tmp*let1/(sin(pi4)),0.08*c1/(sin(pi4)))
 
     allocate(xx(0:lxit,0:lett),yy(0:lxit,0:lett),zz(0:lxit,0:lett),zs(0:lze0))
     allocate(xp(0:lxit,0:5),yp(0:lxit,0:5))

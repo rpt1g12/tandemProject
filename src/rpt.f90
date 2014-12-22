@@ -1,8 +1,5 @@
 !**********************
 !***** RPT MODULE *****
-! Mode 0: Compute Area
-! Mode 1: Compute Force coefficient
-! Mode 2: Close file
 !**********************
 
 module  rpt
@@ -13,7 +10,192 @@ use mpi
 
 contains
 
+subroutine cpComp(ele)
+use problemcase, only: span,delt1,delt2,wlew,wlea
+implicit none
+
+   integer, intent(in) :: ele
+   logical :: flag
+   integer :: nwlew
+   integer :: bblock,tblock
+   integer :: loc
+   integer :: olxi
+   integer :: dest,omp
+   real(nr) :: wlew4,zcp,dinp
+   real(nr),dimension(0:lxi-1) :: mycp
+   real(nr),dimension(:,:),allocatable :: cp,tcp
+   character,dimension(3) :: cloc
+   character(4) :: cblock
+
+   nwlew=4*int(span/wlew)
+   wlew4=wlew*quarter
+   flag=.false.
+
+   ! Find parallel grid position
+   ip=mod(myid-mo(mb),npc(mb,1))
+   jp=mod((myid-mo(mb))/npc(mb,1),npc(mb,2))
+   kp=mod((myid-mo(mb))/(npc(mb,1)*npc(mb,2)),npc(mb,3))
+
+   ! Define aerofoil blocks
+   select case(ele)
+   case(1)
+   bblock = 6; tblock = 11
+   cblock='fore'
+   case(2)
+   bblock = 8; tblock = 13
+   cblock='aftr'
+   end select
+
+
+   if ((mb==bblock).AND.(jp==npc(mb,2)-1)) then
+   ! Find master of the block
+   mp = mo(mb) + npc(mb,1)*(npc(mb,2)-1)
+   omp = mo(tblock)
+   j=ijk(1,2);flag=.true. 
+   elseif ((mb==tblock).AND.(jp==0)) then
+   ! Find master of the block
+   mp = mo(mb)
+   omp = mo(bblock) + npc(bblock,1)*(npc(bblock,2)-1)
+   j=0;flag=.true.
+   end if
+
+   if (flag) then
+   if (myid==mp) then
+      allocate(cp(0:lximb(mb)-1,0:nwlew))
+      if (j==0) then
+      allocate(tcp(0:lximb(mb)+lximb(bblock)-1,0:nwlew))
+      end if
+   end if
+   do loc = 0, nwlew
+      zcp=loc*wlew4
+      k=int(zcp/(span/lzemb(mb)))
+      l=indx3(0,j,k,1)
+      mycp(:)=p(l:l+lxi)
+      mycp(:)=two*(mycp(:)-poo)/(amachoo**2)
+      if (myid==mp) then
+         cp(0:lxi-1,loc)=mycp(:)
+         do m = 0, npc(mb,1)-2
+         dest=myid+m+1
+         olxi=lxim(dest)
+         CALL MPI_RECV(cp(lxi+m*olxi+1,loc),olxi,MPI_DOUBLE,dest,dest,MPI_COMM_WORLD,ista,ierr)
+         end do
+      else
+         CALL MPI_SEND(mycp,lxi,MPI_DOUBLE,mp,myid,MPI_COMM_WORLD,ierr)
+      end if
+
+      if (myid==mp) then
+         if (j==0) then
+            CALL MPI_RECV(tcp(lximb(mb),loc),lximb(bblock),MPI_DOUBLE,omp,omp,MPI_COMM_WORLD,ista,ierr)
+            cloc(1)=achar((loc/100)+48)
+            cloc(2)=achar((mod(loc,100)/10)+48)
+            cloc(3)=achar(mod(loc,10)+48)
+            open(3,file='loc/'//cblock//cloc(1)//cloc(2)//cloc(3)//'.dat')
+            write(3,"('VARIABLES= x,cp')") 
+            write(3,"('ZONE T= ',a4,'loc',3a)") cblock,cloc
+            tcp(0:lximb(mb)-1,loc)=cp(:,loc)
+         do i = 0, lximb(mb)-1
+           write(3,'(f10.5,"   ",f10.5)') tpwle(i,loc,1),tcp(i,loc)
+         end do
+         do i = lximb(mb)+lximb(bblock)-1, lximb(mb), -1
+           write(3,'(f10.5,"   ",f10.5)') tpwle(i,loc,1),tcp(i,loc)
+         end do
+         close(3)
+         else
+            CALL MPI_SEND(cp(0,loc),lximb(mb),MPI_DOUBLE,omp,mp,MPI_COMM_WORLD,ierr)
+         end if
+      end if
+   end do
+   end if
+
+end subroutine cpComp
+!===============================================
+subroutine spanLoc(ele)
+use problemcase, only: span,delt1,delt2,wlew,wlea
+implicit none
+
+   integer, intent(in) :: ele
+   logical :: flag
+   integer :: nwlew
+   integer :: bblock,tblock
+   integer :: loc
+   integer :: olxi
+   integer :: dest,omp
+   real(nr) :: wlew4,zcp
+   real(nr),dimension(0:lxi-1) :: mypwle
+   real(nr),dimension(:,:,:),allocatable :: pwle
+   character,dimension(3) :: cloc
+
+   nwlew=4*int(span/wlew)
+   wlew4=wlew*quarter
+   flag=.false.
+
+   ! Find parallel grid position
+   ip=mod(myid-mo(mb),npc(mb,1))
+   jp=mod((myid-mo(mb))/npc(mb,1),npc(mb,2))
+   kp=mod((myid-mo(mb))/(npc(mb,1)*npc(mb,2)),npc(mb,3))
+
+   ! Define aerofoil blocks
+   select case(ele)
+   case(1)
+   bblock = 6; tblock = 11
+   case(2)
+   bblock = 8; tblock = 13
+   end select
+
+
+   if ((mb==bblock).AND.(jp==npc(mb,2)-1)) then
+   ! Find master of the block
+   mp = mo(mb) + npc(mb,1)*(npc(mb,2)-1)
+   omp = mo(tblock)
+   j=ijk(1,2);flag=.true. 
+   elseif ((mb==tblock).AND.(jp==0)) then
+   ! Find master of the block
+   mp = mo(mb)
+   omp = mo(bblock) + npc(bblock,1)*(npc(bblock,2)-1)
+   j=0;flag=.true.
+   end if
+
+   if (flag) then
+   if (myid==mp) then
+      allocate(pwle(0:lximb(mb)-1,0:nwlew,3))
+      if (j==0) then
+      allocate(tpwle(0:lximb(mb)+lximb(bblock)-1,0:nwlew,3))
+      end if
+   end if
+   do loc = 0, nwlew
+      zcp=loc*wlew4
+      k=int(zcp/(span/lzemb(mb)))
+      do nn=1,3
+      l=indx3(0,j,k,1)
+      mypwle(:)=ss(l:l+lxi,nn)
+      if (myid==mp) then
+         pwle(0:lxi-1,loc,nn)=mypwle(:)
+         do m = 0, npc(mb,1)-2
+         dest=myid+m+1
+         olxi=lxim(dest)
+         CALL MPI_RECV(pwle(lxi+m*olxi+1,loc,nn),olxi,MPI_DOUBLE,dest,dest,MPI_COMM_WORLD,ista,ierr)
+         end do
+      else
+         CALL MPI_SEND(mypwle,lxi,MPI_DOUBLE,mp,myid,MPI_COMM_WORLD,ierr)
+      end if
+      if (myid==mp) then
+         if (j==0) then
+            tpwle(0:lximb(mb)-1,loc,nn)=pwle(:,loc,nn)
+            CALL MPI_RECV(tpwle(lximb(mb),loc,nn),lximb(bblock),MPI_DOUBLE,omp,omp,MPI_COMM_WORLD,ista,ierr)
+         else
+            CALL MPI_SEND(pwle(0,loc,nn),lximb(mb),MPI_DOUBLE,omp,mp,MPI_COMM_WORLD,ierr)
+         end if
+      end if
+      end do
+   end do
+   end if
+
+end subroutine spanLoc
+!===============================================
 subroutine clComp(mode,ele,dir)
+! Mode 0: Compute Area
+! Mode 1: Compute Force coefficient
+! Mode 2: Close file
 
 use problemcase, only: span,delt1,delt2
 implicit none
@@ -26,7 +208,6 @@ implicit none
    real(nr) :: dinp
    integer :: ddelt1,ddelt2
    integer :: wunit
-   character :: char1,char2,char3
    character, dimension (4) :: cdelt1,cdelt2
 
    wunit=10*(dir)+(ele-1)
@@ -156,7 +337,7 @@ implicit none
 
    
 end subroutine clComp
-
+!===============================================
 subroutine post
 
 use problemcase, only: finalout,ngridv
@@ -164,21 +345,25 @@ use problemcase, only: finalout,ngridv
 !===== POST-PROCESSING & GENERATING TECPLOT DATA FILE
 
  if(dt==0.or.nout==2) then
-    ! rpt-File is not closed so it can still be saved up to the last record
-    !close(0,status='delete')
     if (myid==0) then
     write(*,*) "Overflow."
     end if
  ndata=ndati
  end if
- !else
+
  if(myid==0) then
     write(*,'("Simulation time was ",f6.2," hours")') wtime/(3600_nr*npro)
+ if (ndatp==1) then
+    write(*,*) 'Preparing Statistics and Writting Output Files...'
+ else
     write(*,*) "Writing Output files..."
  end if
-    if (ndatp==1) then
-    call finalout
-    end if
+ end if
+
+ if (ndatp==1) then
+ call finalout
+ end if
+
  if(myid==mo(mb)) then
     open(9,file=coutput); close(9,status='delete')
  end if
@@ -278,5 +463,5 @@ use problemcase, only: finalout,ngridv
  !end if
 
 end subroutine post
-
+!===============================================
 end module rpt

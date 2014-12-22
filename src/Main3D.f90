@@ -255,6 +255,8 @@
     open(9,file=cgrid); close(9,status='delete')
  end if
 
+    call spanLoc(2)
+
     rr(:,1)=ss(:,1)
     m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
     qo(:,1)=rr(:,1); qo(:,2)=rr(:,2); qo(:,3)=rr(:,3)
@@ -357,6 +359,7 @@
     n=0; ndt=0; dt=0; dts=0; dte=0; timo=0
     call initialo ! Make sure that pressure is calculated.
  else
+    CALL MPI_BARRIER(icom,ierr)
     open(3,file=crestart,access='stream',shared)
     lh=0
     read(3,pos=4*lh+1) n;    lh=lh+2
@@ -740,93 +743,92 @@
     timo=timo+dt
 
 !----- RECORDING INTERMEDIATE RESULTS
-
-
  if(nout==1.or.nout==2) then
-    times(ndati)=timo
- if(myid==0) then
-    write(*,"('===> saving output ',i3,' at time =',f12.8)") ndati,timo
+      times(ndati)=timo
+   if(myid==0) then
+      write(*,"('===> saving output ',i3,' at time =',f12.8)") ndati,timo
+   end if
+   if (nout==2) then
+      qa(:,:)=qo(:,:)   
+   end if
+
+   !==========SAVING VELOCITY AND DENSITY
+   nwrec=nwrec+1
+      varr(:)=qa(:,1); write(0,rec=nwrec) varr(:)
+   do m = 2, 4
+   nwrec=nwrec+1
+      varr(:)=((qa(:,m)/qa(:,1))+umf(m-1)); write(0,rec=nwrec) varr(:)
+   end do
+   !======================================
+
+   select case(nvarout)
+   case(0); rr(:,1)=qa(:,1)
+   case(1); rr(:,1)=qa(:,2)/qa(:,1)+umf(1)
+   case(2); rr(:,1)=qa(:,3)/qa(:,1)+umf(2)
+   case(3); rr(:,1)=qa(:,4)/qa(:,1)+umf(3)
+   case(4); rr(:,1)=p(:)
+   case(5); rr(:,1)=gam*p(:)-1
+   case(6)
+      ss(:,1)=1/qa(:,1); de(:,1:3)=0
+
+      rr(:,1)=ss(:,1)*qa(:,2)
+      m=1; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+      de(:,2)=de(:,2)+rr(:,1)*xim(:,3)+rr(:,2)*etm(:,3)+rr(:,3)*zem(:,3)
+      de(:,3)=de(:,3)-rr(:,1)*xim(:,2)-rr(:,2)*etm(:,2)-rr(:,3)*zem(:,2)
+
+      rr(:,1)=ss(:,1)*qa(:,3)
+      m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+      de(:,3)=de(:,3)+rr(:,1)*xim(:,1)+rr(:,2)*etm(:,1)+rr(:,3)*zem(:,1)
+      de(:,1)=de(:,1)-rr(:,1)*xim(:,3)-rr(:,2)*etm(:,3)-rr(:,3)*zem(:,3)
+
+      rr(:,1)=ss(:,1)*qa(:,4)
+      m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+      de(:,1)=de(:,1)+rr(:,1)*xim(:,2)+rr(:,2)*etm(:,2)+rr(:,3)*zem(:,2)
+      de(:,2)=de(:,2)-rr(:,1)*xim(:,1)-rr(:,2)*etm(:,1)-rr(:,3)*zem(:,1)
+
+      rr(:,1)=sqrt((de(:,1)*de(:,1)+de(:,2)*de(:,2)+de(:,3)*de(:,3))*yaco(:)*yaco(:))
+   end select
+
+   ! rpt-Because of saving metrics, record count changes
+   !varr(:)=rr(:,1); write(0,rec=ndati+4) varr(:)
+   !call intermed(3)
+   nwrec=nwrec+1
+   varr(:)=rr(:,1); write(0,rec=nwrec) varr(:)
+   narec=nwrec-nrec
+
+   if (nout==2) then
+      goto 100
+   end if
+
+   !===== GENERATING RESTART DATA FILE
+   
+   if(nrestart==1) then
+      if (myid==0) then
+         write(*,*) 'Writting restart file..'
+      end if
+      if(myid==mo(mb)) then
+         open(3,file=crestart); close(3,status='delete')
+      end if
+         call MPI_BARRIER(icom,ierr)
+         open(3,file=crestart,access='stream',shared)
+      if(myid==mo(mb)) then
+      lh=0
+         write(3,pos=4*lh+1) n;    lh=lh+2
+         write(3,pos=4*lh+1) ndt;  lh=lh+2
+         write(3,pos=4*lh+1) dt;   lh=lh+2
+         write(3,pos=4*lh+1) dts;  lh=lh+2
+         write(3,pos=4*lh+1) dte;  lh=lh+2
+         write(3,pos=4*lh+1) timo; lh=lh+2
+      end if
+         lp=lpos(myid)+12
+      do m=1,5; lq=(m-1)*ltomb
+      do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+         write(3,pos=nr*(lp+lq+lio(j,k))+1) qa(l:l+lxi,m)
+      end do; end do
+      end do
+         close(3)
+   end if
  end if
- if (nout==2) then
-    qa(:,:)=qo(:,:)   
- end if
-
-    !==========SAVING VELOCITY AND DENSITY
-    nwrec=nwrec+1
-       varr(:)=qa(:,1); write(0,rec=nwrec) varr(:)
-    do m = 2, 4
-    nwrec=nwrec+1
-       varr(:)=((qa(:,m)/qa(:,1))+umf(m-1)); write(0,rec=nwrec) varr(:)
-    end do
-    !======================================
-
- select case(nvarout)
- case(0); rr(:,1)=qa(:,1)
- case(1); rr(:,1)=qa(:,2)/qa(:,1)+umf(1)
- case(2); rr(:,1)=qa(:,3)/qa(:,1)+umf(2)
- case(3); rr(:,1)=qa(:,4)/qa(:,1)+umf(3)
- case(4); rr(:,1)=p(:)
- case(5); rr(:,1)=gam*p(:)-1
- case(6)
-    ss(:,1)=1/qa(:,1); de(:,1:3)=0
-
-    rr(:,1)=ss(:,1)*qa(:,2)
-    m=1; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
-    de(:,2)=de(:,2)+rr(:,1)*xim(:,3)+rr(:,2)*etm(:,3)+rr(:,3)*zem(:,3)
-    de(:,3)=de(:,3)-rr(:,1)*xim(:,2)-rr(:,2)*etm(:,2)-rr(:,3)*zem(:,2)
-
-    rr(:,1)=ss(:,1)*qa(:,3)
-    m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
-    de(:,3)=de(:,3)+rr(:,1)*xim(:,1)+rr(:,2)*etm(:,1)+rr(:,3)*zem(:,1)
-    de(:,1)=de(:,1)-rr(:,1)*xim(:,3)-rr(:,2)*etm(:,3)-rr(:,3)*zem(:,3)
-
-    rr(:,1)=ss(:,1)*qa(:,4)
-    m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
-    de(:,1)=de(:,1)+rr(:,1)*xim(:,2)+rr(:,2)*etm(:,2)+rr(:,3)*zem(:,2)
-    de(:,2)=de(:,2)-rr(:,1)*xim(:,1)-rr(:,2)*etm(:,1)-rr(:,3)*zem(:,1)
-
-    rr(:,1)=sqrt((de(:,1)*de(:,1)+de(:,2)*de(:,2)+de(:,3)*de(:,3))*yaco(:)*yaco(:))
- end select
-    ! rpt-Because of saving metrics, record count changes
-    !varr(:)=rr(:,1); write(0,rec=ndati+4) varr(:)
-    !call intermed(3)
-    nwrec=nwrec+1
-    varr(:)=rr(:,1); write(0,rec=nwrec) varr(:)
-    narec=nwrec-nrec
-
-    if (nout==2) then
-       goto 100
-    end if
-
-    !===== GENERATING RESTART DATA FILE
-    
-     if(nrestart==1) then
-     if (myid==0) then
-        write(*,*) 'Writting restart file..'
-     end if
-     if(myid==mo(mb)) then
-        open(3,file=crestart); close(3,status='delete')
-     end if
-        call MPI_BARRIER(icom,ierr)
-        open(3,file=crestart,access='stream',shared)
-     if(myid==mo(mb)) then
-     lh=0
-        write(3,pos=4*lh+1) n;    lh=lh+2
-        write(3,pos=4*lh+1) ndt;  lh=lh+2
-        write(3,pos=4*lh+1) dt;   lh=lh+2
-        write(3,pos=4*lh+1) dts;  lh=lh+2
-        write(3,pos=4*lh+1) dte;  lh=lh+2
-        write(3,pos=4*lh+1) timo; lh=lh+2
-     end if
-        lp=lpos(myid)+lh
-     do m=1,5; lq=(m-1)*ltomb
-     do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-        write(3,pos=nr*(lp+lq+lio(j,k))+1) qa(l:l+lxi,m)
-     end do; end do
-     end do
-        close(3)
-     end if
-  end if
 
  if(timo-tsam>=0.and.mod(n,nsgnl)==0) then
     nsigi=nsigi+1; call signalgo
@@ -835,8 +837,6 @@
 !==========================
 !===== END OF TIME MARCHING
 !==========================
-
-
  end do
 ! rpt-tag for exiting while loop
 100 continue
@@ -855,6 +855,7 @@
  end if
 
  call post
+ call cpComp(2)
 
 !===== END OF JOB
 
