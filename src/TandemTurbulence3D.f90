@@ -126,28 +126,45 @@
 
  subroutine domdcomp
 
-    ip=30*nthick+35*(1-nthick); jp=35*(1-nbody)+nbody*(20+5*nviscous)
+ integer :: ip1,jp1,ip2,jp2
+
+    !ip=30*nthick+35*(1-nthick); jp=35*(1-nbody)+nbody*(20+5*nviscous)
+
+    select case(nthick)
+    case(0); ip1=35; ip2=35; ip=35; jp=35
+    case(1); ip1=30; ip2=30; ip=30; jp=30
+    case(2); ip1=30; ip2=30; ip=30; jp=30
+    case(3); ip1=30; ip2=30; ip=30; jp=30
+    end select
+
+    select case(nbody)
+    case(0); jp1=35; jp2=35
+    case(1); jp1=20+5*nviscous; jp2=20+5*nviscous
+    case(2); jp1=20+5*nviscous; jp2=30
+    case(3); jp1=30; jp2=20+5*nviscous
+    end select
+
  select case(mb)
- case(0);  nbcs(1)=10; nbce(1)=ip; nbcs(2)=10; nbce(2)=ip; nbcs(3)=45; nbce(3)=45
- case(1);  nbcs(1)=ip; nbce(1)=ip; nbcs(2)=10; nbce(2)=ip; nbcs(3)=45; nbce(3)=45
- case(2);  nbcs(1)=ip; nbce(1)=ip; nbcs(2)=10; nbce(2)=ip; nbcs(3)=45; nbce(3)=45
- case(3);  nbcs(1)=ip; nbce(1)=ip; nbcs(2)=10; nbce(2)=ip; nbcs(3)=45; nbce(3)=45
- case(4);  nbcs(1)=ip; nbce(1)=10; nbcs(2)=10; nbce(2)=ip; nbcs(3)=45; nbce(3)=45
- case(5);  nbcs(1)=10; nbce(1)=ip; nbcs(2)=ip; nbce(2)=ip; nbcs(3)=45; nbce(3)=45
- case(6);  nbcs(1)=ip; nbce(1)=ip; nbcs(2)=ip; nbce(2)=jp; nbcs(3)=45; nbce(3)=45
- case(7);  nbcs(1)=ip; nbce(1)=ip; nbcs(2)=ip; nbce(2)=ip; nbcs(3)=45; nbce(3)=45
- case(8);  nbcs(1)=ip; nbce(1)=ip; nbcs(2)=ip; nbce(2)=jp; nbcs(3)=45; nbce(3)=45
- case(9);  nbcs(1)=ip; nbce(1)=10; nbcs(2)=ip; nbce(2)=ip; nbcs(3)=45; nbce(3)=45
- case(10); nbcs(1)=10; nbce(1)=ip; nbcs(2)=ip; nbce(2)=ip; nbcs(3)=45; nbce(3)=45
- case(11); nbcs(1)=ip; nbce(1)=ip; nbcs(2)=jp; nbce(2)=ip; nbcs(3)=45; nbce(3)=45
- case(12); nbcs(1)=ip; nbce(1)=ip; nbcs(2)=ip; nbce(2)=ip; nbcs(3)=45; nbce(3)=45
- case(13); nbcs(1)=ip; nbce(1)=ip; nbcs(2)=jp; nbce(2)=ip; nbcs(3)=45; nbce(3)=45
- case(14); nbcs(1)=ip; nbce(1)=10; nbcs(2)=ip; nbce(2)=ip; nbcs(3)=45; nbce(3)=45
- case(15); nbcs(1)=10; nbce(1)=ip; nbcs(2)=ip; nbce(2)=10; nbcs(3)=45; nbce(3)=45
- case(16); nbcs(1)=ip; nbce(1)=ip; nbcs(2)=ip; nbce(2)=10; nbcs(3)=45; nbce(3)=45
- case(17); nbcs(1)=ip; nbce(1)=ip; nbcs(2)=ip; nbce(2)=10; nbcs(3)=45; nbce(3)=45
- case(18); nbcs(1)=ip; nbce(1)=ip; nbcs(2)=ip; nbce(2)=10; nbcs(3)=45; nbce(3)=45
- case(19); nbcs(1)=ip; nbce(1)=10; nbcs(2)=ip; nbce(2)=10; nbcs(3)=45; nbce(3)=45
+ case(0);  nbcs(1)=10;  nbce(1)=ip1; nbcs(2)=10;  nbce(2)=ip1; nbcs(3)=45; nbce(3)=45
+ case(1);  nbcs(1)=ip1; nbce(1)=ip1; nbcs(2)=10;  nbce(2)=ip1; nbcs(3)=45; nbce(3)=45
+ case(2);  nbcs(1)=ip1; nbce(1)=ip2; nbcs(2)=10;  nbce(2)=jp;  nbcs(3)=45; nbce(3)=45
+ case(3);  nbcs(1)=ip2; nbce(1)=ip2; nbcs(2)=10;  nbce(2)=ip2; nbcs(3)=45; nbce(3)=45
+ case(4);  nbcs(1)=ip2; nbce(1)=10;  nbcs(2)=10;  nbce(2)=ip2; nbcs(3)=45; nbce(3)=45
+ case(5);  nbcs(1)=10;  nbce(1)=ip1; nbcs(2)=ip1; nbce(2)=ip1; nbcs(3)=45; nbce(3)=45
+ case(6);  nbcs(1)=ip1; nbce(1)=ip1; nbcs(2)=ip1; nbce(2)=jp1; nbcs(3)=45; nbce(3)=45
+ case(7);  nbcs(1)=ip1; nbce(1)=ip2; nbcs(2)=jp;  nbce(2)=jp;  nbcs(3)=45; nbce(3)=45
+ case(8);  nbcs(1)=ip2; nbce(1)=ip2; nbcs(2)=ip2; nbce(2)=jp2; nbcs(3)=45; nbce(3)=45
+ case(9);  nbcs(1)=ip2; nbce(1)=10;  nbcs(2)=ip2; nbce(2)=ip2; nbcs(3)=45; nbce(3)=45
+ case(10); nbcs(1)=10;  nbce(1)=ip1; nbcs(2)=ip1; nbce(2)=ip1; nbcs(3)=45; nbce(3)=45
+ case(11); nbcs(1)=ip1; nbce(1)=ip1; nbcs(2)=jp1; nbce(2)=ip1; nbcs(3)=45; nbce(3)=45
+ case(12); nbcs(1)=ip1; nbce(1)=ip2; nbcs(2)=jp;  nbce(2)=jp;  nbcs(3)=45; nbce(3)=45
+ case(13); nbcs(1)=ip2; nbce(1)=ip2; nbcs(2)=jp2; nbce(2)=ip2; nbcs(3)=45; nbce(3)=45
+ case(14); nbcs(1)=ip2; nbce(1)=10;  nbcs(2)=ip2; nbce(2)=ip2; nbcs(3)=45; nbce(3)=45
+ case(15); nbcs(1)=10;  nbce(1)=ip1; nbcs(2)=ip1; nbce(2)=10;  nbcs(3)=45; nbce(3)=45
+ case(16); nbcs(1)=ip1; nbce(1)=ip1; nbcs(2)=ip1; nbce(2)=10;  nbcs(3)=45; nbce(3)=45
+ case(17); nbcs(1)=ip1; nbce(1)=ip2; nbcs(2)=jp;  nbce(2)=10;  nbcs(3)=45; nbce(3)=45
+ case(18); nbcs(1)=ip2; nbce(1)=ip2; nbcs(2)=ip2; nbce(2)=10;  nbcs(3)=45; nbce(3)=45
+ case(19); nbcs(1)=ip2; nbce(1)=10;  nbcs(2)=ip2; nbce(2)=10;  nbcs(3)=45; nbce(3)=45
  end select
 
  ! rpt-setting the neighbouring blocks

@@ -1,20 +1,20 @@
-lxi0-to-4	200	150	100	150	200
-let0		200     20
-lze0		25
-nbody-nthick	1	1
+lxi0-to-4	200	150	100	50	200
+let0		180     60
+lze0		35
+nbody-nthick	2	2
 ngridv		1
-npbxi0-to-9	1	1	1	1	1	1	1	1	1	1
-npbxi10-to-19	1	1	1	1	1	1	1	1	1	1
-npbet0-to-9	1	1	1	1	1	1	1	1	1	1	
-npbet10-to-19	1	1	1	1	1	1	1	1	1	1	
+npbxi0-to-9	8	6	4	2	8	8	6	4	2	8
+npbxi10-to-19	8	6	4	2	8	8	6	4	2	8
+npbet0-to-9	6	6	6	6	6	2	2	2	2	2	
+npbet10-to-19	2	2	2	2	2	6	6	6	6	6	
 npbze0-to-9	1	1	1	1	1	1	1	1	1	1
 npbze10-to-19	1	1	1	1	1	1	1	1	1	1
-nito-nits-litr	1	1	10
-smgrid-domlen	0.0075e0		13e0
-ximod-etamod	0.8e0		0.2e0
-span-wlew-wlea	0.25e0		0.125e0		0.05e0
+nito-nits-litr	0	1	10
+smgrid-domlen	0.0075e0	13e0
+ximod-etamod	0.8e0		0.045e0
+span-wlew-wlea	0.25e0		0.25e0		0.00e0
 gap-chord1-2	1.5e0		1.0e0		1.0e0
-delt1-2(deg)	4.0e0		4.0e0		
+delt1-2(deg)	5.0e0		0.0e0		
 szth1-th2-xt-co	2.0e0		2.0e0		4.0e0		12.0e0
 tgusto		5.0e0
 ck1-2-3		0.001e0		0.0e0		0.0e0
@@ -35,11 +35,11 @@ npbet10-to-19	1	1	1	1	1	4	4	4	4	4
 npbze0-to-9	1	1	1	1	1	1	1	1	1	1
 npbze10-to-19	1	1	1	1	1	1	1	1	1	1
 
-! 6n16p
+! 20n16p
 npbxi0-to-9	4	3	2	3	4	4	3	2	3	4
 npbxi10-to-19	4	3	2	3	4	4	3	2	3	4
-npbet0-to-9	2	2	2	2	2	1	1	1	1	1	
-npbet10-to-19	1	1	1	1	1	2	2	2	2	2	
+npbet0-to-9	6	6	6	6	6	4	4	4	4	4	
+npbet10-to-19	4	4	4	4	4	6	6	6	6	6	
 npbze0-to-9	1	1	1	1	1	1	1	1	1	1
 npbze10-to-19	1	1	1	1	1	1	1	1	1	1
 
@@ -51,11 +51,27 @@ npbet10-to-19	1	1	1	1	1	1	1	1	1	1
 npbze0-to-9	1	1	1	1	1	1	1	1	1	1
 npbze10-to-19	1	1	1	1	1	1	1	1	1	1
 
-! 4n16p
+! 28n16p
+npbxi0-to-9	8	6	4	2	8	8	6	4	2	8
+npbxi10-to-19	8	6	4	2	8	8	6	4	2	8
+npbet0-to-9	6	6	6	6	6	2	2	2	2	2	
+npbet10-to-19	2	2	2	2	2	6	6	6	6	6	
+npbze0-to-9	1	1	1	1	1	1	1	1	1	1
+npbze10-to-19	1	1	1	1	1	1	1	1	1	1
+
+! 18n16p
 npbxi0-to-9	4	3	2	3	4	4	3	2	3	4
 npbxi10-to-19	4	3	2	3	4	4	3	2	3	4
-npbet0-to-9	1	1	1	1	1	1	1	1	1	1	
-npbet10-to-19	1	1	1	1	1	1	1	1	1	1	
+npbet0-to-9	8	8	8	8	8	1	1	1	1	1	
+npbet10-to-19	1	1	1	1	1	8	8	8	8	8	
+npbze0-to-9	1	1	1	1	1	1	1	1	1	1
+npbze10-to-19	1	1	1	1	1	1	1	1	1	1
+
+! 14n16p
+npbxi0-to-9	4	3	2	3	4	4	3	2	3	4
+npbxi10-to-19	4	3	2	3	4	4	3	2	3	4
+npbet0-to-9	6	6	6	6	6	2	2	2	2	2	
+npbet10-to-19	2	2	2	2	2	6	6	6	6	6	
 npbze0-to-9	1	1	1	1	1	1	1	1	1	1
 npbze10-to-19	1	1	1	1	1	1	1	1	1	1
 

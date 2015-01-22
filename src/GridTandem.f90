@@ -50,6 +50,7 @@ module gridgen
  real(nr) :: oxp,oyp
  real(nr) :: tmps,tmpe,tmpc
  real(nr) :: sha,shb,shc
+ logical :: flag
 
     lxit=lxi0+lxi1+lxi2+lxi3+lxi4+4; lett=2*(let0+let1)+3
 
@@ -67,7 +68,7 @@ module gridgen
     shs=smgrid; she=shs
     shs1=ximod*smgrid; she1=shs1
     shs2=etamod*smgrid;
-    tmp=shs2!(shs2+10*shs2)*half
+    tmp=(shs2+10*shs2)*half
     lbl=max(tmp*let1/(sin(pi4)),0.08*c1/(sin(pi4)))
 
     allocate(xx(0:lxit,0:lett),yy(0:lxit,0:lett),zz(0:lxit,0:lett),zs(0:lze0))
@@ -85,17 +86,24 @@ if(myid==mo(mb)) then
     sho=tla/litr; ll=2*litr; lsz1=ll*sho; lsz2=szth1+szxt
 !---WAVY LEADING-EDGE PROFILE
     lwle=wlea*sin(2*pi*(zs(k)-zs(0))/wlew)
+!---HORIZONTAL LINES
     xa(:)=-domlen;
     xb(:)=xa+lsz1
     xc(2:3)=-half*c1;
     xc(0:1)=xc(2)-lbl*cos(pi4-delt1);xc(4:5)=xc(3)-lbl*cos(pi4+delt1)
+    if (nthick*(nthick-3)==0) then
+       xc(0:1)=xc(2);xc(4:5)=xc(3)
+    end if
     xd(:)=xc(2)+c1*cos(delt1)
     xe(2:3)=xc(2)+c1+gap+lwle*cos(delt2);
     xe(0:1)=xe(2)-lbl*cos(pi4-delt2);xe(4:5)=xe(3)-lbl*cos(pi4+delt2)
+    if (nthick*(nthick-2)==0) then
+       xe(0:1)=xe(2);xe(4:5)=xe(3)
+    end if
     xf(:)=xc(2)+c1+gap+(c2)*cos(delt2)
     xg(:)=half*(c1+c2)+gap+domlen-szth1
     xh(:)=xg(:)+lsz2
-
+!---VERTICAL LINES
     ya(:)=-domlen;
     yb=ya(:)+lsz1;
     yd(0:1)=zero;yd(5)=zero
@@ -140,6 +148,19 @@ if(myid==mo(mb)) then
     hslo(3,2,:)=hslo(2,2,:)
     hslo(3,3,:)=hslo(2,3,:)
     hslo(3,4,:)=hslo(2,4,:)
+    select case (nthick);
+    case(0);
+    hslo(1,3,:)=zero
+    hslo(4,3,:)=zero
+    hslo(1,1,:)=zero
+    hslo(4,1,:)=zero
+    case(2);
+    hslo(1,3,:)=zero
+    hslo(4,3,:)=zero
+    case(3);
+    hslo(1,1,:)=zero
+    hslo(4,1,:)=zero
+    end select
 
 !----- INITIAL AND END VERTICAL SLOPES
     vslo(0,:,:)=zero
@@ -153,48 +174,87 @@ if(myid==mo(mb)) then
     vslo(3,2,:)=(/-tan(pi4+delt2),zero/)
     vslo(3,3,:)=zero
     vslo(4:5,:,:)=zero
+    select case (nthick);
+    case(0)
+    vslo(1,1,:)=zero
+    vslo(1,2,:)=zero
+    vslo(3,1,:)=zero
+    vslo(3,2,:)=zero
+    case(2);
+    vslo(3,1,:)=zero
+    vslo(3,2,:)=zero
+    case(3);
+    vslo(1,1,:)=zero
+    vslo(1,2,:)=zero
+    end select
 
 !----- AEROFOIL SURFACE GRID POINTS
    do m=1,2
-   select case(m)
-   case(1);tmp=c1;tmpa=xc(2);tmpb=yd(1);lxis=lxis1;lxie=lxie1;lxib=lxi1;alph=delt1
-   case(2);tmp=c2-lwle;tmpa=xe(2);tmpb=yd(3);lxis=lxis3;lxie=lxie3;lxib=lxi3;alph=delt2
-   end select
-   ! READ COORDINATES FROM FILE
-   open(2,file='aerofoil.dat')
-   do n=2,3; do i=0,lnaca
-      read(2,*) xnaca(i,n,m),ynaca(i,n,m)
-      xnaca(i,n,m)=tmp*xnaca(i,n,m); ynaca(i,n,m)=tmp*ynaca(i,n,m)
-   end do; end do
-   close(2)
-    ! DETERMINE UPPER AND LOWER SIDES
-    do n=2,3
-       yp(lxis,n)=zero;xp(lxis,n)=zero
-       ! DETERMINE THE FIRST LL POINTS
-       ll=8 ! "LL" MUST BE EQUAL TO OR LARGER THAN 4.
-       do i=lxis+1,lxis+ll
-          xp(i,n)=xp(i-1,n)+half*shs1; err=1
-          do while(abs(err)>sml)
+    select case(m)
+    case(1);tmp=c1;tmpa=xc(2);tmpb=yd(1);lxis=lxis1;lxie=lxie1;lxib=lxi1;alph=delt1
+    if (nthick*(nthick-3)==0) then
+       flag=.false.
+    else
+       flag=.true.
+    end if
+    case(2);tmp=c2-lwle;tmpa=xe(2);tmpb=yd(3);lxis=lxis3;lxie=lxie3;lxib=lxi3;alph=delt2
+    if (nthick*(nthick-2)==0) then
+       flag=.false.
+    else
+       flag=.true.
+    end if
+    end select
+    if (flag) then
+       ! READ COORDINATES FROM FILE
+       open(2,file='aerofoil.dat')
+       do n=2,3; do i=0,lnaca
+          read(2,*) xnaca(i,n,m),ynaca(i,n,m)
+          xnaca(i,n,m)=tmp*xnaca(i,n,m); ynaca(i,n,m)=tmp*ynaca(i,n,m)
+       end do; end do
+       close(2)
+       ! DETERMINE UPPER AND LOWER SIDES
+       do n=2,3
+          yp(lxis,n)=zero;xp(lxis,n)=zero
+          ! DETERMINE THE FIRST LL POINTS
+          ll=8 ! "LL" MUST BE EQUAL TO OR LARGER THAN 4.
+          do i=lxis+1,lxis+ll
+             xp(i,n)=xp(i-1,n)+half*shs1; err=1
+             do while(abs(err)>sml)
+                yp(i,n)=ylagi(i,n,m)
+                err=sqrt((xp(i,n)-xp(i-1,n))**2+(yp(i,n)-yp(i-1,n))**2)/shs1-1;
+                xp(i,n)=xp(i,n)-half*err*shs1
+             end do
+          end do
+          xo=xp(lxis+ll,n); sho=sum(xp(lxis+ll-4:lxis+ll,n)*(/3,-16,36,-48,25/))/12
+          ! COMPUTE THE REST OF THE POINTS
+          ip=lxis+ll;im=lxib-ll 
+          call gridf(xp(:,n),pxi,xo,tmp,sho,she1,lxit,im,ip)
+          do i=lxis+ll+1,lxie-1
              yp(i,n)=ylagi(i,n,m)
-             err=sqrt((xp(i,n)-xp(i-1,n))**2+(yp(i,n)-yp(i-1,n))**2)/shs1-1;
-             xp(i,n)=xp(i,n)-half*err*shs1
+          end do
+          yp(lxie,n)=zero
+          ! ROTATE AND MOVE AEROFOILS
+          do i = lxis, lxie
+          oxp=xp(i,n);oyp=yp(i,n)
+          xp(i,n) = (oxp*cos(alph)+oyp*sin(alph))+tmpa;
+          yp(i,n) = (-oxp*sin(alph)+oyp*cos(alph))+tmpb;
           end do
        end do
-       xo=xp(lxis+ll,n); sho=sum(xp(lxis+ll-4:lxis+ll,n)*(/3,-16,36,-48,25/))/12
-       ! COMPUTE THE REST OF THE POINTS
-       ip=lxis+ll;im=lxib-ll 
-       call gridf(xp(:,n),pxi,xo,tmp,sho,she1,lxit,im,ip)
-       do i=lxis+ll+1,lxie-1
-          yp(i,n)=ylagi(i,n,m)
-       end do
-       yp(lxie,n)=zero
-       ! ROTATE AND MOVE AEROFOILS
-       do i = lxis, lxie
-       oxp=xp(i,n);oyp=yp(i,n)
-       xp(i,n) = (oxp*cos(alph)+oyp*sin(alph))+tmpa;
-       yp(i,n) = (-oxp*sin(alph)+oyp*cos(alph))+tmpb;
-       end do
-    end do
+    else
+      ip=lxis; im=lxib;
+      call gridf(xp(:,2),pxi,zero,tmp,shs1,she1,lxit,im,ip)
+      yp(lxis:lxie,2)=zero
+      xp(lxis:lxie,3)=xp(lxis:lxie,2)
+      yp(lxis:lxie,3)=yp(lxis:lxie,2)
+      do n = 2, 3
+      ! ROTATE AND MOVE AEROFOILS
+        do i = lxis, lxie
+        oxp=xp(i,n);oyp=yp(i,n)
+        xp(i,n) = (oxp*cos(alph)+oyp*sin(alph))+tmpa;
+        yp(i,n) = (-oxp*sin(alph)+oyp*cos(alph))+tmpb;
+        end do
+      end do
+    end if
    end do
 
 !--HORIZONTAL INTERFACES
@@ -231,14 +291,22 @@ if(myid==mo(mb)) then
       call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
    else
    !--BLOCK2
+   select case(nthick)
+   case(2,0)
+   !--d-e
+      ip=lxis2; im=lxi2;
+      tmpa=xd(n);sha=she1;tmpb=xe(n);shb=shs1
+      call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
+   case(1,3)
    !--d-e2
       ip=lxis2; im=lxi2-int((lbl*sin(pi4)*cos(delt2))/(1.5_nr*shs1))
-      tmpa=xd(2);sha=she1;tmpb=xe(2)-(lbl*sin(pi4)*cos(delt2));shb=2*shs1
+      tmpa=xd(2);sha=she1;shb=2*shs1;tmpb=xe(2)-(lbl*sin(pi4)*cos(delt2));
       call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
    !--e2-e
       ip=ip+im; im=lxi2-im
       tmpa=tmpb;sha=shb;tmpb=xe(2);shb=shs1
       call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
+   end select
    end if
    !--BLOCK4
    !--f-g
@@ -247,7 +315,7 @@ if(myid==mo(mb)) then
       call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
    !--g-h
       ip=ip+im; im=lxisz;
-      tmpa=xg(n);sha=pxi(ip);tmpb=xh(n);shb=sml
+      tmpa=xg(n);sha=pxi(ip);tmpb=xh(n);shb=sho
       call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
    !--COPY ON N+1 INTERFACE
       xp(lxis0:lxie0,n+1)=xp(lxis0:lxie0,n)
@@ -318,7 +386,7 @@ if(myid==mo(mb)) then
          yp(i,n)=inter(k1,k2,k3,k4,x0,x1,xp(i,n))
          yp(i,n+1)=yp(i,n)
       end do
-      if (m==2) then
+      if ((m==2).and.(ie.ne.lxie2)) then
       do i = ie, lxie2
          yp(i,n)=inter(k3,k4,yd(3),k4,x1,xe(2),xp(i,n))
          yp(i,n+1)=yp(i,n)
@@ -337,7 +405,7 @@ if(myid==mo(mb)) then
       !-BLOCK1
       !-c-d
       ip=lets1; im=let1;
-      tmpa=yc(n);sha=sml;tmpb=yd(n);shb=shs2*sin(pi4-alph)
+      tmpa=yc(n);sha=10*shs2;tmpb=yd(n);shb=shs2*sin(pi4-alph)
       call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lxit,im,ip)
       she2=qet(ip)
       !-BLOCK0
@@ -353,7 +421,7 @@ if(myid==mo(mb)) then
       !-BLOCK2
       !-d-e
       ip=lets2; im=let1;
-      tmpa=yd(n);sha=shs2*sin(pi4+alph);tmpb=ye(n);shb=sml
+      tmpa=yd(n);sha=shs2*sin(pi4+alph);tmpb=ye(n);shb=10*shs2
       call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lxit,im,ip)
       she2=qet(ip+im)
       !-BLOCK3
