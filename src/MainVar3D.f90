@@ -148,9 +148,16 @@
  integer(4),dimension(12) :: ireq
  integer(4) :: ir,mpro,npro,myid,itag,info,icom,ierr
 
-!===== INTEGER VARIABLES FOR MPI COMMANDS by RPT
+!===== INTEGER VARIABLES FOR RECORDING BY RPT
 
  integer :: nrec,narec,nwrec
+
+!===== INTEGER VARIABLES FOR RECORDING BY RPT
+
+ real(nr)  ::  xfor,yfor,rfor,amfor,tsfor,tefor
+ integer   ::  lfor
+ integer ,allocatable,dimension(:)  ::  lcfor
+ real(nr),allocatable,dimension(:,:)  ::  xafor,yafor,bfor
 !=====
  end module mainvar3d
 

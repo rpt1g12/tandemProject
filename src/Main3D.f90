@@ -56,6 +56,12 @@
 
     call inputext
 
+    ! rpt-Forcing parameters
+    xfor=cos(delt1)-0.5_nr-0.9_nr;
+    yfor=-sin(delt1)+0.129_nr;
+    rfor=5.0e-3
+    amfor=1e-3*amachoo
+    tsfor=0.0e0;tefor=0.0005e0
 !===== DOMAIN DECOMPOSITION & BOUNDARY INFORMATION
 
     mo(0)=0
@@ -353,6 +359,10 @@
 
     call spongeup
 
+!===== SETTING UP FORCING PARAMETERS
+
+    call forceup
+
 !===== INITIAL CONDITIONS
 
  if(nts==0) then
@@ -579,6 +589,10 @@
 !----- IMPLEMENTATION OF SPONGE CONDITION
 
     call spongego ! Make sure that "ss(l,1)=0" is specified if sponge is NOT used.
+
+!----- IMPLEMENTATION OF FORCING
+
+    call forcego
 
 !----- PREPARATION FOR GCBC & GCIC
 

@@ -197,6 +197,7 @@
  subroutine spongeup
 
  do nn=1,3
+ ! rpt-set nsz=1 if contains boundary region
  if(nbcs(nn)==10) then; nsz(0,nn)=1; else; nsz(0,nn)=0; end if
  if(nbce(nn)==10) then; nsz(1,nn)=1; else; nsz(1,nn)=0; end if
  select case(nn)
@@ -211,22 +212,26 @@
     ll=-1; ra0=half*szco; ra1=1+min(2*amach1/(1+amach1),one)
  do l=0,lmx
     rr(l,:)=nsz(0,:)*szr(0,:)*max(szp(0,:)-ss(l,:),zero)+nsz(1,:)*szr(1,:)*max(ss(l,:)-szp(1,:),zero)
-    de(l,1)=ra0*(1+cos(pi*(1-rr(l,1))*(1-rr(l,2))*(1-rr(l,3))))
+    ! rpt-this is sigma(x,y,z)
+    de(l,1)=ra0*(1+cos(pi*(1-rr(l,1))*(1-rr(l,2))*(1-rr(l,3)))) 
+    ! rpt-this is lambda(x)
     de(l,2)=ra1*(1-tanh(ss(l,1)))+1
  if(de(l,1)-sml>0) then
-    ll=ll+1; de(ll,5)=l+sml
+    ll=ll+1; de(ll,5)=l+sml ! rpt-this gives the l's containing sponge points,why sum sml??
  end if
  end do
-    lsz=ll
+    lsz=ll ! rpt-total number of points in sponge zone
  if(lsz/=-1) then
     allocate(lcsz(0:lsz),asz(0:lsz),bsz(0:lsz))
  do ll=0,lsz; l=de(ll,5); lcsz(ll)=l
+    ! rpt-asz=sigma(x,y,z) and bsc=sigma(x,y,z)*lambda(x)
     asz(ll)=de(l,1)/yaco(l); bsz(ll)=asz(ll)*de(l,2)
  end do
  end if
 
     ll=-1; ra0=tlb*(2.5_nr-cutlb)
  do lh=0,lsz; l=lcsz(lh)
+ ! rpt-mark points where the gust is going to happen
  if(ss(l,1)-szp(0,1)<0.and.abs(ss(l,2))-ra0<0) then
     ll=ll+1; de(ll,5)=l+sml
  end if
@@ -341,7 +346,7 @@
 
  subroutine spongego
 
- if(ltz/=-1) then
+ if(ltz/=-1) then ! rpt-ltz=# of points involved in inflow gust
     vit(:,:)=0
  if(timo-tgusto+dtk>0) then
     ra0=timo-tgusto+dtk; ra1=slit/uoo(1); ra2=ra0/ra1; ra3=ra0-ra1*int(ra2)

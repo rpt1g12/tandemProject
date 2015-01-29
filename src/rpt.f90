@@ -337,12 +337,12 @@ implicit none
 
    
 end subroutine clComp
-!===============================================
+
+!===== POST-PROCESSING & GENERATING TECPLOT DATA FILE
 subroutine post
 
 use problemcase, only: finalout,ngridv
    
-!===== POST-PROCESSING & GENERATING TECPLOT DATA FILE
 
  if(dt==0.or.nout==2) then
     if (myid==0) then
@@ -463,5 +463,55 @@ use problemcase, only: finalout,ngridv
  !end if
 
 end subroutine post
+
+! ====SET UP FORCING PARAMETERS
+subroutine forceup
+
+use problemcase, only: span
+
+ra0=-log(0.0001_nr)/(rfor**2); ra1=2*pi/span
+ra2=rfor**2
+ll=-1
+do l = 0, lmx
+  rr(l,1)=(ss(l,1)-xfor)**2+(ss(l,2)-yfor)**2
+  if (rr(l,1)-ra2<0) then
+     ll=ll+1; de(ll,5)=l+sml
+  end if
+end do
+lfor=ll
+if (lfor.ne.-1) then
+   allocate(lcfor(0:lfor),xafor(0:lfor,3),yafor(0:lfor,3),bfor(0:lfor,3))
+do ll = 0, lfor; l=de(ll,5); lcfor(ll)=l
+   bfor(ll,1)=cos(ra1*ss(l,3))
+   bfor(ll,2)=cos(3*ra1*ss(l,3))
+   bfor(ll,3)=cos(4*ra1*ss(l,3))
+   ra2=rr(l,1)
+   ra3=(qo(l,2)-qo(l,1))
+   xafor(ll,1)=half*exp(-ra0*ra2)*bfor(ll,1)*ra3
+   xafor(ll,2)=half*exp(-ra0*ra2)*bfor(ll,2)*ra3
+   xafor(ll,3)=half*exp(-ra0*ra2)*bfor(ll,3)*ra3
+   ra3=(qa(l,2)-qa(l,1))
+   yafor(ll,1)=half*exp(-ra0*ra2)*bfor(ll,1)*ra3
+   yafor(ll,2)=half*exp(-ra0*ra2)*bfor(ll,2)*ra3
+   yafor(ll,3)=half*exp(-ra0*ra2)*bfor(ll,3)*ra3
+end do
+end if
+   
+end subroutine forceup
+
+! ====FORCE IMPLEMENTATION
+subroutine forcego
+
+if ((timo+dtk>tsfor).and.(timo+dtk<tefor)) then
+  ra0=(timo+dtk-tsfor)
+  ra1=amfor*cos(ra0*48.76_nr*amachoo)/3
+  ra2=amfor*cos(ra0*53.6_nr*amachoo)/3
+  ra3=amfor*cos(ra0*53.6_nr*amachoo)/3
+  do ll = 0, lfor; l=lcfor(ll)
+    de(l,2)=de(l,2)+ra1*xafor(ll,1)+ra2*xafor(ll,2)+ra3*xafor(ll,3)
+    de(l,3)=de(l,3)+ra1*yafor(ll,1)+ra2*yafor(ll,2)+ra3*yafor(ll,3)
+  end do
+end if
+end subroutine forcego
 !===============================================
 end module rpt
