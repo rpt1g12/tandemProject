@@ -6,7 +6,7 @@ nkrk		4
 nviscous	1
 nsmf		0
 nfskp		0
-nrestart	0
+nrestart	1
 nvarout		4
 reoo-tempoo	5.0e4		273.0e0
 amach1-2-3	0.4e0		0.0e0		0.0e0
