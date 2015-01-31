@@ -480,7 +480,15 @@
 
  subroutine finalout
 
+ integer :: totVar
  real(nr),dimension(:),allocatable :: delt
+
+ select case(nvarout)
+ case(0,1,2,3,4,5,6)
+   totVar=5
+ case(7)
+   totVar=14
+ end select
  
  if(ltz/=-1) then; deallocate(lctz,tt,vit,vito); end if
 
@@ -490,10 +498,10 @@
  do n=ns+1,ne-1
     delt(n)=fctr*(times(n+1)-times(n-1))
  end do
- do m = 1, 5
+ do m = 1, totVar
     rr(:,1)=0
  do n=0,ndata
-    read(0,rec=(n*5)+nrec+m) varr(:)
+    read(0,rec=(n*totVar)+nrec+m) varr(:)
     rr(:,1)=rr(:,1)+delt(n)*varr(:)
  end do
  !   ss(:,1)=0
