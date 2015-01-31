@@ -80,7 +80,7 @@
     crestart='rsta/restart'//cno(2)//cno(1)//cno(0)//'.dat'
     no(4)=myid/10000; no(3)=mod(myid,10000)/1000; no(2)=mod(myid,1000)/100
     no(1)=mod(myid,100)/10; no(0)=mod(myid,10); cno=achar(no+48)
-    cdata='misc/data'//cno(4)//cno(3)//cno(2)//cno(1)//cno(0)//'.dat'
+    cdata='data/data'//cno(4)//cno(3)//cno(2)//cno(1)//cno(0)//'.dat'
     cturb='misc/turb'//cno(4)//cno(3)//cno(2)//cno(1)//cno(0)//'.dat'
 
     call domdcomp

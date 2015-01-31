@@ -397,6 +397,17 @@ use problemcase, only: finalout,ngridv
     cinput='v'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
     cinput='w'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
     cinput='p'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
+    if (nvarout==7) then
+    cinput='dux'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
+    cinput='duy'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
+    cinput='duz'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
+    cinput='dvx'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
+    cinput='dvy'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
+    cinput='dvz'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
+    cinput='dwx'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
+    cinput='dwy'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
+    cinput='dwz'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
+    end if
  end do
  if (ndatp==1) then
     cinput='r'; call strio(9,lh,cinput)
@@ -404,6 +415,17 @@ use problemcase, only: finalout,ngridv
     cinput='v'; call strio(9,lh,cinput)
     cinput='w'; call strio(9,lh,cinput)
     cinput='p'; call strio(9,lh,cinput)
+    if (nvarout==7) then
+    cinput='dux'; call strio(9,lh,cinput)
+    cinput='duy'; call strio(9,lh,cinput)
+    cinput='duz'; call strio(9,lh,cinput)
+    cinput='dvx'; call strio(9,lh,cinput)
+    cinput='dvy'; call strio(9,lh,cinput)
+    cinput='dvz'; call strio(9,lh,cinput)
+    cinput='dwx'; call strio(9,lh,cinput)
+    cinput='dwy'; call strio(9,lh,cinput)
+    cinput='dwz'; call strio(9,lh,cinput)
+    end if
  end if
     write(9,pos=4*lh+1) 299.0; lh=lh+1 ! Zone Marker
     cinput=czone; call strio(9,lh,cinput)
@@ -447,7 +469,8 @@ use problemcase, only: finalout,ngridv
  end do; end do
     varmin(n)=minval(varr(:)); varmax(n)=maxval(varr(:))
  end do
-    close(0,status='delete')
+    !close(0,status='delete')
+    close(0)
  do n=ns,ne
     res=varmin(n); call MPI_ALLREDUCE(res,fctr,1,MPI_REAL8,MPI_MIN,icom,ierr); varmin(n)=fctr
     res=varmax(n); call MPI_ALLREDUCE(res,fctr,1,MPI_REAL8,MPI_MAX,icom,ierr); varmax(n)=fctr
