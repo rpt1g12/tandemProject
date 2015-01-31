@@ -199,12 +199,20 @@
     fctr=1-cos(ra1)
     dfdt=ra0*sin(ra2)
     progmf=half*(fctr+dtk*dfdt)
+    if (nts==1) then
+    umf(:)=ures(:)+progmf*(uoo(:)-ures(:))
+    else
     umf(:)=progmf*uoo(:)
+    end if
 
     fctr=sin(ra1)
     dfdt=ra0*cos(ra2)
     progmf=half*ra0*(fctr+dtk*dfdt)
+    if (nts==1) then
+    dudtmf(:)=progmf*(uoo(:)-ures(:))
+    else
     dudtmf(:)=progmf*uoo(:)
+    end if
  else
     umf(:)=uoo(:); dudtmf(:)=0
  end if

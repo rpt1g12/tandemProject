@@ -378,6 +378,9 @@
     read(3,pos=4*lh+1) dts;  lh=lh+2
     read(3,pos=4*lh+1) dte;  lh=lh+2
     read(3,pos=4*lh+1) timo; lh=lh+2
+    read(3,pos=4*lh+1) ures(1); lh=lh+2
+    read(3,pos=4*lh+1) ures(2); lh=lh+2
+    read(3,pos=4*lh+1) ures(3); lh=lh+2
 
     tmp=(tsam-timo)/timo
     if (abs(tmp)<0.1e0) then
@@ -873,8 +876,11 @@
          write(3,pos=4*lh+1) dts;  lh=lh+2
          write(3,pos=4*lh+1) dte;  lh=lh+2
          write(3,pos=4*lh+1) timo; lh=lh+2
+         write(3,pos=4*lh+1) uoo(1); lh=lh+2
+         write(3,pos=4*lh+1) uoo(2); lh=lh+2
+         write(3,pos=4*lh+1) uoo(3); lh=lh+2
       end if
-         lp=lpos(myid)+12
+         lp=lpos(myid)+lh
       do m=1,5; lq=(m-1)*ltomb
       do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
          write(3,pos=nr*(lp+lq+lio(j,k))+1) qa(l:l+lxi,m)

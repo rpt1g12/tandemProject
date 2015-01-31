@@ -123,7 +123,7 @@
  real(nr),dimension(mbci) :: rbci,sbci
  real(nr),dimension(5) :: cha,dha
  real(nr),dimension(-2:2) :: alag,blag,tlag
- real(nr),dimension(3) :: ve,dm,rv,uoo,umf,dudtmf
+ real(nr),dimension(3) :: ve,dm,rv,uoo,umf,dudtmf,ures
  real(nr),dimension(0:2) :: fam,fbm,fcm
  ! rpt - cl added
  real(nr),dimension(1:2,1:3) :: cl
