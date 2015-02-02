@@ -72,6 +72,7 @@
  real(nr),dimension(:),allocatable :: txx,tyy,tzz,txy,tyz,tzx,hxx,hyy,hzz
 
  real(nr),dimension(:,:),allocatable :: xim,etm,zem
+ real(nr),dimension(:,:),allocatable :: xm,ym,zm
  real(nr),dimension(:),allocatable :: p,yaco
  ! rpt-Area array declaration
  real(nr),dimension(:),allocatable :: dA

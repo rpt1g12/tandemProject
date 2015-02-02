@@ -342,27 +342,6 @@ end subroutine clComp
 subroutine post
 
 use problemcase, only: finalout,ngridv
-   
-
- if(dt==0.or.nout==2) then
-    if (myid==0) then
-    write(*,*) "Overflow."
-    end if
- ndata=ndati
- end if
-
- if(myid==0) then
-    write(*,'("Simulation time was ",f6.2," hours")') wtime/(3600_nr*npro)
- if (ndatp==1) then
-    write(*,*) 'Preparing Statistics and Writting Output Files...'
- else
-    write(*,*) "Writing Output files..."
- end if
- end if
-
- if (ndatp==1) then
- call finalout
- end if
 
  if(myid==mo(mb)) then
     open(9,file=coutput); close(9,status='delete')

@@ -61,7 +61,7 @@
     yfor=-sin(delt1)+0.129_nr;
     rfor=5.0e-3
     amfor=1e-3*amachoo
-    tsfor=0.0e0;tefor=0.0005e0
+    tsfor=40.0e0;tefor=70.000e0
 !===== DOMAIN DECOMPOSITION & BOUNDARY INFORMATION
 
     mo(0)=0
@@ -914,6 +914,41 @@
     close(9)
  end if
 
+ if(dt==0.or.nout==2) then
+    if (myid==0) then
+    write(*,*) "Overflow."
+    end if
+ ndata=ndati
+ end if
+
+ if(myid==0) then
+    write(*,'("Simulation time was ",f6.2," hours")') wtime/(3600_nr*npro)
+ if (ndatp==1) then
+    write(*,*) 'Preparing Statistics and Writting Output Files...'
+ else
+    write(*,*) "Writing Output files..."
+ end if
+ end if
+
+ if (ndatp==1) then
+ call finalout
+ end if
+
+    if (myid==0) then
+       open(9,file='data/post.dat')
+       write(9,*) 'ngridv ',ngridv
+       write(9,*) 'nvarout',nvarout
+       write(9,*) 'ndata  ',ndata
+       write(9,*) 'ndatp  ',ndatp
+       write(9,*) 'nrec   ',nrec
+       write(9,*) 'nwrec  ',nwrec
+       write(9,*) 'Timerecord'
+       do n = 0, ndata
+       write(9,*) times(n)
+       end do
+       close(9)
+    end if
+   
  call post
  call cpComp(2)
 
