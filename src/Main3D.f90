@@ -61,7 +61,7 @@
     yfor=-sin(delt1)+0.129_nr;
     rfor=5.0e-3
     amfor=1e-3*amachoo
-    tsfor=40.0e0;tefor=70.000e0
+    tsfor=5.0e0;tefor=40.000e0
 !===== DOMAIN DECOMPOSITION & BOUNDARY INFORMATION
 
     mo(0)=0
@@ -78,6 +78,7 @@
     coutput='out/output'//cno(2)//cno(1)//cno(0)//'.plt'
     cgrid='misc/grid'//cno(2)//cno(1)//cno(0)//'.dat'
     crestart='rsta/restart'//cno(2)//cno(1)//cno(0)//'.dat'
+    cpostdat='data/postdat'//cno(2)//cno(1)//cno(0)//'.dat'
     no(4)=myid/10000; no(3)=mod(myid,10000)/1000; no(2)=mod(myid,1000)/100
     no(1)=mod(myid,100)/10; no(0)=mod(myid,10); cno=achar(no+48)
     cdata='data/data'//cno(4)//cno(3)//cno(2)//cno(1)//cno(0)//'.dat'
@@ -164,6 +165,7 @@
 
     allocate(qo(0:lmx,5),qa(0:lmx,5),de(0:lmx,5))
     allocate(xim(0:lmx,3),etm(0:lmx,3),zem(0:lmx,3),rr(0:lmx,3),ss(0:lmx,3))
+    allocate(xm(0:lmx,3),ym(0:lmx,3),zm(0:lmx,3))
     ! rpt-dA allocation added
     allocate(p(0:lmx),yaco(0:lmx),varr(0:lmx),dA(0:lmx))
 
@@ -275,8 +277,8 @@
     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
     de(:,1)=rr(:,1); de(:,2)=rr(:,2); de(:,3)=rr(:,3)
 
-    call clComp(0,1,2)
-    call clComp(0,2,2)
+    !call clComp(0,1,2)
+    !call clComp(0,2,2)
     
 
     xim(:,1)=qa(:,2)*de(:,3)-de(:,2)*qa(:,3)
@@ -315,6 +317,9 @@
               +qa(:,1)*xim(:,2)+qa(:,2)*etm(:,2)+qa(:,3)*zem(:,2)&
               +de(:,1)*xim(:,3)+de(:,2)*etm(:,3)+de(:,3)*zem(:,3))
 
+
+    call wallArea
+    call walldir
 
  do nn=1,3; do ip=0,1; i=ip*ijk(1,nn)
  do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
@@ -412,10 +417,15 @@
     ndati=-1; nsigi=-1
  do while(timo-tmax<0.and.(dt/=0.or.n<=2))
 
- call clComp(1,1,2)
- call clComp(1,2,2)
- call clComp(1,1,1)
- call clComp(1,2,1)
+ !call clComp(1,1,2)
+ !call clComp(1,2,2)
+ !call clComp(1,1,1)
+ !call clComp(1,2,1)
+ if (n.ge.2) then
+   call clpost(1,2,ndati,.false.) 
+ else
+   cl=0
+ end if
 
  if(myid==0.and.mod(n,nscrn)==0) then
     write(*,"(' n =',i8,'   time =',f12.5,' Cl1 = ',f10.5,', Cl2 = ',f10.5)") &
@@ -528,6 +538,7 @@
     hyy(:)=rr(:,2)*ss(:,2)+de(:,2)*txy(:)+de(:,3)*tyy(:)+de(:,4)*tyz(:)
     hzz(:)=rr(:,2)*ss(:,3)+de(:,2)*tzx(:)+de(:,3)*tyz(:)+de(:,4)*tzz(:)
  end if
+
 
 !----- CALCULATION OF FLUX DERIVATIVES
 
@@ -880,7 +891,7 @@
          write(3,pos=4*lh+1) uoo(2); lh=lh+2
          write(3,pos=4*lh+1) uoo(3); lh=lh+2
       end if
-         lp=lpos(myid)+lh
+         lp=lpos(myid)+18
       do m=1,5; lq=(m-1)*ltomb
       do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
          write(3,pos=nr*(lp+lq+lio(j,k))+1) qa(l:l+lxi,m)
@@ -890,9 +901,9 @@
    end if
  end if
 
- if(timo-tsam>=0.and.mod(n,nsgnl)==0) then
-    nsigi=nsigi+1; call signalgo
- end if
+! if(timo-tsam>=0.and.mod(n,nsgnl)==0) then
+!    nsigi=nsigi+1; call signalgo
+! end if
 
 !==========================
 !===== END OF TIME MARCHING
@@ -903,8 +914,8 @@
 
     close(1)
     ! rpt-Close cl and cd files
-    call clComp(2,1,2)
-    call clComp(2,2,2)
+    !call clComp(2,1,2)
+    !call clComp(2,2,2)
 
     wte=MPI_WTIME(); res=wte-wts
     call MPI_ALLREDUCE(res,wtime,1,MPI_REAL8,MPI_SUM,icom,ierr)
@@ -933,6 +944,7 @@
  if (ndatp==1) then
  call finalout
  end if
+ call postDat
 
     if (myid==0) then
        open(9,file='data/post.dat')
@@ -949,8 +961,8 @@
        close(9)
     end if
    
- call post
- call cpComp(2)
+! call post
+! call cpComp(2)
 
 !===== END OF JOB
 

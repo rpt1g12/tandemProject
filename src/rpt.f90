@@ -448,8 +448,7 @@ use problemcase, only: finalout,ngridv
  end do; end do
     varmin(n)=minval(varr(:)); varmax(n)=maxval(varr(:))
  end do
-    !close(0,status='delete')
-    close(0)
+    close(0,status='delete')
  do n=ns,ne
     res=varmin(n); call MPI_ALLREDUCE(res,fctr,1,MPI_REAL8,MPI_MIN,icom,ierr); varmin(n)=fctr
     res=varmax(n); call MPI_ALLREDUCE(res,fctr,1,MPI_REAL8,MPI_MAX,icom,ierr); varmax(n)=fctr
@@ -515,5 +514,254 @@ if ((timo+dtk>tsfor).and.(timo+dtk<tefor)) then
   end do
 end if
 end subroutine forcego
+
+! ====RECORD DATA FOR POST-PROCESSING
+subroutine postDat
+ call MPI_BARRIER(icom,ierr)
+ open(3,file=cpostdat,access='stream',shared)
+ lp=lpos(myid)
+ do n=1,nwrec
+    lq=(n-1)*ltomb
+    read(0,rec=n) varr(:)
+    do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+       write(3,pos=nr*(lp+lq+lio(j,k))+1) varr(l:l+lxi)
+    end do; end do
+ end do
+ close(3)
+end subroutine postDat
+
+!=====COMPUTE CELL AREA OVER AEROFOILS
+ subroutine wallArea
+ implicit none
+    integer :: bblock1,tblock1
+    integer :: bblock2,tblock2
+    real(nr) :: g11, g33, g13,coef
+ 
+    bblock1 = 6; tblock1 = 11
+    bblock2 = 8; tblock2 = 13
+ 
+    ! Find parallel grid position
+    ip=mod(myid-mo(mb),npc(mb,1))
+    jp=mod((myid-mo(mb))/npc(mb,1),npc(mb,2))
+    kp=mod((myid-mo(mb))/(npc(mb,1)*npc(mb,2)),npc(mb,3))
+ 
+    ! Initialise values
+    wflag=.false.
+    g11=0;g33=g11;g13=g33
+ 
+    if ((mb==bblock1).AND.(jp==npc(mb,2)-1)) then
+    j=ijk(1,2); wflag=.true.
+    elseif ((mb==tblock1).AND.(jp==0)) then
+    j=0; wflag=.true.
+    end if
+    if ((mb==bblock2).AND.(jp==npc(mb,2)-1)) then
+    j=ijk(1,2); wflag=.true.
+    elseif ((mb==tblock2).AND.(jp==0)) then
+    j=0; wflag=.true.
+    end if
+ 
+    ll=-1; lcwall=(nbsize(2)-1)
+    if (wflag) then
+    allocate(lwall(0:lcwall),area(0:lcwall))
+    do k=0,ijk(2,2)
+    do i=0,ijk(3,2); l=indx3(j,k,i,2)
+       g11 = qo(l,1)*qo(l,1)+qa(l,1)*qa(l,1)+de(l,1)*de(l,1)
+       g33 = qo(l,3)*qo(l,3)+qa(l,3)*qa(l,3)+de(l,3)*de(l,3)
+       g13 = qo(l,1)*qo(l,3)+qa(l,1)*qa(l,3)+de(l,1)*de(l,3)
+       ll=ll+1; lwall(ll)=l+sml
+       area(ll)=sqrt(g11*g33-g13*g13)
+       if ((ip==0).and.(i==0)) then
+         area(ll) = area(ll)*half
+       elseif ((ip==npc(mb,1)-1).and.(i==ijk(3,2))) then
+         area(ll) = area(ll)*half
+       end if
+       if ((kp==0).and.(k==0)) then
+         area(ll) = area(ll)*half
+       elseif ((kp==npc(mb,3)-1).and.(k==ijk(2,2))) then
+         area(ll) = area(ll)*half
+       end if
+    end do
+    end do
+    end if
+ 
+ end subroutine wallArea
+
+!=====COMPUTE WALL NORMAL VECTOR OVER AEROFOILS
+ subroutine walldir
+ implicit none
+    
+    integer :: bblock1,tblock1
+    integer :: bblock2,tblock2
+    real(nr) :: coef,tmp
+ 
+    bblock1 = 6; tblock1 = 11
+    bblock2 = 8; tblock2 = 13
+ 
+    if (wflag) then
+    ! Find top or bottom
+    if ((mb==bblock1).or.(mb==bblock2)) then
+       coef=-one
+    elseif ((mb==tblock1).or.(mb==tblock2)) then
+       coef=one
+    end if
+    allocate(wnor(0:lcwall,3))
+    do ll = 0, lcwall; l=lwall(ll)
+       tmp=coef/sqrt(etm(l,1)*etm(l,1)+etm(l,2)*etm(l,2)+etm(l,3)*etm(l,3))
+       do m = 1, 3
+       wnor(ll,m)=etm(l,m)*tmp
+       end do
+    end do
+    end if
+ 
+ end subroutine walldir
+
+!=====COMPUTE LIFT COEFFICIENT OVER AEROFOILS
+ subroutine clpost(ele,dir,nvar,post)
+ 
+ use problemcase, only: span,delt1,delt2
+ use subroutines3d, only: mpigo,deriv
+ implicit none
+    
+    integer, intent(in) :: ele,nvar,dir
+    integer :: bblock,tblock
+    real(nr) :: dynp,clp,clv,tcl
+    logical :: flag,post
+ 
+    clp=0;clv=0;flag=.false.;tcl=0;
+ 
+    ! Define aerofoil blocks
+    select case(ele)
+    case(1)
+    bblock = 6; tblock = 11
+    case(2)
+    bblock = 8; tblock = 13
+    end select
+ 
+    if (mb==bblock) then
+    ! Find master of the block
+    mp = mo(mb) + npc(mb,1)*(npc(mb,2)-1)
+    flag=.true.
+    elseif (mb==tblock) then
+    ! Find master of the block
+    mp = mo(mb)
+    flag=.true.
+    end if
+ 
+    if (wflag.and.flag) then
+    if (post) then
+       ! READ VARIABLES
+       nread=nrec+(totVar*nvar)
+       do nn = 1, 5
+        nread=nread+1 
+        call postread(nread)
+        qo(:,nn)=varr(:)
+       end do
+       p(:)=qo(:,5)
+    end if
+    ! Compute Dynamic pressure
+    dynp=two/(amachoo*amachoo*span)
+    do ll = 0, lcwall; l=lwall(ll)
+      clp=clp+(p(l)*wnor(ll,dir)*area(ll))
+    end do
+    if (nviscous==1) then
+     if (post) then
+     de(:,1)=1/qo(:,1)
+     de(:,2)=qo(:,2)
+     de(:,3)=qo(:,3)
+     de(:,4)=qo(:,4)
+     de(:,5)=gam*qo(:,5)*de(:,1)
+     ss(:,1)=srefp1dre*de(:,5)**1.5_nr/(de(:,5)+srefoo)
+     de(:,1)=ss(:,1)
+ 
+     rr(:,1)=de(:,2)
+     m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     txx(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
+     hzz(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
+     tzx(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
+ 
+     rr(:,1)=de(:,3)
+     m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     txy(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
+     tyy(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
+     hxx(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
+ 
+     rr(:,1)=de(:,4)
+     m=4; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     hyy(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
+     tyz(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
+     tzz(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
+ 
+     fctr=2.0_nr/3
+     rr(:,1)=de(:,1)*yaco(:)
+     de(:,5)=fctr*(txx(:)+tyy(:)+tzz(:))
+ 
+     txx(:)=yaco(:)*(2*txx(:)-de(:,5))
+     tyy(:)=yaco(:)*(2*tyy(:)-de(:,5))
+     tzz(:)=yaco(:)*(2*tzz(:)-de(:,5))
+     txy(:)=yaco(:)*(txy(:)+hzz(:))
+     tyz(:)=yaco(:)*(tyz(:)+hxx(:))
+     tzx(:)=yaco(:)*(tzx(:)+hyy(:))
+     end if
+ 
+       if(.not.allocated(tw)) allocate(tw(0:lcwall,3))
+       do ll = 0, lcwall; l=lwall(ll)
+         tw(ll,1)=(txx(l)*wnor(ll,1)+txy(l)*wnor(ll,2)+tzx(l)*wnor(ll,3))/reoo
+         tw(ll,2)=(txy(l)*wnor(ll,1)+tyy(l)*wnor(ll,2)+tyz(l)*wnor(ll,3))/reoo
+         tw(ll,3)=(tzx(l)*wnor(ll,1)+tyz(l)*wnor(ll,2)+tzz(l)*wnor(ll,3))/reoo
+         clv=clv+tw(ll,dir)*area(ll)
+       end do
+    end if
+    tcl=(clp+clv)*dynp
+    if (myid==mp) then
+       do m = 1, (npc(mb,1)*npc(mb,3)-1)
+       CALL MPI_RECV(clp,1,MPI_REAL8,MPI_ANY_SOURCE,10,MPI_COMM_WORLD,ista,ierr)
+       tcl=tcl+clp
+       end do
+    else
+       CALL MPI_SEND(tcl,1,MPI_REAL8,mp,10,MPI_COMM_WORLD,ierr)
+    end if
+    end if
+ 
+    CALL MPI_ALLREDUCE(tcl,cl(ele,dir),1,MPI_REAL8,MPI_SUM,icom,ierr)
+ 
+ end subroutine clpost
+
+! ====READ DATA FOR POST-PROCESSING
+subroutine postread(nread)
+implicit none
+integer, intent (in) :: nread
+ n=nread
+ lp=lpos(myid)
+    lq=(n-1)*ltomb
+    do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+       read(3,pos=nr*(lp+lq+lio(j,k))+1) varr(l:l+lxi)
+    end do; end do
+end subroutine postread
+
+! ====WRITE DATA FOR POST-PROCESSING
+subroutine postwrite(nread)
+implicit none
+integer, intent (in) :: nread
+ call MPI_BARRIER(icom,ierr)
+ n=nread
+ lp=lpos(myid)
+    lq=(n-1)*ltomb
+    do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+       write(3,pos=nr*(lp+lq+lio(j,k))+1) varr(l:l+lxi)
+    end do; end do
+end subroutine postwrite
+
+! ====WRITE DATA FOR POST-PROCESSING
+subroutine datawrite
+implicit none
+integer :: n
+ call MPI_BARRIER(icom,ierr)
+    inquire(iolength=lh) varr
+    open(0,file=cdata,access='direct',recl=lh)
+    do n = 1, nwrec
+       call postread(n)
+       write(0,rec=nwrec) varr(:)
+    end do
+end subroutine datawrite
 !===============================================
 end module rpt

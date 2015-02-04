@@ -11,8 +11,6 @@
  use rpt
  implicit none
 
- integer :: nread,nreado,totVar
-
 !===== PREPARATION FOR PARALLEL COMPUTING
 
     call MPI_INIT(ierr)
@@ -24,6 +22,149 @@
     allocate(lxim(0:mpro),letm(0:mpro),lzem(0:mpro),lpos(0:mpro),vmpi(0:mpro))
     allocate(ista(MPI_STATUS_SIZE,12))
 
+call setup
+
+!===== GRID INPUT & CALCULATION OF GRID METRICS
+
+!===== INPUT RECORDING PARAMETERS
+    open(9,file='data/post.dat',shared)
+    read(9,*) cinput,ngridv
+    read(9,*) cinput,nvarout
+    read(9,*) cinput,ndata
+    read(9,*) cinput,ndatp
+    read(9,*) cinput,nrec
+    read(9,*) cinput,nwrec
+    read(9,*) cinput
+    do n = 0, ndata
+    read(9,*) times(n)
+    end do
+    close(9)
+!===== INQUIRE RECORD LENGTH
+ open(3,file=cpostdat,access='stream',shared)
+ nread=0
+
+!===== READ X,Y,Z COORDINATES
+ do nn=1,3
+    nread=nread+1
+    call postread(nread)
+    ss(:,nn)=varr(:)
+ end do
+!===== READ METRICS
+ if (ngridv==1) then
+ do nn=1,3
+    nread=nread+1
+    call postread(nread)
+    xim(:,nn)=varr(:)
+ end do
+ do nn=1,3
+    nread=nread+1
+    call postread(nread)
+    etm(:,nn)=varr(:)
+ end do
+ do nn=1,3
+    nread=nread+1
+    call postread(nread)
+    zem(:,nn)=varr(:)
+ end do
+ end if
+
+!===== COMPUTE INVERSE METRICS
+    rr(:,1)=ss(:,1)
+    m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+    qo(:,1)=rr(:,1); qo(:,2)=rr(:,2); qo(:,3)=rr(:,3)
+
+    rr(:,1)=ss(:,2)
+    m=2; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+    qa(:,1)=rr(:,1); qa(:,2)=rr(:,2); qa(:,3)=rr(:,3)
+
+    rr(:,1)=ss(:,3)
+    m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+    de(:,1)=rr(:,1); de(:,2)=rr(:,2); de(:,3)=rr(:,3)
+
+!===== COMPUTE METRICS IF NOT AVAILABLE YET
+    if(ngridv.ne.1) then
+    xim(:,1)=qa(:,2)*de(:,3)-de(:,2)*qa(:,3)
+    xim(:,2)=de(:,2)*qo(:,3)-qo(:,2)*de(:,3)
+    xim(:,3)=qo(:,2)*qa(:,3)-qa(:,2)*qo(:,3)
+    etm(:,1)=qa(:,3)*de(:,1)-de(:,3)*qa(:,1)
+    etm(:,2)=de(:,3)*qo(:,1)-qo(:,3)*de(:,1)
+    etm(:,3)=qo(:,3)*qa(:,1)-qa(:,3)*qo(:,1)
+    zem(:,1)=qa(:,1)*de(:,2)-de(:,1)*qa(:,2)
+    zem(:,2)=de(:,1)*qo(:,2)-qo(:,1)*de(:,2)
+    zem(:,3)=qo(:,1)*qa(:,2)-qa(:,1)*qo(:,2)
+    end if
+
+!===== COMPUTE JACOBIAN
+    yaco(:)=3/(qo(:,1)*xim(:,1)+qo(:,2)*etm(:,1)+qo(:,3)*zem(:,1)&
+              +qa(:,1)*xim(:,2)+qa(:,2)*etm(:,2)+qa(:,3)*zem(:,2)&
+              +de(:,1)*xim(:,3)+de(:,2)*etm(:,3)+de(:,3)*zem(:,3))
+
+
+ do nn=1,3; do ip=0,1; i=ip*ijk(1,nn)
+ do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
+ do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
+ select case(nn)
+ case(1); rv(:)=yaco(l)*xim(l,:); fctr=1/sqrt(rv(1)**2+rv(2)**2+rv(3)**2); cm1(jk,:,ip)=fctr*rv(:)
+ case(2); rv(:)=yaco(l)*etm(l,:); fctr=1/sqrt(rv(1)**2+rv(2)**2+rv(3)**2); cm2(jk,:,ip)=fctr*rv(:)
+ case(3); rv(:)=yaco(l)*zem(l,:); fctr=1/sqrt(rv(1)**2+rv(2)**2+rv(3)**2); cm3(jk,:,ip)=fctr*rv(:)
+ end select
+ end do
+ end do
+ end do; end do
+
+!===== COMPUTE AVERAGE VALUES IF NOT AVAILABLE YET
+ if (ndatp.ne.1) then
+ ltz=-1
+ call average
+ ndatp=1
+ end if
+
+!===== Save average values into array
+ select case(nvarout)
+ case(0,1,2,3,4,5,6)
+   totVar=5
+ case(7)
+   totVar=14
+ end select
+ nread=nwrec-totVar
+ do nn=1,5
+    nread=nread+1
+    call postread(nread)
+    qa(:,nn)=varr(:)
+ end do
+
+
+!===== WRITE TECPLOT FILE
+ call wallArea
+ call walldir
+ deallocate(xm,ym,zm)
+
+call clpost(1,2,1,.true.)
+call datawrite
+close(3)
+
+!===== WRITE TECPLOT FILE
+ call post
+
+!===== END OF JOB
+if (myid==11) then
+ write(*,*) sum(area)
+end if
+
+ if(myid==0) then
+ write(*,*) cl(1,2)
+    write(*,*) "Finished."
+ end if
+
+
+    call MPI_FINALIZE(ierr)
+
+
+ contains
+
+
+subroutine setup
+   
 !===== INPUT PARAMETERS
 
     open(9,file='inputo.dat',shared)
@@ -72,6 +213,7 @@
     coutput='out/output'//cno(2)//cno(1)//cno(0)//'.plt'
     cgrid='misc/grid'//cno(2)//cno(1)//cno(0)//'.dat'
     crestart='rsta/restart'//cno(2)//cno(1)//cno(0)//'.dat'
+    cpostdat='data/postdat'//cno(2)//cno(1)//cno(0)//'.dat'
     no(4)=myid/10000; no(3)=mod(myid,10000)/1000; no(2)=mod(myid,1000)/100
     no(1)=mod(myid,100)/10; no(0)=mod(myid,10); cno=achar(no+48)
     cdata='data/data'//cno(4)//cno(3)//cno(2)//cno(1)//cno(0)//'.dat'
@@ -231,7 +373,6 @@
     call penta(yu(:,:),yl(:,:),albef(:,:,ns),albef(:,:,ne),alphf,betf,is,ie)
  end do
 
-!===== GRID INPUT & CALCULATION OF GRID METRICS
     allocate(lio(0:let,0:lze))
  do k=0,lze; kp=k*(leto+1)*(lxio+1)
  do j=0,let; jp=j*(lxio+1)
@@ -239,126 +380,42 @@
  end do
  end do
 
-!===== INPUT RECORDING PARAMETERS
-    open(9,file='data/post.dat',shared)
-    read(9,*) cinput,ngridv
-    read(9,*) cinput,nvarout
-    read(9,*) cinput,ndata
-    read(9,*) cinput,ndatp
-    read(9,*) cinput,nrec
-    read(9,*) cinput,nwrec
-    read(9,*) cinput
-    do n = 0, ndata
-    read(9,*) times(n)
-    end do
-    close(9)
-!===== INQUIRE RECORD LENGTH
- inquire(iolength=lp) varr
- open(0,file=cdata,access='direct',recl=lp)
- nread=0
-
-!===== READ X,Y,Z COORDINATES
- do nn=1,3
-    nread=nread+1
-    read(0,rec=nread) varr(:)
-    ss(:,nn)=varr(:)
- end do
-!===== READ METRICS
- if (ngridv==1) then
- do nn=1,3
-    nread=nread+1
-    read(0,rec=nread) varr(:)
-    xim(:,nn)=varr(:)
- end do
- do nn=1,3
-    nread=nread+1
-    read(0,rec=nread) varr(:)
-    etm(:,nn)=varr(:)
- end do
- do nn=1,3
-    nread=nread+1
-    read(0,rec=nread) varr(:)
-    zem(:,nn)=varr(:)
- end do
- end if
-
-!===== COMPUTE INVERSE METRICS
-    rr(:,1)=ss(:,1)
-    m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
-    xm(:,1)=rr(:,1); xm(:,2)=rr(:,2); xm(:,3)=rr(:,3)
-
-    rr(:,1)=ss(:,2)
-    m=2; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
-    ym(:,1)=rr(:,1); ym(:,2)=rr(:,2); ym(:,3)=rr(:,3)
-
-    rr(:,1)=ss(:,3)
-    m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
-    zm(:,1)=rr(:,1); zm(:,2)=rr(:,2); zm(:,3)=rr(:,3)
-
-!===== COMPUTE METRICS IF NOT AVAILABLE YET
-    if(ngridv.ne.1) then
-    xim(:,1)=ym(:,2)*zm(:,3)-zm(:,2)*ym(:,3)
-    xim(:,2)=zm(:,2)*xm(:,3)-xm(:,2)*zm(:,3)
-    xim(:,3)=xm(:,2)*ym(:,3)-ym(:,2)*xm(:,3)
-    etm(:,1)=ym(:,3)*zm(:,1)-zm(:,3)*ym(:,1)
-    etm(:,2)=zm(:,3)*xm(:,1)-xm(:,3)*zm(:,1)
-    etm(:,3)=xm(:,3)*ym(:,1)-ym(:,3)*xm(:,1)
-    zem(:,1)=ym(:,1)*zm(:,2)-zm(:,1)*ym(:,2)
-    zem(:,2)=zm(:,1)*xm(:,2)-xm(:,1)*zm(:,2)
-    zem(:,3)=xm(:,1)*ym(:,2)-ym(:,1)*xm(:,2)
-    end if
-
-!===== COMPUTE JACOBIAN
-    yaco(:)=3/(xm(:,1)*xim(:,1)+xm(:,2)*etm(:,1)+xm(:,3)*zem(:,1)&
-              +ym(:,1)*xim(:,2)+ym(:,2)*etm(:,2)+ym(:,3)*zem(:,2)&
-              +zm(:,1)*xim(:,3)+zm(:,2)*etm(:,3)+zm(:,3)*zem(:,3))
+end subroutine setup
 
 
- do nn=1,3; do ip=0,1; i=ip*ijk(1,nn)
- do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
- do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
- select case(nn)
- case(1); rv(:)=yaco(l)*xim(l,:); fctr=1/sqrt(rv(1)**2+rv(2)**2+rv(3)**2); cm1(jk,:,ip)=fctr*rv(:)
- case(2); rv(:)=yaco(l)*etm(l,:); fctr=1/sqrt(rv(1)**2+rv(2)**2+rv(3)**2); cm2(jk,:,ip)=fctr*rv(:)
- case(3); rv(:)=yaco(l)*zem(l,:); fctr=1/sqrt(rv(1)**2+rv(2)**2+rv(3)**2); cm3(jk,:,ip)=fctr*rv(:)
- end select
- end do
- end do
- end do; end do
+!=====AVERAGE RESULTS
+ subroutine average
 
-!===== COMPUTE AVERAGE VALUES IF NOT AVAILABLE YET
- if (ndatp.ne.1) then
- ltz=-1
- call finalout
- ndatp=1
- end if
+ integer :: totVar
+ real(nr),dimension(:),allocatable :: delt
 
-!===== Save average values into array
  select case(nvarout)
  case(0,1,2,3,4,5,6)
    totVar=5
  case(7)
    totVar=14
  end select
- nread=nwrec-totVar
- do nn=1,5
-    nread=nread+nn
-    read(0,rec=nread) varr(:)
-    qa(:,nn)=varr(:)
+ 
+    ns=0; ne=ndata; allocate(delt(ns:ne))
+    fctr=half/(times(ne)-times(ns))
+    delt(ns)=fctr*(times(ns+1)-times(ns)); delt(ne)=fctr*(times(ne)-times(ne-1))
+ do n=ns+1,ne-1
+    delt(n)=fctr*(times(n+1)-times(n-1))
+ end do
+ do m = 1, totVar
+    rr(:,1)=0
+ do n=0,ndata
+    call postread((n*totVar+nrec+m))
+    rr(:,1)=rr(:,1)+delt(n)*varr(:)
+ end do
+    varr(:)=rr(:,1)
+    nwrec=nwrec+1
+    call postwrite(nwrec)
  end do
 
-!===== WRITE TECPLOT FILE
- call post
+ end subroutine average
 
-!===== END OF JOB
-
- if(myid==0) then
-    write(*,*) "Finished."
- end if
-
-
-    call MPI_FINALIZE(ierr)
-
- end program mainpost
-
+ 
+ 
 !*****
+end program mainpost

@@ -141,7 +141,7 @@
  character(16) :: cinput
  character(16) :: cgrid
  character(18) :: cdata,cturb
- character(19) :: crestart
+ character(19) :: crestart,cpostdat
 
 !===== INTEGER VARIABLES FOR MPI COMMANDS
 
@@ -151,7 +151,7 @@
 
 !===== INTEGER VARIABLES FOR RECORDING BY RPT
 
- integer :: nrec,narec,nwrec
+ integer :: nrec,narec,nwrec,nread,totVar
 
 !===== INTEGER VARIABLES FOR RECORDING BY RPT
 
@@ -159,6 +159,11 @@
  integer   ::  lfor
  integer ,allocatable,dimension(:)  ::  lcfor
  real(nr),allocatable,dimension(:,:)  ::  xafor,yafor,bfor
+ integer :: lcwall
+ integer, dimension(:), allocatable ::lwall
+ real(nr), dimension(:), allocatable ::area
+ real(nr), dimension(:,:), allocatable ::wnor,tw
+ logical :: wflag
 !=====
  end module mainvar3d
 
