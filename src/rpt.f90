@@ -515,20 +515,6 @@ if ((timo+dtk>tsfor).and.(timo+dtk<tefor)) then
 end if
 end subroutine forcego
 
-! ====RECORD DATA FOR POST-PROCESSING
-subroutine postDat
- call MPI_BARRIER(icom,ierr)
- open(3,file=cpostdat,access='stream',shared)
- lp=lpos(myid)
- do n=1,nwrec
-    lq=(n-1)*ltomb
-    read(0,rec=n) varr(:)
-    do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-       write(3,pos=nr*(lp+lq+lio(j,k))+1) varr(l:l+lxi)
-    end do; end do
- end do
- close(3)
-end subroutine postDat
 
 !=====COMPUTE CELL AREA OVER AEROFOILS
  subroutine wallArea
@@ -726,42 +712,81 @@ end subroutine postDat
  
  end subroutine clpost
 
-! ====READ DATA FOR POST-PROCESSING
-subroutine postread(nread)
+! ====READ DATA FOR POST-PROCESSING FROM TECPLOT FILE
+subroutine tpostread(num,lsta)
 implicit none
-integer, intent (in) :: nread
- n=nread
+integer, intent (in) :: num,lsta
+ lp=lpos(myid)+lsta
+    lq=(num-1)*ltomb
+    do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+       read(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi)
+    end do; end do
+end subroutine tpostread
+! ====READ DATA FOR POST-PROCESSING
+subroutine postread(num)
+implicit none
+integer, intent (in) :: num
  lp=lpos(myid)
-    lq=(n-1)*ltomb
+    lq=(num-1)*ltomb
     do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
        read(3,pos=nr*(lp+lq+lio(j,k))+1) varr(l:l+lxi)
     end do; end do
 end subroutine postread
 
 ! ====WRITE DATA FOR POST-PROCESSING
-subroutine postwrite(nread)
+subroutine postwrite(num)
 implicit none
-integer, intent (in) :: nread
+integer, intent (in) :: num
  call MPI_BARRIER(icom,ierr)
- n=nread
  lp=lpos(myid)
-    lq=(n-1)*ltomb
+    lq=(num-1)*ltomb
     do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
        write(3,pos=nr*(lp+lq+lio(j,k))+1) varr(l:l+lxi)
     end do; end do
 end subroutine postwrite
 
-! ====WRITE DATA FOR POST-PROCESSING
-subroutine datawrite
+! ====WRITE DATA FOR POST-PROCESSING FROM TECPLOT FILES
+subroutine tdatawrite(lsta)
 implicit none
-integer :: n
+integer, intent (in) :: lsta
+integer :: nn
  call MPI_BARRIER(icom,ierr)
     inquire(iolength=lh) varr
     open(0,file=cdata,access='direct',recl=lh)
-    do n = 1, nwrec
-       call postread(n)
-       write(0,rec=nwrec) varr(:)
+    do nn = 1, nwrec
+       call tpostread(nn,lsta)
+       write(0,rec=nn) varr(:)
+    end do
+end subroutine tdatawrite
+
+! ====WRITE DATA FOR POST-PROCESSING
+subroutine datawrite
+implicit none
+integer :: nn
+ call MPI_BARRIER(icom,ierr)
+    inquire(iolength=lh) varr
+    open(0,file=cdata,access='direct',recl=lh)
+    do nn = 1, nwrec
+       call postread(nn)
+       write(0,rec=nn) varr(:)
     end do
 end subroutine datawrite
+
+! ====RECORD DATA FOR POST-PROCESSING
+subroutine postDat
+ implicit none
+ integer :: nn
+ call MPI_BARRIER(icom,ierr)
+ open(3,file=cpostdat,access='stream',shared)
+ lp=lpos(myid)
+ do nn=1,nwrec
+    lq=(nn-1)*ltomb
+    read(0,rec=nn) varr(:)
+    do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+       write(3,pos=nr*(lp+lq+lio(j,k))+1) varr(l:l+lxi)
+    end do; end do
+ end do
+ close(3)
+end subroutine postDat
 !===============================================
 end module rpt

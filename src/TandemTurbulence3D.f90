@@ -483,6 +483,7 @@
  integer :: totVar
  real(nr),dimension(:),allocatable :: delt
 
+
  select case(nvarout)
  case(0,1,2,3,4,5,6)
    totVar=5

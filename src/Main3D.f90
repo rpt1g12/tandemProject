@@ -61,7 +61,7 @@
     yfor=-sin(delt1)+0.129_nr;
     rfor=5.0e-3
     amfor=1e-3*amachoo
-    tsfor=5.0e0;tefor=40.000e0
+    tsfor=5.0e0;tefor=30.000e0
 !===== DOMAIN DECOMPOSITION & BOUNDARY INFORMATION
 
     mo(0)=0
@@ -165,7 +165,6 @@
 
     allocate(qo(0:lmx,5),qa(0:lmx,5),de(0:lmx,5))
     allocate(xim(0:lmx,3),etm(0:lmx,3),zem(0:lmx,3),rr(0:lmx,3),ss(0:lmx,3))
-    allocate(xm(0:lmx,3),ym(0:lmx,3),zm(0:lmx,3))
     ! rpt-dA allocation added
     allocate(p(0:lmx),yaco(0:lmx),varr(0:lmx),dA(0:lmx))
 
@@ -961,7 +960,7 @@
        close(9)
     end if
    
-! call post
+ call post
 ! call cpComp(2)
 
 !===== END OF JOB

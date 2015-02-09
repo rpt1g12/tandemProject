@@ -10,6 +10,8 @@
  use problemcase
  use rpt
  implicit none
+ integer :: lsta
+ logical :: tecplot
 
 !===== PREPARATION FOR PARALLEL COMPUTING
 
@@ -23,6 +25,7 @@
     allocate(ista(MPI_STATUS_SIZE,12))
 
 call setup
+tecplot=.false.
 
 !===== GRID INPUT & CALCULATION OF GRID METRICS
 
@@ -39,31 +42,58 @@ call setup
     read(9,*) times(n)
     end do
     close(9)
+
+ select case(nvarout)
+ case(0,1,2,3,4,5,6)
+   totVar=5
+ case(7)
+   totVar=14
+ end select
+ if (tecplot) then
+ lsta=17+ngridv*45+(ndata+1)*25+ndatp*10+24+nwrec+3+4*nwrec
+ end if
 !===== INQUIRE RECORD LENGTH
  open(3,file=cpostdat,access='stream',shared)
+ open(9,file=coutput,access='stream',shared)
  nread=0
 
 !===== READ X,Y,Z COORDINATES
  do nn=1,3
     nread=nread+1
+    if (tecplot) then
+    call tpostread(nread,lsta)
+    else 
     call postread(nread)
+    end if
     ss(:,nn)=varr(:)
  end do
 !===== READ METRICS
  if (ngridv==1) then
  do nn=1,3
     nread=nread+1
+    if (tecplot) then
+    call tpostread(nread,lsta)
+    else 
     call postread(nread)
+    end if
     xim(:,nn)=varr(:)
  end do
  do nn=1,3
     nread=nread+1
+    if (tecplot) then
+    call tpostread(nread,lsta)
+    else 
     call postread(nread)
+    end if
     etm(:,nn)=varr(:)
  end do
  do nn=1,3
     nread=nread+1
+    if (tecplot) then
+    call tpostread(nread,lsta)
+    else 
     call postread(nread)
+    end if
     zem(:,nn)=varr(:)
  end do
  end if
@@ -80,6 +110,11 @@ call setup
     rr(:,1)=ss(:,3)
     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
     de(:,1)=rr(:,1); de(:,2)=rr(:,2); de(:,3)=rr(:,3)
+
+    do i = 1, 3
+       xyz(:,i)=ss(:,i)
+    end do
+
 
 !===== COMPUTE METRICS IF NOT AVAILABLE YET
     if(ngridv.ne.1) then
@@ -99,6 +134,8 @@ call setup
               +qa(:,1)*xim(:,2)+qa(:,2)*etm(:,2)+qa(:,3)*zem(:,2)&
               +de(:,1)*xim(:,3)+de(:,2)*etm(:,3)+de(:,3)*zem(:,3))
 
+ call wallArea
+ call walldir
 
  do nn=1,3; do ip=0,1; i=ip*ijk(1,nn)
  do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
@@ -120,28 +157,31 @@ call setup
  end if
 
 !===== Save average values into array
- select case(nvarout)
- case(0,1,2,3,4,5,6)
-   totVar=5
- case(7)
-   totVar=14
- end select
  nread=nwrec-totVar
  do nn=1,5
     nread=nread+1
+    if (tecplot) then
+    call tpostread(nread,lsta)
+    else 
     call postread(nread)
+    end if
     qa(:,nn)=varr(:)
  end do
 
-
-!===== WRITE TECPLOT FILE
- call wallArea
- call walldir
- deallocate(xm,ym,zm)
-
 call clpost(1,2,1,.true.)
-call datawrite
+
+if (myid==11) then
+varr(:)=qa(:,5)
+call spcavg(2,3,0,1,2)
+end if
+
+if (tecplot) then
+   call tdatawrite(lsta)
+else
+   call datawrite
+end if
 close(3)
+close(9)
 
 !===== WRITE TECPLOT FILE
  call post
@@ -152,7 +192,6 @@ if (myid==11) then
 end if
 
  if(myid==0) then
- write(*,*) cl(1,2)
     write(*,*) "Finished."
  end if
 
@@ -300,7 +339,7 @@ subroutine setup
 
     allocate(qo(0:lmx,5),qa(0:lmx,5),de(0:lmx,5))
     allocate(xim(0:lmx,3),etm(0:lmx,3),zem(0:lmx,3),rr(0:lmx,3),ss(0:lmx,3))
-    allocate(xm(0:lmx,3),ym(0:lmx,3),zm(0:lmx,3))
+    allocate(xyz(0:lmx,3))
     allocate(p(0:lmx),yaco(0:lmx),varr(0:lmx))
 
  if(nviscous==1) then
@@ -382,10 +421,9 @@ subroutine setup
 
 end subroutine setup
 
-
 !=====AVERAGE RESULTS
  subroutine average
-
+ implicit none
  integer :: totVar
  real(nr),dimension(:),allocatable :: delt
 
@@ -415,7 +453,72 @@ end subroutine setup
 
  end subroutine average
 
- 
- 
+ ! ---SPACE AVERAGING
+ subroutine spcavg(plane,dir,pos,nvar,nout)
+    implicit none
+    integer, intent(in) :: plane,dir,pos,nvar,nout
+    integer :: odir,idir,loop,axis
+    real(nr), dimension(:,:), allocatable :: avg,delt
+    integer, dimension(:,:), allocatable :: lavg
+
+    select case(plane)
+    case(1)
+     select case(dir)
+     case(2); odir=ijk(3,1); idir=ijk(2,1); loop=1; axis=3
+     case(3); odir=ijk(2,1); idir=ijk(3,1); loop=2; axis=2
+     end select                                  
+    case(2)                                     
+     select case(dir)                          
+     case(1); odir=ijk(2,2); idir=ijk(3,2); loop=2; axis=3
+     case(3); odir=ijk(3,2); idir=ijk(2,2); loop=1; axis=1 
+     end select                               
+    case(3)                                  
+     select case(dir)                       
+     case(1); odir=ijk(3,3); idir=ijk(2,3); loop=1; axis=2 
+     case(2); odir=ijk(2,3); idir=ijk(3,3); loop=2; axis=1 
+     end select
+    end select
+
+    allocate(lavg(0:idir,0:odir))
+    allocate(avg(0:odir,2),delt(0:idir,0:odir))
+    open(7,file='out/avg.dat')
+    write(7,"('VARIABLES= dir, var')")
+    write(7,"('ZONE T= avg')")
+
+    !! READ VARIABLE TO AVERAGE
+    !nread=nrec+(totVar*nvar)+nout
+    !write(*,*) nread
+    !call postread(nread)
+    
+    select case(loop)
+    case(1);
+    do k = 0, odir
+       do j = 0, idir 
+          lavg(j,k)=indx3(pos,j,k,plane)
+       end do
+    end do
+    case(2);
+    do k = 0, odir
+       do j = 0, idir
+          lavg(j,k)=indx3(pos,j,k,plane)
+       end do
+    end do
+    end select
+
+    do k = 0, odir
+    ns=lavg(0,k); ne=lavg(idir,k)
+    fctr=half/abs((xyz(ne,dir)-xyz(ns,dir)))
+    delt(0,k)=fctr*abs((xyz(lavg(1,k),dir)-xyz(ns,dir)))
+    delt(idir,k)=fctr*abs((xyz(ne,dir)-xyz(lavg(idir-1,k),dir)))
+    avg(k,2)=delt(0,k)*varr(ns)+delt(idir,k)*varr(ne)
+    avg(k,1)=xyz(ns,axis)
+       do j = 1, idir-1; l=lavg(j,k)
+         delt(j,k)=fctr*abs((xyz(lavg(j+1,k),dir)-xyz(lavg(j-1,k),dir)))
+         avg(k,2)=avg(k,2)+delt(j,k)*varr(l)
+       end do
+    write(7,'(f10.5,"   ",f10.5)') avg(k,1),avg(k,2)
+    end do
+    close(7)
+ end subroutine spcavg
 !*****
 end program mainpost
