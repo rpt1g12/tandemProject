@@ -120,7 +120,6 @@
     call MPI_BCAST(xit,nits,MPI_REAL8,0,icom,ierr)
 
  end subroutine inputext
- 
 
 !===== DOMAIN DECOMPOSITION & BOUNDARY INFORMATION
 
@@ -392,6 +391,7 @@
 
  subroutine junction
 
+ integer :: njct
 
     is=mbk; ie=0; kk=5*(lze+1)-1
     kp=mod((myid-mo(mb))/(npc(mb,1)*npc(mb,2)),npc(mb,3))
@@ -484,12 +484,7 @@
  real(nr),dimension(:),allocatable :: delt
 
 
- select case(nvarout)
- case(0,1,2,3,4,5,6)
    totVar=5
- case(7)
-   totVar=14
- end select
  
  if(ltz/=-1) then; deallocate(lctz,tt,vit,vito); end if
 

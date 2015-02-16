@@ -25,14 +25,28 @@
 
 tecplot=.false.
 call setup
+ !===== INPUT RECORDING PARAMETERS
+  open(9,file='data/post.dat',shared)
+  read(9,*) cinput,ngridv
+  read(9,*) cinput,ndata
+  read(9,*) cinput,nrec
+  read(9,*) cinput,nwrec
+  close(9)
+    totVar=5
+
+  if (tecplot) then
+  lsta=17+ngridv*45+(ndata+1)*25+24+nwrec+3+4*nwrec
+  end if
+ !===== INQUIRE RECORD LENGTH
+  open(3,file=cpostdat,access='stream',shared)
+  open(9,file=coutput,access='stream',shared)
+  nread=0
 
 
 !===== COMPUTE AVERAGE VALUES IF NOT AVAILABLE YET
- if (ndatp.ne.1) then
- ltz=-1
- call average
- ndatp=1
- end if
+! ltz=-1
+! call average
+
 !!===== SAVE AVERAGE VALUES INTO ARRAY
 ! nread=nwrec-totVar
 ! do nn=1,5
@@ -44,23 +58,27 @@ call setup
 !    end if
 !    qa(:,nn)=varr(:)
 ! end do
+
 !===COMPUTE FORCE COEFFICIENT
 !call clpost(1,2,1,.true.)
+
 !==COMPUTE SPACE AVERAGE
 !if (myid==11) then
 !varr(:)=qa(:,5)
 !call spcavg(2,3,0)
 !end if
+
 !==WRITE DATA SO IT CAN BE READ BY POST SUBROUTINE
-!if (tecplot) then
-!   call tdatawrite(lsta)
-!else
-!   call datawrite
-!end if
-!close(3)
-!close(9)
+if (tecplot) then
+   call tdatawrite(lsta)
+else
+   call datawrite
+end if
+close(3)
+
 !!===== WRITE TECPLOT FILE
-! call post
+ call post
+
 !==COMPUTE WALL DISTANCES
 call getwplus(1)
 if (myid==11) then
@@ -75,6 +93,7 @@ allocate(wvarr(0:lcwall))
  wvarr=wplus(:,2)
  call wavg(2,wall=.true.)
 end if
+
 !===== END OF JOB
  if(myid==0) then
     write(*,*) "Finished."

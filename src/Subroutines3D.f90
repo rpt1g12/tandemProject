@@ -188,6 +188,31 @@
 
  end subroutine filte
 
+!===== SUBROUTINE FOR CALCULATING VORTICITY
+
+ subroutine vorti
+
+    ss(:,1)=1/qa(:,1); de(:,1:3)=0
+
+    rr(:,1)=ss(:,1)*qa(:,2)
+    m=1; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+    de(:,2)=de(:,2)+rr(:,1)*xim(:,3)+rr(:,2)*etm(:,3)+rr(:,3)*zem(:,3)
+    de(:,3)=de(:,3)-rr(:,1)*xim(:,2)-rr(:,2)*etm(:,2)-rr(:,3)*zem(:,2)
+
+    rr(:,1)=ss(:,1)*qa(:,3)
+    m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+    de(:,3)=de(:,3)+rr(:,1)*xim(:,1)+rr(:,2)*etm(:,1)+rr(:,3)*zem(:,1)
+    de(:,1)=de(:,1)-rr(:,1)*xim(:,3)-rr(:,2)*etm(:,3)-rr(:,3)*zem(:,3)
+
+    rr(:,1)=ss(:,1)*qa(:,4)
+    m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+    de(:,1)=de(:,1)+rr(:,1)*xim(:,2)+rr(:,2)*etm(:,2)+rr(:,3)*zem(:,2)
+    de(:,2)=de(:,2)-rr(:,1)*xim(:,1)-rr(:,2)*etm(:,1)-rr(:,3)*zem(:,1)
+
+    de(:,1)=de(:,1)*yaco(:); de(:,2)=de(:,2)*yaco(:); de(:,3)=de(:,3)*yaco(:)
+
+ end subroutine vorti
+
 !===== SUBROUTINE FOR ELEMENTARY VARIABLES IN GCBC/GCIC
 
  subroutine eleme(l,cm)

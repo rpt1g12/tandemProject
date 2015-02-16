@@ -1,19 +1,18 @@
 mbk		19
-nts		1
+nts		0
 nscrn-nsgnl	1		1
-ndata-ndatp	1		0
+ndata		12
 nkrk		4
 nviscous	1
 nsmf		0
 nfskp		0
-nrestart	0
-nvarout		4
+nrestart	1
 reoo-tempoo	5.0e4		273.0e0
 amach1-2-3	0.4e0		0.0e0		0.0e0
 wtemp		1.0e0
 cfl		0.95e0
-tmax-timf-tsam	60.0006e0	5.0e0		60.000e0
-fltk		0.8e0 		0.65e0		0.83e0
+tmax-timf-tsam	12.00e0 	5.0e0		00.0e0
+fltk-bc		0.80e0		0.85e0
 dto		-0.01725e0
 
 ! long run

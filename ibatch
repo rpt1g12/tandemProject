@@ -1,18 +1,8 @@
 # !/bin/bash
-# Simple TORQUE/PBS job script to run program my_prog 
 
-# Set default resource requirements for job
-# These can be overridden on the qsub command line.
 #PBS -l nodes=28:ppn=16
-#PBS -l walltime=3:30:00
+#PBS -l walltime=15:30:00
 
-# Change to directory from which job was submitted.
-# The actual name is held in the PBS environment variable $PBS_O_WORKDIR.
 cd $PBS_O_WORKDIR
-
-# Load intel compiler module so that we can find the runtime libraries.
-# This step is not needed for the gcc compilers.
 module load openmpi
-
-# Run my_prog taking input from file inputfile and sending output to outputfile.
 mpirun -mca btl ^openib run.exe > display

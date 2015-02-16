@@ -50,13 +50,6 @@ contains
      cinput='w'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
      cinput='p'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
   end do
-  if (ndatp==1) then
-     cinput='r'; call strio(9,lh,cinput)
-     cinput='u'; call strio(9,lh,cinput)
-     cinput='v'; call strio(9,lh,cinput)
-     cinput='w'; call strio(9,lh,cinput)
-     cinput='p'; call strio(9,lh,cinput)
-  end if
      write(9,pos=4*lh+1) 299.0; lh=lh+1 ! Zone Marker
      cinput=czone; call strio(9,lh,cinput)
      write(9,pos=4*lh+1) -1; lh=lh+1 ! Parent Zone
@@ -112,7 +105,6 @@ contains
   end do
   end if
      close(9)
-  !end if
  
  end subroutine post
 
