@@ -787,7 +787,6 @@
       varr(:)=((qa(:,m)/qa(:,1))+umf(m-1)); write(0,rec=nwrec) varr(:)
    end do
    !======================================
-
    select case(nvarout)
    case(0); rr(:,1)=qa(:,1)
    case(1); rr(:,1)=qa(:,2)/qa(:,1)+umf(1)
@@ -814,49 +813,6 @@
       de(:,2)=de(:,2)-rr(:,1)*xim(:,1)-rr(:,2)*etm(:,1)-rr(:,3)*zem(:,1)
 
       rr(:,1)=sqrt((de(:,1)*de(:,1)+de(:,2)*de(:,2)+de(:,3)*de(:,3))*yaco(:)*yaco(:))
-   case(7)
-      nwrec=nwrec+1
-      varr(:)=p(:); write(0,rec=nwrec) varr(:)
-
-      ss(:,1)=1/qa(:,1); de(:,1:3)=0
-
-      rr(:,1)=ss(:,1)*qa(:,2)
-      m=1; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
-      de(:,1)=yaco(:)*(rr(:,1)*xim(:,1)+rr(:,2)*etm(:,1)+rr(:,3)*zem(:,1))
-      de(:,2)=yaco(:)*(rr(:,1)*xim(:,2)+rr(:,2)*etm(:,2)+rr(:,3)*zem(:,2))
-      de(:,3)=yaco(:)*(rr(:,1)*xim(:,3)+rr(:,2)*etm(:,3)+rr(:,3)*zem(:,3))
-
-      nwrec=nwrec+1
-      varr(:)=de(:,1); write(0,rec=nwrec) varr(:)
-      nwrec=nwrec+1
-      varr(:)=de(:,2); write(0,rec=nwrec) varr(:)
-      nwrec=nwrec+1
-      varr(:)=de(:,3); write(0,rec=nwrec) varr(:)
-
-      rr(:,1)=ss(:,1)*qa(:,3)
-      m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
-      de(:,1)=yaco(:)*(rr(:,1)*xim(:,1)+rr(:,2)*etm(:,1)+rr(:,3)*zem(:,1))
-      de(:,2)=yaco(:)*(rr(:,1)*xim(:,2)+rr(:,2)*etm(:,2)+rr(:,3)*zem(:,2))
-      de(:,3)=yaco(:)*(rr(:,1)*xim(:,3)+rr(:,2)*etm(:,3)+rr(:,3)*zem(:,3))
-
-      nwrec=nwrec+1
-      varr(:)=de(:,1); write(0,rec=nwrec) varr(:)
-      nwrec=nwrec+1
-      varr(:)=de(:,2); write(0,rec=nwrec) varr(:)
-      nwrec=nwrec+1
-      varr(:)=de(:,3); write(0,rec=nwrec) varr(:)
-
-      rr(:,1)=ss(:,1)*qa(:,4)
-      m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
-      de(:,1)=yaco(:)*(rr(:,1)*xim(:,1)+rr(:,2)*etm(:,1)+rr(:,3)*zem(:,1))
-      de(:,2)=yaco(:)*(rr(:,1)*xim(:,2)+rr(:,2)*etm(:,2)+rr(:,3)*zem(:,2))
-      de(:,3)=yaco(:)*(rr(:,1)*xim(:,3)+rr(:,2)*etm(:,3)+rr(:,3)*zem(:,3))
-
-      nwrec=nwrec+1
-      varr(:)=de(:,1); write(0,rec=nwrec) varr(:)
-      nwrec=nwrec+1
-      varr(:)=de(:,2); write(0,rec=nwrec) varr(:)
-      rr(:,1)=de(:,3)
    end select
 
    nwrec=nwrec+1

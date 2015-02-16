@@ -164,7 +164,16 @@
  real(nr), dimension(:,:), allocatable ::wnor,tw
  real(nr), dimension(:,:), allocatable :: xyz
  logical :: wflag
+
+!===== POST-PROCESSING VARIABLES BY RPT
+
+ integer :: lsta
+ logical :: tecplot
+ real(nr), dimension(:,:), allocatable :: wplus
+ real(nr), dimension(:), allocatable :: wvarr
+
 !=====
+
  end module mainvar3d
 
 !*****
