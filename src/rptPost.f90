@@ -223,8 +223,6 @@ contains
     call penta(yu(:,:),yl(:,:),albef(:,:,ns),albef(:,:,ne),alphf,betf,is,ie)
  end do
 
-!===== GRID INPUT & CALCULATION OF GRID METRICS
-
     allocate(lio(0:let,0:lze))
  do k=0,lze; kp=k*(leto+1)*(lxio+1)
  do j=0,let; jp=j*(lxio+1)
@@ -232,49 +230,28 @@ contains
  end do
  end do
 
- 
- !===== GRID INPUT & CALCULATION OF GRID METRICS
- !===== READ X,Y,Z COORDINATES
-  do nn=1,3
-     nread=nread+1
-     if (tecplot) then
-     call tpostread(nread,lsta)
-     else 
-     call postread(nread)
-     end if
-     ss(:,nn)=varr(:)
-  end do
- !===== READ METRICS
-  if (ngridv==1) then
-  do nn=1,3
-     nread=nread+1
-     if (tecplot) then
-     call tpostread(nread,lsta)
-     else 
-     call postread(nread)
-     end if
-     xim(:,nn)=varr(:)
-  end do
-  do nn=1,3
-     nread=nread+1
-     if (tecplot) then
-     call tpostread(nread,lsta)
-     else 
-     call postread(nread)
-     end if
-     etm(:,nn)=varr(:)
-  end do
-  do nn=1,3
-     nread=nread+1
-     if (tecplot) then
-     call tpostread(nread,lsta)
-     else 
-     call postread(nread)
-     end if
-     zem(:,nn)=varr(:)
-  end do
+ !===== INPUT RECORDING PARAMETERS
+  open(9,file='data/post.dat',shared)
+  read(9,*) cinput,ngridv
+  read(9,*) cinput,ndata
+  read(9,*) cinput,nrec
+  read(9,*) cinput,nwrec
+  close(9)
+    totVar=5
+
+  if (tecplot) then
+  lsta=17+ngridv*45+(ndata+1)*25+24+nwrec+3+4*nwrec
   end if
- 
+ !===== OPEN UNITS FOR POSTPROCESSING
+  open(8,file=cpostdat,access='stream',shared)
+  open(9,file=coutput,access='stream',shared)
+  nread=0
+ end subroutine setup
+
+!====================================================================================
+!=====COMPUTE METRIC TERMS
+!====================================================================================
+ subroutine getMetrics
  !===== COMPUTE INVERSE METRICS
      rr(:,1)=ss(:,1)
      m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
@@ -288,13 +265,25 @@ contains
      m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
      de(:,1)=rr(:,1); de(:,2)=rr(:,2); de(:,3)=rr(:,3)
  
+     allocate(xyz(0:lmx,3))
      do i = 1, 3
         xyz(:,i)=ss(:,i)
      end do
- 
- 
  !===== COMPUTE METRICS IF NOT AVAILABLE YET
-     if(ngridv.ne.1) then
+     if (ngridv==1) then
+        do nn = 1, 3
+           nread=nread+1; call postread(nread)
+           xim(:,nn)=varr(:)
+        end do
+        do nn = 1, 3
+           nread=nread+1; call postread(nread)
+           etm(:,nn)=varr(:)
+        end do
+        do nn = 1, 3
+           nread=nread+1; call postread(nread)
+           zem(:,nn)=varr(:)
+        end do
+     else
      xim(:,1)=qa(:,2)*de(:,3)-de(:,2)*qa(:,3)
      xim(:,2)=de(:,2)*qo(:,3)-qo(:,2)*de(:,3)
      xim(:,3)=qo(:,2)*qa(:,3)-qa(:,2)*qo(:,3)
@@ -305,12 +294,11 @@ contains
      zem(:,2)=de(:,1)*qo(:,2)-qo(:,1)*de(:,2)
      zem(:,3)=qo(:,1)*qa(:,2)-qa(:,1)*qo(:,2)
      end if
- 
+    
  !===== COMPUTE JACOBIAN
      yaco(:)=3/(qo(:,1)*xim(:,1)+qo(:,2)*etm(:,1)+qo(:,3)*zem(:,1)&
                +qa(:,1)*xim(:,2)+qa(:,2)*etm(:,2)+qa(:,3)*zem(:,2)&
                +de(:,1)*xim(:,3)+de(:,2)*etm(:,3)+de(:,3)*zem(:,3))
-
 
     call wallArea
     call walldir
@@ -326,7 +314,7 @@ contains
  end do
  end do
  end do; end do
- end subroutine setup
+ end subroutine getMetrics
 
 !====================================================================================
 !=====AVERAGE RESULTS IN TIME
@@ -337,6 +325,13 @@ contains
     real(nr),dimension(:),allocatable :: delt
     ! SELECT THE VARIABLE STRIDE
       totVar=5
+    ! READ OUTPUT TIMES
+    open(3,file='data/timeouts.dat',shared)
+    do nn = 0, ndata
+       read(3,'(es15.7)') times(nn)
+    end do
+    close(3)
+
     ! CONSTRUCT THE COEFFICIENTS ARRAY
        ns=0; ne=ndata; allocate(delt(ns:ne))
        fctr=half/(times(ne)-times(ns))
@@ -350,9 +345,7 @@ contains
        call postread((n*totVar+nrec+m))
        rr(:,1)=rr(:,1)+delt(n)*varr(:)
     end do
-       varr(:)=rr(:,1)
-       nwrec=nwrec+1
-       call postwrite(nwrec)
+       qa(:,m)=rr(:,1)
     end do
  end subroutine average
 
@@ -524,6 +517,56 @@ contains
     close(7)
     end if
  end subroutine wavg
+ 
+!====================================================================================
+!=====COMPUTE Q-CRITERION
+!====================================================================================
+ subroutine qcriterion(nvar)
+    implicit none
+    integer, intent(in) :: nvar
+
+    ! READ VARIABLES
+    nread=nrec+(totVar*nvar)
+    do nn = 1, 5
+     nread=nread+1 
+     call postread(nread)
+     qo(:,nn)=varr(:)
+    end do
+    p(:)=qo(:,5)
+    if (nviscous==1) then
+     de(:,1)=1/qo(:,1)
+     de(:,2)=qo(:,2)
+     de(:,3)=qo(:,3)
+     de(:,4)=qo(:,4)
+     de(:,5)=gam*p(:)*de(:,1)
+     ss(:,1)=srefp1dre*de(:,5)**1.5_nr/(de(:,5)+srefoo)
+     de(:,1)=ss(:,1)
+ 
+     rr(:,1)=de(:,2)
+     m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     txx(:)=yaco(:)*(xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3))
+     hzz(:)=yaco(:)*(xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3))
+     tzx(:)=yaco(:)*(xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3))
+ 
+     rr(:,1)=de(:,3)
+     m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     txy(:)=yaco(:)*(xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3))
+     tyy(:)=yaco(:)*(xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3))
+     hxx(:)=yaco(:)*(xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3))
+ 
+     rr(:,1)=de(:,4)
+     m=4; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     hyy(:)=yaco(:)*(xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3))
+     tyz(:)=yaco(:)*(xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3))
+     tzz(:)=yaco(:)*(xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3))
+
+     varr(:)=2*(half*(hzz(:)-txy(:)))**2 + 2*(half*(tzx(:)-tzz(:)))**2 + &
+     2*(half*(hxx(:)-tyz(:)))**2 - txx(:)**2 - tyy(:)**2 - tzz(:)**2 -   &
+     2*(half*(hzz(:)+txy(:)))**2 - 2*(half*(tzx(:)+hyy(:)))**2 -         &
+     2*(half*(hxx(:)+tyz(:)))**2
+    end if
+
+ end subroutine qcriterion
 !*****
 
 end module rptpost

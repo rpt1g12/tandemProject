@@ -13,8 +13,9 @@ contains
 !====================================================================================
 !===== POST-PROCESSING & GENERATING TECPLOT DATA FILE
 !====================================================================================
- subroutine post
+ subroutine post(average)
  use problemcase, only: finalout,ngridv
+ logical, intent(in) :: average
  
   if(myid==mo(mb)) then
      open(9,file=coutput); close(9,status='delete')
@@ -50,6 +51,13 @@ contains
      cinput='w'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
      cinput='p'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
   end do
+     if (average) then
+     cinput='r'; call strio(9,lh,cinput)
+     cinput='u'; call strio(9,lh,cinput)
+     cinput='v'; call strio(9,lh,cinput)
+     cinput='w'; call strio(9,lh,cinput)
+     cinput='p'; call strio(9,lh,cinput)
+     end if
      write(9,pos=4*lh+1) 299.0; lh=lh+1 ! Zone Marker
      cinput=czone; call strio(9,lh,cinput)
      write(9,pos=4*lh+1) -1; lh=lh+1 ! Parent Zone
@@ -323,6 +331,7 @@ contains
  implicit none
  integer, intent(in) :: nvar
 
+    if (wflag) then
     ! READ VARIABLES
     nread=nrec+(totVar*nvar)
     do nn = 1, 5
@@ -376,6 +385,7 @@ contains
          tw(ll,3)=(tzx(l)*wnor(ll,1)+tyz(l)*wnor(ll,2)+tzz(l)*wnor(ll,3))/reoo
        end do
     end if
+    end if
     
  end subroutine gettw
 
@@ -401,7 +411,7 @@ contains
   lp=lpos(myid)
      lq=(num-1)*ltomb
      do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-        read(3,pos=nr*(lp+lq+lio(j,k))+1) varr(l:l+lxi)
+        read(8,pos=nr*(lp+lq+lio(j,k))+1) varr(l:l+lxi)
      end do; end do
  end subroutine postread
 
@@ -415,7 +425,7 @@ contains
   lp=lpos(myid)
      lq=(num-1)*ltomb
      do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-        write(3,pos=nr*(lp+lq+lio(j,k))+1) varr(l:l+lxi)
+        write(8,pos=nr*(lp+lq+lio(j,k))+1) varr(l:l+lxi)
      end do; end do
  end subroutine postwrite
 
@@ -457,15 +467,15 @@ contains
   implicit none
   integer :: nn
   call MPI_BARRIER(icom,ierr)
-  open(3,file=cpostdat,access='stream',shared)
+  open(8,file=cpostdat,access='stream',shared)
   lp=lpos(myid)
   do nn=1,nwrec
      lq=(nn-1)*ltomb
      read(0,rec=nn) varr(:)
      do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-        write(3,pos=nr*(lp+lq+lio(j,k))+1) varr(l:l+lxi)
+        write(8,pos=nr*(lp+lq+lio(j,k))+1) varr(l:l+lxi)
      end do; end do
   end do
-  close(3)
+  close(8)
  end subroutine postDat
 end module rpt

@@ -371,6 +371,9 @@
     read(9,pos=nr*lh+1) dte; lh=lh+1
     read(9,pos=nr*lh+1) timo; lh=lh+1
     lp=lpos(myid)+lh
+    if ((tsam-timo)/tsam<0.05e0) then
+       tsam=timo
+    end if
  do m=1,5; lq=(m-1)*ltomb
  do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
     read(9,pos=nr*(lp+lq+lio(j,k))+1) qa(l:l+lxi,m)
@@ -801,7 +804,7 @@
  end if
 
  if(timo-tsam>=0.and.mod(n,nsgnl)==0) then
-    nsigi=nsigi+1; call signalgo
+    !nsigi=nsigi+1; call signalgo
  end if
 
 !==========================
@@ -813,7 +816,7 @@
     wte=MPI_WTIME(); res=wte-wts
     call MPI_ALLREDUCE(res,wtime,1,MPI_REAL8,MPI_SUM,icom,ierr)
  if(myid==0) then
-    open(9,file='timeouts.dat')
+    open(9,file='data/timeouts.dat')
     write(9,'(es15.7)') times(:)
     close(9)
     open(9,file='walltime.dat',position='append')
@@ -832,7 +835,7 @@
        write(*,*) "Writing Output files..."
     end if
     call postDat
-    call post
+    call post(average=.false.)
  end if
 
 if (myid==0) then

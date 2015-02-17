@@ -3,10 +3,10 @@ let0		180     60
 lze0		35
 nbody-nthick	2	2
 ngridv		1
-npbxi0-to-9	8	6	4	2	8	8	6	4	2	8
-npbxi10-to-19	8	6	4	2	8	8	6	4	2	8
-npbet0-to-9	6	6	6	6	6	2	2	2	2	2	
-npbet10-to-19	2	2	2	2	2	6	6	6	6	6	
+npbxi0-to-9	1	1	1	1	1	1	1	1	1	1
+npbxi10-to-19	1	1	1	1	1	1	1	1	1	1
+npbet0-to-9	1	1	1	1	1	1	1	1	1	1	
+npbet10-to-19	1	1	1	1	1	1	1	1	1	1	
 npbze0-to-9	1	1	1	1	1	1	1	1	1	1
 npbze10-to-19	1	1	1	1	1	1	1	1	1	1
 nito-nits-litr	0	1	10
