@@ -10,6 +10,8 @@
  use problemcase
  use rpt
  implicit none
+ real(nr) :: xpos,ypos,zpos
+ integer :: lsignal,idsignal
 
 !===== PREPARATION FOR PARALLEL COMPUTING
 
@@ -49,6 +51,10 @@
     uoo(1)=amach1*aoo; uoo(2)=amach2*aoo; uoo(3)=amach3*aoo
     ! rpt-Initialising the record count 
     nwrec=0
+    ! rpt-Do not use postprocessing subroutines
+    ispost=.false.
+    ! rpt-Position of signal sampling
+    xpos=0.4_nr;ypos=0.01_nr;zpos=0.0_nr
 
     allocate(times(0:ndata))
     allocate(lximb(0:mbk),letmb(0:mbk),lzemb(0:mbk),lhmb(0:mbk),mo(0:mbk),npc(0:mbk,3))
@@ -259,6 +265,20 @@
     open(9,file=cgrid); close(9,status='delete')
  end if
 
+    !RPT-FIND POSITION FOR SIGNAL SAMPLING
+    idsignal=-1
+    varr(:)=sqrt((ss(:,1)-xpos)**2+(ss(:,2)-ypos)**2+(ss(:,3)-zpos)**2)
+    lsignal=minloc(varr(:),1)-1
+    ra0=varr(lsignal)
+    CALL MPI_ALLREDUCE(ra0,ra1,1,MPI_REAL8,MPI_MIN,icom,ierr)
+    if (abs(ra0-ra1)/ra0<sml) then
+       idsignal=myid
+    end if
+    if (myid==idsignal) then
+    open(6,file='data/signal.dat')
+    end if
+
+
     rr(:,1)=ss(:,1)
     m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
     qo(:,1)=rr(:,1); qo(:,2)=rr(:,2); qo(:,3)=rr(:,3)
@@ -399,14 +419,14 @@
  do while(timo-tmax<0.and.(dt/=0.or.n<=2))
 
   if (n.ge.2) then
-    call clpost(1,2,ndati,post=.false.) 
+    call clpost(1,2,ndati) 
   else
     cl=0
   end if
 
   if(myid==0.and.mod(n,nscrn)==0) then
      write(*,"(' n =',i8,'   time =',f12.5,' Cl1 = ',f10.5,', Cl2 = ',f10.5)") &
-     n,timo,cl(1,2),cl(2,2)
+     n,timo,cl(1,2),cl(1,1)
   end if
 
 ! ----- FILTERING
@@ -807,18 +827,29 @@
     !nsigi=nsigi+1; call signalgo
  end if
 
+ if (myid==idsignal) then
+    ra0=qa(lsignal,2)/qa(lsignal,1)+umf(1)
+    ra1=qa(lsignal,3)/qa(lsignal,1)+umf(2)
+    ra2=qa(lsignal,4)/qa(lsignal,1)+umf(3)
+    write(6,"(f10.5,1x,f10.5,1x,f10.5,1x,f10.5)") ra0,ra1,ra2,timo
+ end if
+
 !==========================
 !===== END OF TIME MARCHING
 !==========================
  end do
     close(1)
+    if (myid==idsignal) then
+       close(6)
+    end if
 
     wte=MPI_WTIME(); res=wte-wts
     call MPI_ALLREDUCE(res,wtime,1,MPI_REAL8,MPI_SUM,icom,ierr)
  if(myid==0) then
-    open(9,file='data/timeouts.dat')
-    write(9,'(es15.7)') times(:)
-    close(9)
+    !open(9,file='data/timeouts.dat')
+    !write(9,'(es15.7)') times(:)
+    !close(9)
+
     open(9,file='walltime.dat',position='append')
     write(9,'(2es15.7)') real(npro,nr),wtime/npro
     close(9)
@@ -834,18 +865,18 @@
        write(*,'("Simulation time was ",f6.2," hours")') wtime/(3600_nr*npro)
        write(*,*) "Writing Output files..."
     end if
-    call postDat
-    call post(average=.false.)
+!    call post(average=.false.)
  end if
 
-if (myid==0) then
-   open(9,file='data/post.dat')
-   write(9,*) 'ngridv ',ngridv
-   write(9,*) 'ndata  ',ndata
-   write(9,*) 'nrec   ',nrec
-   write(9,*) 'nwrec  ',nwrec
-   close(9)
-end if
+!if (myid==0) then
+!   open(9,file='data/post.dat')
+!   write(9,*) 'ngridv ',ngridv
+!   write(9,*) 'ndata  ',ndata
+!   write(9,*) 'nrec   ',nrec
+!   write(9,*) 'nwrec  ',nwrec
+!   write(9,*) 'lhmb   ',lhmb(mb)
+!   close(9)
+!end if
 
 !===== END OF JOB
 

@@ -18,10 +18,18 @@ contains
  logical, intent(in) :: average
  
   if(myid==mo(mb)) then
+     if (ispost) then
+     open(9,file=ctecout); close(9,status='delete')
+     else
      open(9,file=coutput); close(9,status='delete')
+     end if
   end if
      call MPI_BARRIER(icom,ierr)
+     if (ispost) then
+     open(9,file=ctecout,access='stream',shared)
+     else
      open(9,file=coutput,access='stream',shared)
+     end if
      lh=0
   if(myid==mo(mb)) then
      write(9,pos=4*lh+1) '#!TDV112'; lh=lh+2
@@ -58,6 +66,10 @@ contains
      cinput='w'; call strio(9,lh,cinput)
      cinput='p'; call strio(9,lh,cinput)
      end if
+  do n=0,ndata
+     no(2)=n/100; no(1)=mod(n,100)/10; no(0)=mod(n,10); cno=achar(no+48)
+     cinput='Q'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
+  end do
      write(9,pos=4*lh+1) 299.0; lh=lh+1 ! Zone Marker
      cinput=czone; call strio(9,lh,cinput)
      write(9,pos=4*lh+1) -1; lh=lh+1 ! Parent Zone
@@ -94,13 +106,21 @@ contains
      ns=1; ne=nwrec; allocate(varmin(ns:ne),varmax(ns:ne))
      lp=lpos(myid)+lhmb(mb)
   do n=ns,ne; lq=(n-1)*ltomb
+     if (ispost) then
+     call postread(n)   
+     else
      read(0,rec=n) varr(:)
+     end if
   do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
      write(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
   end do; end do
      varmin(n)=minval(varr(:)); varmax(n)=maxval(varr(:))
   end do
+     if (ispost) then
+     close(8)
+     else
      close(0,status='delete')
+     end if
   do n=ns,ne
      res=varmin(n); call MPI_ALLREDUCE(res,fctr,1,MPI_REAL8,MPI_MIN,icom,ierr); varmin(n)=fctr
      res=varmax(n); call MPI_ALLREDUCE(res,fctr,1,MPI_REAL8,MPI_MAX,icom,ierr); varmax(n)=fctr
@@ -234,9 +254,11 @@ contains
     integer :: bblock1,tblock1
     integer :: bblock2,tblock2
     real(nr) :: coef,tmp
+    real(nr), dimension(3) :: u,v,r
  
     bblock1 = 6; tblock1 = 11
     bblock2 = 8; tblock2 = 13
+    u=(/0,0,1/)
  
     if (wflag) then
     ! Find top or bottom
@@ -245,12 +267,15 @@ contains
     elseif ((mb==tblock1).or.(mb==tblock2)) then
        coef=one
     end if
-    allocate(wnor(0:lcwall,3))
+    allocate(wnor(0:lcwall,3),wtan(0:lcwall,3))
     do ll = 0, lcwall; l=lwall(ll)
        tmp=coef/sqrt(etm(l,1)*etm(l,1)+etm(l,2)*etm(l,2)+etm(l,3)*etm(l,3))
        do m = 1, 3
        wnor(ll,m)=etm(l,m)*tmp
        end do
+       v=wnor(ll,:)
+       r=cross(u,v)
+       wtan(ll,:)=r(:)*coef
     end do
     end if
  
@@ -259,15 +284,15 @@ contains
 !====================================================================================
 !=====COMPUTE LIFT COEFFICIENT OVER AEROFOILS
 !====================================================================================
- subroutine clpost(ele,dir,nvar,post)
+ subroutine clpost(ele,dir,nvar)
  
  use problemcase, only: span,delt1,delt2
  implicit none
     
     integer, intent(in) :: ele,nvar,dir
-    integer :: bblock,tblock
+    integer :: bblock,tblock,m,ll
     real(nr) :: dynp,clp,clv,tcl
-    logical :: flag,post
+    logical :: flag
  
     clp=0;clv=0;flag=.false.;tcl=0;
  
@@ -292,7 +317,7 @@ contains
     if (wflag.and.flag) then
     ! Compute Dynamic pressure
     dynp=two/(amachoo*amachoo*span)
-    if (post) then
+    if (ispost) then
        call gettw(nvar)
        do ll = 0, lcwall; l=lwall(ll)
          clp=clp+(p(l)*wnor(ll,dir)*area(ll))
@@ -330,13 +355,17 @@ contains
  use subroutines3d, only: mpigo,deriv
  implicit none
  integer, intent(in) :: nvar
+ integer :: nn,ll
 
     if (wflag) then
     ! READ VARIABLES
     nread=nrec+(totVar*nvar)
     do nn = 1, 5
-     nread=nread+1 
-     call postread(nread)
+     if (tecplot) then
+     nread=nread+1; call tpostread(nread,lsta)
+     else
+     nread=nread+1; call postread(nread)
+     end if
      qo(:,nn)=varr(:)
     end do
     p(:)=qo(:,5)
@@ -408,6 +437,7 @@ contains
  subroutine postread(num)
  implicit none
  integer, intent (in) :: num
+ integer :: lp,lq,l,k,j
   lp=lpos(myid)
      lq=(num-1)*ltomb
      do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
@@ -430,52 +460,35 @@ contains
  end subroutine postwrite
 
 !====================================================================================
-! ====WRITE DATA FOR POST-PROCESSING FROM TECPLOT FILES
-!====================================================================================
- subroutine tdatawrite(lsta)
- implicit none
- integer, intent (in) :: lsta
- integer :: nn
-  call MPI_BARRIER(icom,ierr)
-     inquire(iolength=lh) varr
-     open(0,file=cdata,access='direct',recl=lh)
-     do nn = 1, nwrec
-        call tpostread(nn,lsta)
-        write(0,rec=nn) varr(:)
-     end do
- end subroutine tdatawrite
-
-!====================================================================================
-! ====WRITE DATA FOR POST-PROCESSING
-!====================================================================================
- subroutine datawrite
- implicit none
- integer :: nn
-  call MPI_BARRIER(icom,ierr)
-     inquire(iolength=lh) varr
-     open(0,file=cdata,access='direct',recl=lh)
-     do nn = 1, nwrec
-        call postread(nn)
-        write(0,rec=nn) varr(:)
-     end do
- end subroutine datawrite
-
-!====================================================================================
-! ====RECORD DATA FOR POST-PROCESSING
+! ====RECORD DATA FOR POST-PROCESSING READING FROM TECPLOT FILES
 !====================================================================================
  subroutine postDat
   implicit none
   integer :: nn
+  if (myid==0) then
+     write(*,*) 'creating data files...'
+  end if
   call MPI_BARRIER(icom,ierr)
-  open(8,file=cpostdat,access='stream',shared)
-  lp=lpos(myid)
   do nn=1,nwrec
-     lq=(nn-1)*ltomb
-     read(0,rec=nn) varr(:)
-     do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-        write(8,pos=nr*(lp+lq+lio(j,k))+1) varr(l:l+lxi)
-     end do; end do
+     call tpostread(nn,lsta)
+     call postwrite(nn)
+  if (myid==0) then
+     write(*,"(f5.1,'% written')") nn*100.e0/real(nwrec)
+  end if
   end do
-  close(8)
+  call MPI_BARRIER(icom,ierr)
  end subroutine postDat
+
+!====================================================================================
+! ====CROSS PRODUCT OF TWO VECTORS 
+!====================================================================================
+ function cross(u,v) result(r)
+ real(nr), dimension(3), intent(in) :: u,v
+ real(nr), dimension(3) :: r
+
+    r(1)=(u(2)*v(3)-u(3)*v(2))
+    r(2)=(u(3)*v(1)-u(1)*v(3))
+    r(3)=(u(1)*v(2)-u(2)*v(1))
+ end function cross
+
 end module rpt

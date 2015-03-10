@@ -64,6 +64,7 @@ contains
     cno=achar(no+48); cnzone=cno(2)//cno(1)//cno(0)
     czone='zone'//cnzone;
     coutput='out/output'//cnzone//'.plt'
+    ctecout='out/tecout'//cnzone//'.plt'
     cgrid='misc/grid'//cnzone//'.dat';
     crestart='rsta/restart'//cnzone//'.dat'
     cpostdat='data/postdat'//cnzone//'.dat'
@@ -236,13 +237,13 @@ contains
   read(9,*) cinput,ndata
   read(9,*) cinput,nrec
   read(9,*) cinput,nwrec
+  read(9,*) cinput,lsta
   close(9)
     totVar=5
 
-  if (tecplot) then
-  lsta=17+ngridv*45+(ndata+1)*25+24+nwrec+3+4*nwrec
-  end if
  !===== OPEN UNITS FOR POSTPROCESSING
+ ! inquire(iolength=lh) varr
+ ! open(0,file=cdata,access='direct',recl=lh)
   open(8,file=cpostdat,access='stream',shared)
   open(9,file=coutput,access='stream',shared)
   nread=0
@@ -272,15 +273,27 @@ contains
  !===== COMPUTE METRICS IF NOT AVAILABLE YET
      if (ngridv==1) then
         do nn = 1, 3
+           if (tecplot) then
+           nread=nread+1; call tpostread(nread,lsta)
+           else
            nread=nread+1; call postread(nread)
+           end if
            xim(:,nn)=varr(:)
         end do
         do nn = 1, 3
+           if (tecplot) then
+           nread=nread+1; call tpostread(nread,lsta)
+           else
            nread=nread+1; call postread(nread)
+           end if
            etm(:,nn)=varr(:)
         end do
         do nn = 1, 3
+           if (tecplot) then
+           nread=nread+1; call tpostread(nread,lsta)
+           else
            nread=nread+1; call postread(nread)
+           end if
            zem(:,nn)=varr(:)
         end do
      else
@@ -342,7 +355,14 @@ contains
     do m = 1, totVar
        rr(:,1)=0
     do n=0,ndata
+    if (myid==0) then
+       write(*,"(f5.1,'% Averaged')") real(ndata*(m-1)+n)*100.0e0/real(ndata*totVar)
+    end if
+       if (tecplot) then
+       call tpostread((n*totVar+nrec+m),lsta)
+       else
        call postread((n*totVar+nrec+m))
+       end if
        rr(:,1)=rr(:,1)+delt(n)*varr(:)
     end do
        qa(:,m)=rr(:,1)
@@ -525,14 +545,7 @@ contains
     implicit none
     integer, intent(in) :: nvar
 
-    ! READ VARIABLES
-    nread=nrec+(totVar*nvar)
-    do nn = 1, 5
-     nread=nread+1 
-     call postread(nread)
-     qo(:,nn)=varr(:)
-    end do
-    p(:)=qo(:,5)
+    call fillqo(nvar)
     if (nviscous==1) then
      de(:,1)=1/qo(:,1)
      de(:,2)=qo(:,2)
@@ -567,6 +580,47 @@ contains
     end if
 
  end subroutine qcriterion
+
+!====================================================================================
+!=====FIND INDEX FROM X,Y, AND Z COORDINATES
+!====================================================================================
+ subroutine findll(xpos,ypos,zpos,l,id) 
+    implicit none
+    real(nr), intent(in) :: xpos,ypos,zpos
+    integer, intent (out) :: l,id
+    real(nr) :: tmp,tmpall
+
+    id=-1
+    varr(:)=sqrt((xyz(:,1)-xpos)**2+(xyz(:,2)-ypos)**2+(xyz(:,3)-zpos)**2)
+    l=minloc(varr(:),1)-1
+    tmp=varr(l)
+    CALL MPI_ALLREDUCE(tmp,tmpall,1,MPI_REAL8,MPI_MIN,icom,ierr)
+    if (abs(tmp-tmpall)/tmp<sml) then
+       id=myid
+    end if
+
+ end subroutine findll
+ 
+!====================================================================================
+!=====FILL ARRAY QO(:,:) WITH VALUES FROM OUTPUT = NVAR
+!====================================================================================
+ subroutine fillqo(nvar)
+    implicit none
+    integer, intent(in) :: nvar
+
+    ! READ VARIABLES
+    nread=nrec+(totVar*nvar)
+    do nn = 1, 5
+     if (tecplot) then
+     nread=nread+1; call tpostread(nread,lsta)
+     else
+     nread=nread+1; call postread(nread)
+     end if
+     qo(:,nn)=varr(:)
+    end do
+    p(:)=qo(:,5)
+    
+ end subroutine fillqo
 !*****
 
 end module rptpost

@@ -136,6 +136,7 @@
  character(5) :: cnnode
  character(7) :: czone
  character(17) :: coutput
+ character(17) :: ctecout
  character(16) :: cinput
  character(16) :: cgrid
  character(18) :: cdata,cturb
@@ -160,14 +161,14 @@
  integer :: lcwall
  integer, dimension(:), allocatable ::lwall
  real(nr), dimension(:), allocatable ::area
- real(nr), dimension(:,:), allocatable ::wnor,tw
+ real(nr), dimension(:,:), allocatable ::wnor,wtan,tw
  real(nr), dimension(:,:), allocatable :: xyz
  logical :: wflag
 
 !===== POST-PROCESSING VARIABLES BY RPT
 
  integer :: lsta
- logical :: tecplot
+ logical :: tecplot,ispost
  real(nr), dimension(:,:), allocatable :: wplus
  real(nr), dimension(:), allocatable :: wvarr
 
