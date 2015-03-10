@@ -120,7 +120,6 @@
     call MPI_BCAST(xit,nits,MPI_REAL8,0,icom,ierr)
 
  end subroutine inputext
- 
 
 !===== DOMAIN DECOMPOSITION & BOUNDARY INFORMATION
 
@@ -392,6 +391,7 @@
 
  subroutine junction
 
+ integer :: njct
 
     is=mbk; ie=0; kk=5*(lze+1)-1
     kp=mod((myid-mo(mb))/(npc(mb,1)*npc(mb,2)),npc(mb,3))
@@ -480,7 +480,11 @@
 
  subroutine finalout
 
+ integer :: totVar
  real(nr),dimension(:),allocatable :: delt
+
+
+   totVar=5
  
  if(ltz/=-1) then; deallocate(lctz,tt,vit,vito); end if
 
@@ -490,10 +494,10 @@
  do n=ns+1,ne-1
     delt(n)=fctr*(times(n+1)-times(n-1))
  end do
- do m = 1, 5
+ do m = 1, totVar
     rr(:,1)=0
  do n=0,ndata
-    read(0,rec=(n*5)+nrec+m) varr(:)
+    read(0,rec=(n*totVar)+nrec+m) varr(:)
     rr(:,1)=rr(:,1)+delt(n)*varr(:)
  end do
  !   ss(:,1)=0

@@ -9,7 +9,7 @@
 !===== CONSTANT PARAMETERS
 
  integer,parameter :: nr=kind(0.0d0),ntdrv=0,ntflt=1,nrall=0,nrone=1,n45no=0,n45go=1
- integer,parameter :: lmd=11,lmf=8,lmp=max(lmd,lmf),mfbi=4,mbci=5
+ integer,parameter :: lmd=11,lmf=8,lmp=max(lmd,lmf),mfbi=3,mbci=3
  integer,parameter :: liofs=16,liofl=24
 
  character(len=*),parameter :: fmts='es15.8',fmtl='es23.16',fmtsa=fmts//',a',fmtla=fmtl//',a'
@@ -68,15 +68,11 @@
  integer,dimension(:),allocatable :: lxim,letm,lzem,lpos
  integer,dimension(:),allocatable :: lximb,letmb,lzemb,lhmb,mo
 
- real(nr),dimension(:,:),allocatable :: qo,qa,de
+ real(nr),dimension(:,:),allocatable :: qo,qa,qb,de
  real(nr),dimension(:),allocatable :: txx,tyy,tzz,txy,tyz,tzx,hxx,hyy,hzz
 
  real(nr),dimension(:,:),allocatable :: xim,etm,zem
  real(nr),dimension(:),allocatable :: p,yaco
- ! rpt-Area array declaration
- real(nr),dimension(:),allocatable :: dA
- ! rpt-slice coordinates declaration
- real(nr),dimension(:,:,:),allocatable :: tpwle
 
  real(nr),dimension(:,:),allocatable :: rr,ss
 
@@ -100,6 +96,9 @@
  real(nr),dimension(:,:,:),allocatable,target :: cm1,cm2,cm3
  real(nr),dimension(:,:),allocatable,target :: cmm1,cmm2,cmm3
 
+ character(13),dimension(:),allocatable :: cfilet
+ character(7),dimension(:),allocatable :: czonet
+
 !===== CONSTANT-SIZED MAIN VARIABLES
 
  integer,dimension(0:1,0:1,3) :: ndf
@@ -111,8 +110,8 @@
  integer(8) :: lp,lq,ltomb
  integer :: lxio,leto,lzeo,lxi,let,lze,lmx,lim
  integer :: i,ii,is,ie,ip,iq,j,jj,js,je,jp,jq,jk,k,kk,kp,l,lh,ll
- integer :: m,ma,mb,mh,mm,mp,mbk,n,ndt,nn,nk,ns,ne,np,nt,nz,ndati,nsigi,nout,nfile,njct
- integer :: nts,nscrn,nsgnl,ndata,ndatp,nviscous,nkrk,nsmf,nfskp,nrestart,nvarout
+ integer :: m,ma,mb,mh,mm,mp,mbk,n,ndt,nn,nk,ns,ne,np,nt,nz,ndati,nsigi,nout,nfile
+ integer :: nts,nscrn,nsgnl,ndata,nviscous,nkrk,nsmf,nfskp,nrestart
 
  real(nr),dimension(0:lmp,0:1,0:1) :: pbci,pbco
  real(nr),dimension(-2:2,0:2,0:1) :: albed,albef
@@ -123,24 +122,25 @@
  real(nr),dimension(mbci) :: rbci,sbci
  real(nr),dimension(5) :: cha,dha
  real(nr),dimension(-2:2) :: alag,blag,tlag
- real(nr),dimension(3) :: ve,dm,rv,uoo,umf,dudtmf,ures
+ real(nr),dimension(3) :: ve,dm,rv,uoo,umf,dudtmf
  real(nr),dimension(0:2) :: fam,fbm,fcm
- ! rpt - cl added
- real(nr),dimension(1:2,1:3) :: cl
  real(nr) :: alphf,betf,fa,fb,fc
  real(nr) :: ra0,ra1,ra2,ra3,res,fctr,dfdt
- real(nr) :: reoo,tempoo,amach1,amach2,amach3,wtemp,cfl,tmax,timf,fltk,dto
+ real(nr) :: reoo,tempoo,amach1,amach2,amach3,wtemp,cfl,tmax,timf,fltk,fltkbc,dto
  real(nr) :: rhooo,poo,aoo,amachoo,srefoo,srefp1dre
- real(nr) :: dt,dts,dte,dtk,dtko,timo,tsam,wts,wte,wtime
+ real(nr) :: dt,dts,dte,dtk,dtko,dtsum,timo,tsam,wts,wte,wtime
  real(nr) :: vn,vs,hv2,ao,bo,co,ho,aoi,rhoi,progmf,sqrtrema,sqrtremai
 
  character(1),dimension(0:4) :: cno
+ character(3) :: cnzone,cndata
+ character(5) :: cnnode
  character(7) :: czone
  character(17) :: coutput
+ character(17) :: ctecout
  character(16) :: cinput
  character(16) :: cgrid
  character(18) :: cdata,cturb
- character(19) :: crestart
+ character(19) :: crestart,cpostdat
 
 !===== INTEGER VARIABLES FOR MPI COMMANDS
 
@@ -150,15 +150,31 @@
 
 !===== INTEGER VARIABLES FOR RECORDING BY RPT
 
- integer :: nrec,narec,nwrec
+ integer :: nrec,nwrec,nread,totVar
 
-!===== INTEGER VARIABLES FOR RECORDING BY RPT
+!===== VARIABLES FOR RECORDING BY RPT
 
  real(nr)  ::  xfor,yfor,rfor,amfor,tsfor,tefor
  integer   ::  lfor
  integer ,allocatable,dimension(:)  ::  lcfor
  real(nr),allocatable,dimension(:,:)  ::  xafor,yafor,bfor
+ integer :: lcwall
+ integer, dimension(:), allocatable ::lwall
+ real(nr), dimension(:), allocatable ::area
+ real(nr), dimension(:,:), allocatable ::wnor,wtan,tw
+ real(nr), dimension(:,:), allocatable :: xyz
+ logical :: wflag
+
+!===== POST-PROCESSING VARIABLES BY RPT
+
+ integer :: lsta
+ logical :: tecplot,ispost
+ real(nr), dimension(:,:), allocatable :: wplus
+ real(nr), dimension(:), allocatable :: wvarr
+
+ real(nr), dimension(2,2) :: cl
 !=====
+
  end module mainvar3d
 
 !*****

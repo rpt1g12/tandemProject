@@ -68,14 +68,14 @@
 
 !===== SUBROUTINE FOR BOUNDARY FILTER COEFFICIENTS
 
- subroutine fcbcm(fltk,albef,fa,fb,fc)
+ subroutine fcbcm(fltk,fltkbc,albef,fa,fb,fc)
  
- real(nr),intent(in) :: fltk
+ real(nr),intent(in) :: fltk,fltkbc
  real(nr),dimension(-2:2,0:2),intent(inout) :: albef
  real(nr),dimension(0:2),intent(inout) :: fa,fb,fc
  real(nr) :: alphz,betz,za,zb,zc
 
-    res=(fltk-pi)/3; ra0=pi; ra1=ra0+res; ra2=ra1+res
+    res=(fltk-fltkbc)/3; ra0=fltkbc; ra1=ra0+res; ra2=ra1+res
 
     call fcint(ra0,half,alphz,betz,za,zb,zc)
     albef(:,0)=(/zero,zero,one,alphz,betz/); fa(0)=za; fb(0)=zb; fc(0)=zc
@@ -199,20 +199,12 @@
     fctr=1-cos(ra1)
     dfdt=ra0*sin(ra2)
     progmf=half*(fctr+dtk*dfdt)
-    if (nts==1) then
-    umf(:)=ures(:)+progmf*(uoo(:)-ures(:))
-    else
     umf(:)=progmf*uoo(:)
-    end if
 
     fctr=sin(ra1)
     dfdt=ra0*cos(ra2)
     progmf=half*ra0*(fctr+dtk*dfdt)
-    if (nts==1) then
-    dudtmf(:)=progmf*(uoo(:)-ures(:))
-    else
     dudtmf(:)=progmf*uoo(:)
-    end if
  else
     umf(:)=uoo(:); dudtmf(:)=0
  end if
@@ -274,40 +266,40 @@
  end subroutine gridf
 
 !===== SUBROUTINE FOR GRID LINE GENERATION : OLD VERSION
-
- subroutine ogridf(x,xxi,xo,xn,dxs,am,ns,lxi,mxic,mxin,ip)
-
- integer,intent(in) :: ns,lxi,mxic,mxin,ip
- real(nr),dimension(0:lxi),intent(inout) :: x,xxi
- real(nr),intent(in) :: xo,xn,dxs,am
-
- integer :: i,ii
- real(nr) :: amp0,amm0,alp0,alp1,s0,s1,c0,c1,aa,bb,xi,xic,xin,xii
-
-    amp0=am+1; amm0=am-1
-    xic=mxic; xin=mxin
-    alp0=xin+amm0*xic; alp1=am*xin-amm0*xic
- if(ns==0) then
-    s0=dxs; s1=(amp0*(xn-xo)-alp0*s0)/alp1
- else
-    s1=dxs; s0=(amp0*(xn-xo)-alp1*s1)/alp0
- end if
-    c0=xo; c1=xn-s1*xin
-    aa=(s1-s0)*xic/xin; bb=(s1-s0)*(xin-xic)/xin
- if(mxic/=0) then
- do i=0,mxic
-    ii=i+ip; xi=i; xii=xi/xic
-    x(ii)=s0*xi+aa*xic*xii**amp0/amp0+c0; xxi(ii)=s0+aa*xii**am
- end do
- end if
- if(mxic/=mxin) then
- do i=mxic,mxin
-    ii=i+ip; xi=i; xii=(xin-xi)/(xin-xic)
-    x(ii)=s1*xi+bb*(xin-xic)*xii**amp0/amp0+c1; xxi(ii)=s1-bb*xii**am
- end do
- end if
-
- end subroutine ogridf
+!
+! subroutine gridf(x,xxi,xo,xn,dxs,am,ns,lxi,mxic,mxin,ip)
+!
+! integer,intent(in) :: ns,lxi,mxic,mxin,ip
+! real(nr),dimension(0:lxi),intent(inout) :: x,xxi
+! real(nr),intent(in) :: xo,xn,dxs,am
+!
+! integer :: i,ii
+! real(nr) :: amp0,amm0,alp0,alp1,s0,s1,c0,c1,aa,bb,xi,xic,xin,xii
+!
+!    amp0=am+1; amm0=am-1
+!    xic=mxic; xin=mxin
+!    alp0=xin+amm0*xic; alp1=am*xin-amm0*xic
+! if(ns==0) then
+!    s0=dxs; s1=(amp0*(xn-xo)-alp0*s0)/alp1
+! else
+!    s1=dxs; s0=(amp0*(xn-xo)-alp1*s1)/alp0
+! end if
+!    c0=xo; c1=xn-s1*xin
+!    aa=(s1-s0)*xic/xin; bb=(s1-s0)*(xin-xic)/xin
+! if(mxic/=0) then
+! do i=0,mxic
+!    ii=i+ip; xi=i; xii=xi/xic
+!    x(ii)=s0*xi+aa*xic*xii**amp0/amp0+c0; xxi(ii)=s0+aa*xii**am
+! end do
+! end if
+! if(mxic/=mxin) then
+! do i=mxic,mxin
+!    ii=i+ip; xi=i; xii=(xin-xi)/(xin-xic)
+!    x(ii)=s1*xi+bb*(xin-xic)*xii**amp0/amp0+c1; xxi(ii)=s1-bb*xii**am
+! end do
+! end if
+!
+! end subroutine gridf
 
 !===== SUBROUTINE FOR CHARACTER STRING CONVERSION
 

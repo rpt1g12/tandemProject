@@ -1,0 +1,8 @@
+# !/bin/bash
+
+#PBS -l nodes=28:ppn=16
+#PBS -l walltime=15:30:00
+
+cd $PBS_O_WORKDIR
+module load openmpi
+mpirun -mca btl ^openib run.exe > display
