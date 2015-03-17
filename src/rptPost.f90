@@ -452,19 +452,19 @@ contains
        do i = 0, lxi;l=indx3(i,0,k,1);lp1=indx3(i,1,k,1);lw=lw+1
           utau(lw)=sqrt(tw(lw,1)**2+tw(lw,2)**2+tw(lw,3)**2)/qo(l,1)
           utau(lw)=sqrt(utau(lw))*reoo
-          wplus(lw,2)=(xyz(lp1,2)-xyz(l,2))*utau(lw)
+          wplus(lw,2)=sqrt((xyz(lp1,1)-xyz(l,1))**2+(xyz(lp1,2)-xyz(l,2))**2)*utau(lw)
        end do
     end do
     ! COMPUTE X+
     lw=-1
     do k = 0, lze
     l=indx3(0,0,k,1);lp1=indx3(1,0,k,1);lw=lw+1
-    wplus(lw,1)=(xyz(lp1,1)-xyz(l,1))*utau(lw)
+    wplus(lw,1)=sqrt((xyz(lp1,1)-xyz(l,1))**2+(xyz(lp1,2)-xyz(l,2))**2)*utau(lw)
        do i = 1, lxi-1;lp1=indx3(i+1,0,k,1);lm1=indx3(i-1,0,k,1);lw=lw+1
-          wplus(lw,1)=(xyz(lp1,1)-xyz(lm1,1))*utau(lw)*half
+          wplus(lw,1)=sqrt((xyz(lp1,1)-xyz(lm1,1))**2+(xyz(lp1,2)-xyz(lm1,2))**2)*utau(lw)*half
        end do
     l=indx3(lxi,0,k,1);lm1=indx3(lxi-1,0,k,1);lw=lw+1
-    wplus(lw,1)=(xyz(l,1)-xyz(lm1,1))*utau(lw)
+    wplus(lw,1)=sqrt((xyz(l,1)-xyz(lm1,1))**2+(xyz(l,2)-xyz(lm1,2))**2)*utau(lw)
     end do
     ! COMPUTE Z+
     lw=-1
