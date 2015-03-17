@@ -66,10 +66,10 @@ contains
      cinput='w'; call strio(9,lh,cinput)
      cinput='p'; call strio(9,lh,cinput)
      end if
-  do n=0,ndata
-     no(2)=n/100; no(1)=mod(n,100)/10; no(0)=mod(n,10); cno=achar(no+48)
-     cinput='Q'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
-  end do
+  !do n=0,ndata
+  !   no(2)=n/100; no(1)=mod(n,100)/10; no(0)=mod(n,10); cno=achar(no+48)
+  !   cinput='Q'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
+  !end do
      write(9,pos=4*lh+1) 299.0; lh=lh+1 ! Zone Marker
      cinput=czone; call strio(9,lh,cinput)
      write(9,pos=4*lh+1) -1; lh=lh+1 ! Parent Zone
