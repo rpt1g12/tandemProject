@@ -218,11 +218,11 @@ if(myid==mo(mb)) then
           ! DETERMINE THE FIRST LL POINTS
           ll=8 ! "LL" MUST BE EQUAL TO OR LARGER THAN 4.
           do i=lxis+1,lxis+ll
-             xp(i,n)=xp(i-1,n)+half*shs1; err=1
+             xp(i,n)=xp(i-1,n)+half**4*shs1; err=1
              do while(abs(err)>sml)
-                yp(i,n)=ylagi(i,n,m)
+                yp(i,n)=naca(xp(i,n),tmp,n)!ylagi(i,n,m)
                 err=sqrt((xp(i,n)-xp(i-1,n))**2+(yp(i,n)-yp(i-1,n))**2)/shs1-1;
-                xp(i,n)=xp(i,n)-half*err*shs1
+                xp(i,n)=xp(i,n)-half**5*err*shs1
              end do
           end do
           xo=xp(lxis+ll,n); sho=sum(xp(lxis+ll-4:lxis+ll,n)*(/3,-16,36,-48,25/))/12
@@ -230,7 +230,7 @@ if(myid==mo(mb)) then
           ip=lxis+ll;im=lxib-ll 
           call gridf(xp(:,n),pxi,xo,tmp,sho,she1,lxit,im,ip)
           do i=lxis+ll+1,lxie-1
-             yp(i,n)=ylagi(i,n,m)
+             yp(i,n)=naca(xp(i,n),tmp,n)!ylagi(i,n,m)
           end do
           yp(lxie,n)=zero
           ! ROTATE AND MOVE AEROFOILS
@@ -583,6 +583,25 @@ end if
  end do
 
  end function ylagi
+
+ function naca(x,c,n) result(y)
+    real(nr),intent(in) :: x,c
+    integer, intent(in) :: n
+    real(nr) :: y
+    real(nr) :: t,k,xc
+
+    t = 12;
+    t=t*0.01e0
+    k=0.991148635e0
+    xc=x/c
+    y =(t*c*k/0.2e0) &
+    *(0.298222773e0*sqrt(xc)-0.127125232e0*xc- 0.357907906e0*xc**2+&
+    0.291984971e0*xc**3-0.105174606e0*xc**4)
+    if (n==2) then
+       y=y*-1.0e0
+    end if
+ end function naca
+ 
 
 !===== FUNCTION FOR INTERFACE POINTS
  function inter(k1,k2,k3,k4,x0,x1,x) result(y)
