@@ -66,10 +66,10 @@ contains
      cinput='w'; call strio(9,lh,cinput)
      cinput='p'; call strio(9,lh,cinput)
      end if
-  do n=0,ndata
-     no(2)=n/100; no(1)=mod(n,100)/10; no(0)=mod(n,10); cno=achar(no+48)
-     cinput='Q'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
-  end do
+  !do n=0,ndata
+  !   no(2)=n/100; no(1)=mod(n,100)/10; no(0)=mod(n,10); cno=achar(no+48)
+  !   cinput='Q'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
+  !end do
      write(9,pos=4*lh+1) 299.0; lh=lh+1 ! Zone Marker
      cinput=czone; call strio(9,lh,cinput)
      write(9,pos=4*lh+1) -1; lh=lh+1 ! Parent Zone
@@ -196,8 +196,8 @@ contains
     integer :: bblock2,tblock2
     real(nr) :: g11, g33, g13,coef
  
-    bblock1 = 6; tblock1 = 11
-    bblock2 = 8; tblock2 = 13
+    bblock1 = 4; tblock1 = 7
+    bblock2 = 12; tblock2 = 13
  
     ! Find parallel grid position
     ip=mod(myid-mo(mb),npc(mb,1))
@@ -256,8 +256,8 @@ contains
     real(nr) :: coef,tmp
     real(nr), dimension(3) :: u,v,r
  
-    bblock1 = 6; tblock1 = 11
-    bblock2 = 8; tblock2 = 13
+    bblock1 = 4; tblock1 = 7
+    bblock2 = 12; tblock2 = 13
     u=(/0,0,1/)
  
     if (wflag) then
@@ -299,9 +299,9 @@ contains
     ! Define aerofoil blocks
     select case(ele)
     case(1)
-    bblock = 6; tblock = 11
+    bblock = 4; tblock = 7
     case(2)
-    bblock = 8; tblock = 13
+    bblock = 12; tblock = 13
     end select
  
     if (mb==bblock) then

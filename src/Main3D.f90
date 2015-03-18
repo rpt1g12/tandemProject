@@ -865,7 +865,7 @@
        write(*,'("Simulation time was ",f6.2," hours")') wtime/(3600_nr*npro)
        write(*,*) "Writing Output files..."
     end if
-!    call post(average=.false.)
+    call post(average=.false.)
  end if
 
 !if (myid==0) then
