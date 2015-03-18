@@ -62,8 +62,8 @@
     call inputext
 
     ! rpt-Forcing parameters
-    xfor=cos(delt1)-0.5_nr-0.9_nr;
-    yfor=-sin(delt1)+0.129_nr;
+    xfor=cos(delt1)-0.5_nr-1.0_nr+(0.1_nr);
+    yfor=-sin(delt1)+(0.129_nr);
     rfor=5.0e-3
     amfor=1e-3*amachoo
     tsfor=15.0e0;tefor=35.000e0
