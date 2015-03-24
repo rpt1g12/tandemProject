@@ -1,6 +1,6 @@
-lxi0-to-4	200	150	100	50	200
+lxi0-to-4	300	300	300	80	300
 let0		180     60
-lze0		50
+lze0		15
 nbody-nthick	2	2
 ngridv		1
 npbxi0-to-9	1	1	1	1	1	1	1	1	1	1
@@ -11,7 +11,7 @@ npbze0-to-9	1	1	1	1	1	1	1	1	1	1
 npbze10-to-19	1	1	1	1	1	1	1	1	1	1
 nito-nits-litr	0	1	10
 smgrid-domlen	0.0075e0	13e0
-ximod-etamod	0.8e0		0.045e0
+ximod-etamod	0.4e0		0.045e0
 span-wlew-wlea	0.20e0		0.20e0		0.02e0
 gap-chord1-2	1.5e0		1.0e0		1.0e0
 delt1-2(deg)	5.0e0		0.0e0		

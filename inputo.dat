@@ -7,7 +7,7 @@ nviscous	1
 nsmf		0
 nfskp		0
 nrestart	0
-reoo-tempoo	5.0e4		273.0e0
+reoo-tempoo	1.2e5		273.0e0
 amach1-2-3	0.4e0		0.0e0		0.0e0
 wtemp		1.0e0
 cfl		0.95e0

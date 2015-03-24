@@ -222,7 +222,7 @@ if(myid==mo(mb)) then
              do while(abs(err)>sml)
                 yp(i,n)=ylagi(i,n,m)
                 err=sqrt((xp(i,n)-xp(i-1,n))**2+(yp(i,n)-yp(i-1,n))**2)/shs1-1;
-                xp(i,n)=xp(i,n)-half*err*shs1
+                xp(i,n)=xp(i,n)-half**5*err*shs1
              end do
           end do
           xo=xp(lxis+ll,n); sho=sum(xp(lxis+ll-4:lxis+ll,n)*(/3,-16,36,-48,25/))/12
