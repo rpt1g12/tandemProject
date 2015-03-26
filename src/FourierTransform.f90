@@ -70,14 +70,14 @@
     end if
 
     if(m/=mav) then
-       k=m*lmt/mav
-    do i=0,lmt-k
-       dt(i)=time(i+k); vdt(i,:)=vart(i+k,:)
-    end do
-    do i=lmt-k+1,lmt
-       dt(i)=time(i+k-lmt)+period; vdt(i,:)=vart(i+k-lmt,:)
-    end do
-       time(:)=dt(:); vart(:,:)=vdt(:,:)
+          k=m*lmt/mav
+       do i=0,lmt-k
+          dt(i)=time(i+k); vdt(i,:)=vart(i+k,:)
+       end do
+       do i=lmt-k+1,lmt
+          dt(i)=time(i+k-lmt)+period; vdt(i,:)=vart(i+k-lmt,:)
+       end do
+          time(:)=dt(:); vart(:,:)=vdt(:,:)
     end if
  end do
     fctr=2/(mav*period); varf(:,:)=fctr*varf(:,:)

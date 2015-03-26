@@ -66,7 +66,7 @@ module gridgen
     shs1=ximod*smgrid; she1=shs1
     shs2=etamod*smgrid;
     tmp=(shs2+10*shs2)*half
-    lbl=max(tmp*let1/(sin(pi4)),0.08*c1/(sin(pi4)))
+    lbl=max(tmp*let1/(sin(pi4)),0.10*c1/(sin(pi4)))
 
     allocate(xx(0:lxit,0:lett),yy(0:lxit,0:lett),zz(0:lxit,0:lett),zs(0:lze0))
     allocate(xp(0:lxit,0:5),yp(0:lxit,0:5))
@@ -112,8 +112,8 @@ if(myid==mo(mb)) then
     fctr=2*pi/wlew; shswle=shs*sqrt(1+0*(fctr*wlea*cos(fctr*(zs(k)-zs(0))))**2)
 
 !----- INITIAL AND END HORIZONTAL SLOPES
-    deg1=(15_nr*pi/180_nr)
-    deg2=(5_nr*pi/180_nr)
+    deg1=(25_nr*pi/180_nr)
+    deg2=(10_nr*pi/180_nr)
     hslo(0,:,:)=zero
     hslo(1,0,:)=(/zero,-tan(delt1)/)
     hslo(1,1,:)=(/tan(-deg1-delt1),tan(deg2-delt1)/)
@@ -183,7 +183,7 @@ if(myid==mo(mb)) then
           do i=lxis+1,lxis+ll
              xp(i,n)=xp(i-1,n)+half*shs1; err=1
              do while(abs(err)>sml)
-                yp(i,n)=ylagi(i,n,m)
+                yp(i,n)=naca(xp(i,n),tmp,n)!ylagi(i,n,m)
                 err=sqrt((xp(i,n)-xp(i-1,n))**2+(yp(i,n)-yp(i-1,n))**2)/shs1-1;
                 xp(i,n)=xp(i,n)-half**5*err*shs1
              end do
@@ -193,7 +193,7 @@ if(myid==mo(mb)) then
           ip=lxis+ll;im=lxib-ll 
           call gridf(xp(:,n),pxi,xo,tmp,sho,she1,lxit,im,ip)
           do i=lxis+ll+1,lxie-1
-             yp(i,n)=ylagi(i,n,m)
+             yp(i,n)=naca(xp(i,n),tmp,n)!ylagi(i,n,m)
           end do
           yp(lxie,n)=zero
           ! ROTATE AND MOVE AEROFOILS
@@ -470,6 +470,25 @@ end if
 
  end function ylagi
 
+!===== NACA FUNCTION
+ function naca(x,c,n) result(y)
+    real(nr),intent(in) :: x,c
+    integer, intent(in) :: n
+    real(nr) :: y
+    real(nr) :: t,k,xc
+
+    t = 21;
+    t=t*0.01e0
+    k=0.991148635e0
+    xc=x/c
+    y =(t*c*k/0.2e0) &
+    *(0.298222773e0*sqrt(xc)-0.127125232e0*xc- 0.357907906e0*xc**2+&
+    0.291984971e0*xc**3-0.105174606e0*xc**4)
+    if (n==2) then
+       y=y*-1.0e0
+    end if
+ end function naca
+ 
 !===== FUNCTION FOR INTERFACE POINTS
  function inter(k1,k2,k3,k4,x0,x1,x) result(y)
 

@@ -824,7 +824,7 @@
  end if
 
  if(timo-tsam>=0.and.mod(n,nsgnl)==0) then
-    !nsigi=nsigi+1; call signalgo
+    nsigi=nsigi+1; call signalgo
  end if
 
  if (myid==idsignal) then

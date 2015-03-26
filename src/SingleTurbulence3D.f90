@@ -1,5 +1,5 @@
 !*****
-!***** 3D TANDEM AEROFOIL-TURBULENCE INTERACTION
+!***** 3D SINGLE AEROFOIL-TURBULENCE INTERACTION
 !*****
 
  module problemcase
@@ -457,7 +457,7 @@
  if(myid==idsgnl(m)) then; ve(:)=qa(l,2:4)/qa(l,1)
     write(1,'(es15.7)',rec=lp+3*m) ve(1)
     write(1,'(es15.7)',rec=lp+3*m+1) ve(2)
-    write(1,'(es15.7,a)',rec=lp+3*m+2) ve(3),achar(10)
+    write(1,'(es15.7,a)',rec=lp+3*m+2) 8,achar(10)
  end if
 
  end subroutine signalgo
