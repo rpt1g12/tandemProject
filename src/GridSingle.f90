@@ -100,12 +100,13 @@ if(myid==mo(mb)) then
     yd(0)=zero;yd(3)=zero
     yd(1)=-lwle*sin(delt1)
     yd(2)=-c1*sin(delt1)
-    yc(0:1)=yd(0:1)-lbl*sin(pi4-delt1)
-    yc(2)=yd(2)-lbl*sin(pi4)*cos(delt1)
-    yc(3)=yc(0)
     ye(0:1)=yd(0:1)+lbl*sin(pi4+delt1)
     ye(2)=yd(2)+lbl*sin(pi4)*cos(delt1)
     ye(3)=ye(0)
+    yc(0)=ye(0)-2*lbl*sin(pi4+delt1)
+    yc(1)=yd(1)-lbl*sin(pi4-delt1)
+    yc(2)=yd(2)-lbl*sin(pi4)*cos(delt1)
+    yc(3)=yc(0)
     yg(:)=domlen
     yf(:)=yg(:)-lsz1
 
@@ -141,7 +142,7 @@ if(myid==mo(mb)) then
     vslo(0,:,:)=zero
     vslo(1,0,:)=zero
     vslo(1,1,:)= (/zero,tan(pi4+delt1)/)
-    vslo(1,2,:)=(/-tan(pi4+delt1),zero/)
+    vslo(1,2,:)=(/-tan(pi4-delt1),zero/)
     vslo(1,3,:)=zero
     vslo(2,:,:)=zero
     vslo(3,:,:)=zero
