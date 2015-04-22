@@ -150,10 +150,10 @@
  case(3);  nbcs(1)=10;  nbce(1)=ip1; nbcs(2)=ip1; nbce(2)=ip1; nbcs(3)=45; nbce(3)=45
  case(4);  nbcs(1)=ip1; nbce(1)=ip1; nbcs(2)=ip1; nbce(2)=jp1; nbcs(3)=45; nbce(3)=45
  case(5);  nbcs(1)=ip1; nbce(1)=10;  nbcs(2)=ip1; nbce(2)=ip1; nbcs(3)=45; nbce(3)=45
- case(6); nbcs(1)=10;  nbce(1)=ip1; nbcs(2)=ip1; nbce(2)=ip1; nbcs(3)=45; nbce(3)=45
- case(7); nbcs(1)=ip1; nbce(1)=ip1; nbcs(2)=jp1; nbce(2)=ip1; nbcs(3)=45; nbce(3)=45
- case(8); nbcs(1)=ip1; nbce(1)=10;  nbcs(2)=ip1; nbce(2)=ip1; nbcs(3)=45; nbce(3)=45
- case(9); nbcs(1)=10;  nbce(1)=ip1; nbcs(2)=ip1; nbce(2)=10;  nbcs(3)=45; nbce(3)=45
+ case(6);  nbcs(1)=10;  nbce(1)=ip1; nbcs(2)=ip1; nbce(2)=ip1; nbcs(3)=45; nbce(3)=45
+ case(7);  nbcs(1)=ip1; nbce(1)=ip1; nbcs(2)=jp1; nbce(2)=ip1; nbcs(3)=45; nbce(3)=45
+ case(8);  nbcs(1)=ip1; nbce(1)=10;  nbcs(2)=ip1; nbce(2)=ip1; nbcs(3)=45; nbce(3)=45
+ case(9);  nbcs(1)=10;  nbce(1)=ip1; nbcs(2)=ip1; nbce(2)=10;  nbcs(3)=45; nbce(3)=45
  case(10); nbcs(1)=ip1; nbce(1)=ip1; nbcs(2)=ip1; nbce(2)=10;  nbcs(3)=45; nbce(3)=45
  case(11); nbcs(1)=ip1; nbce(1)=10;  nbcs(2)=ip1; nbce(2)=10;  nbcs(3)=45; nbce(3)=45
  end select

@@ -343,16 +343,20 @@ contains
        call gettw(nvar)
        do ll = 0, lcwall; l=lwall(ll)
          clp=clp+(p(l)*wnor(ll,dir)*area(ll))
+         if (nviscous==1) then
          clv=clv+tw(ll,dir)*area(ll)
+         end if
        end do
     else
        if(.not.allocated(tw)) allocate(tw(0:lcwall,3))
        do ll = 0, lcwall; l=lwall(ll)
+         if (nviscous==1) then
          tw(ll,1)=(txx(l)*wnor(ll,1)+txy(l)*wnor(ll,2)+tzx(l)*wnor(ll,3))/reoo
          tw(ll,2)=(txy(l)*wnor(ll,1)+tyy(l)*wnor(ll,2)+tyz(l)*wnor(ll,3))/reoo
          tw(ll,3)=(tzx(l)*wnor(ll,1)+tyz(l)*wnor(ll,2)+tzz(l)*wnor(ll,3))/reoo
-         clp=clp+(p(l)*wnor(ll,dir)*area(ll))
          clv=clv+tw(ll,dir)*area(ll)
+         end if
+         clp=clp+(p(l)*wnor(ll,dir)*area(ll))
        end do
     end if
     tcl=(clp+clv)*dynp
