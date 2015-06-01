@@ -54,7 +54,7 @@
     ! rpt-Do not use postprocessing subroutines
     ispost=.false.
     ! rpt-Position of signal sampling
-    xpos=0.4_nr;ypos=0.01_nr;zpos=0.0_nr
+    xpos=-1.0_nr;ypos=0.01_nr;zpos=0.005_nr
 
     allocate(times(0:ndata))
     allocate(lximb(0:mbk),letmb(0:mbk),lzemb(0:mbk),lhmb(0:mbk),mo(0:mbk),npc(0:mbk,3))
@@ -375,7 +375,7 @@
 
 !===== SETTING UP FORCING PARAMETERS
 
-    call forceup
+    !call forceup
 
 !===== INITIAL CONDITIONS
 
@@ -419,14 +419,16 @@
  do while(timo-tmax<0.and.(dt/=0.or.n<=2))
 
   if (n.ge.2) then
-    call clpost(1,2,ndati) 
+    !call clpost(1,ndati) 
   else
     cl=0
   end if
 
   if(myid==0.and.mod(n,nscrn)==0) then
+     !Change ra0 to the angle of attack needed!!!
+     ra0=6.0_nr*pi/180;ra1=cos(ra0);ra2=sin(ra0)
      write(*,"(' n =',i8,'   time =',f12.5,' Cl1 = ',f10.5,', Cl2 = ',f10.5)") &
-     n,timo,cl(1,2),cl(1,1)
+     n,timo,cl(1,2)*ra1-cl(1,1)*ra2,cl(1,2)*ra2+cl(1,1)*ra1
   end if
 
 ! ----- FILTERING
@@ -605,7 +607,7 @@
 
 ! ----- IMPLEMENTATION OF FORCING
 
-     call forcego
+     !call forcego
 
 ! ----- PREPARATION FOR GCBC & GCIC
 
@@ -823,15 +825,17 @@
    end if
  end if
 
- if(timo-tsam>=0.and.mod(n,nsgnl)==0) then
-    nsigi=nsigi+1; call signalgo
- end if
+ !if(timo-tsam>=0.and.mod(n,nsgnl)==0) then
+ !   nsigi=nsigi+1; call signalgo
+ !end if
 
  if (myid==idsignal) then
+ if (timo.le.25.5_nr) then
     ra0=qa(lsignal,2)/qa(lsignal,1)+umf(1)
     ra1=qa(lsignal,3)/qa(lsignal,1)+umf(2)
     ra2=qa(lsignal,4)/qa(lsignal,1)+umf(3)
-    write(6,"(f10.5,1x,f10.5,1x,f10.5,1x,f10.5)") ra0,ra1,ra2,timo
+    write(6,"(es15.7,1x,es15.7,1x,es15.7,1x,es15.7)") ra0,ra1,ra2,timo
+ end if
  end if
 
 !==========================
@@ -846,9 +850,9 @@
     wte=MPI_WTIME(); res=wte-wts
     call MPI_ALLREDUCE(res,wtime,1,MPI_REAL8,MPI_SUM,icom,ierr)
  if(myid==0) then
-    !open(9,file='data/timeouts.dat')
-    !write(9,'(es15.7)') times(:)
-    !close(9)
+    open(9,file='data/timeouts.dat')
+    write(9,'(es15.7)') times(:)
+    close(9)
 
     open(9,file='walltime.dat',position='append')
     write(9,'(2es15.7)') real(npro,nr),wtime/npro
@@ -865,18 +869,18 @@
        write(*,'("Simulation time was ",f6.2," hours")') wtime/(3600_nr*npro)
        write(*,*) "Writing Output files..."
     end if
-    call post(average=.false.)
+   call post(average=.false.)
  end if
 
-!if (myid==0) then
-!   open(9,file='data/post.dat')
-!   write(9,*) 'ngridv ',ngridv
-!   write(9,*) 'ndata  ',ndata
-!   write(9,*) 'nrec   ',nrec
-!   write(9,*) 'nwrec  ',nwrec
-!   write(9,*) 'lhmb   ',lhmb(mb)
-!   close(9)
-!end if
+if (myid==0) then
+   open(9,file='data/post.dat')
+   write(9,*) 'ngridv ',ngridv
+   write(9,*) 'ndata  ',ndata
+   write(9,*) 'nrec   ',nrec
+   write(9,*) 'nwrec  ',nwrec
+   write(9,*) 'lhmb   ',lhmb(mb)
+   close(9)
+end if
 
 !===== END OF JOB
 

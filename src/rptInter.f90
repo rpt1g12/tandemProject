@@ -13,21 +13,18 @@ use rpt
 implicit none
  real(nr),dimension(:,:),allocatable :: xyz2,ixis
  integer :: lxii,leti,lzei
- integer :: l2
- real(nr),dimension(3) :: xs,start,xin,hxi,hxn
- real(nr),dimension(3,3) :: jaco
- real(nr) :: err1,thisxi,thiset,thisze,xn,yn,zn,tol,limit
- real(nr) :: xxin,xetn,xzen
- real(nr) :: yxin,yetn,yzen
- real(nr) :: zxin,zetn,zzen
+ integer :: lxiio,letio,lzeio
+ integer :: l2,color,ncom
 
 real(nr),dimension(:),allocatable :: xxi,xet,xze
 real(nr),dimension(:),allocatable :: yxi,yet,yze
 real(nr),dimension(:),allocatable :: zxi,zet,zze
+real(nr),dimension(:),allocatable :: f
 real(nr),dimension(:),allocatable :: fxi,fet,fze
 real(nr),dimension(:),allocatable :: fetxi
 real(nr),dimension(:),allocatable :: fzexi,fzeet,fzeetxi
-real(nr) :: dti,dtsi,dtei,timoi
+real(nr),dimension(:),allocatable :: lvarr,lvarr2
+real(nr) :: dti,dtsi,dtei,timoi,wtsi,wtei
 integer :: ndti,ni
 contains
 
@@ -99,7 +96,6 @@ contains
     ctecout='out/tecout'//cnzone//'.plt'
     cgrid='misc/grid'//cnzone//'.dat';
     crestart='rsta/restart'//cnzone//'.dat'
-    cpostdat='data/postdat'//cnzone//'.dat'
 
     no(4)=myid/10000; no(3)=mod(myid,10000)/1000;
     no(2)=mod(myid,1000)/100; no(1)=mod(myid,100)/10; no(0)=mod(myid,10)
@@ -131,6 +127,17 @@ contains
     ma=npc(mb,nn)
  if(ma==1) then
     l=ll; nbc(0,nn)=nbcs(nn); nbc(1,nn)=nbce(nn); ncd(0,nn)=ncds(nn); ncd(1,nn)=ncde(nn)
+ end if
+ if(ma>=2) then
+ if(lp==0) then
+    l=ll-((ll+1)/ma)*(ma-1); nbc(0,nn)=nbcs(nn); nbc(1,nn)=40; ncd(0,nn)=ncds(nn); ncd(1,nn)=myid+mp
+ end if
+ if(lp>0.and.lp<ma-1) then
+    l=(ll+1)/ma-1; nbc(0,nn)=40; nbc(1,nn)=40; ncd(0,nn)=myid-mp; ncd(1,nn)=myid+mp
+ end if
+ if(lp==ma-1) then
+    l=(ll+1)/ma-1; nbc(0,nn)=40; nbc(1,nn)=nbce(nn); ncd(0,nn)=myid-mp; ncd(1,nn)=ncde(nn)
+ end if
  end if
  select case(nn); case (1); lxi=l; case (2); let=l; case (3); lze=l; end select
  end do
@@ -172,6 +179,14 @@ contains
     lpos(mp)=lpos(mp-kp)+(lximb(mm)+1)*(letmb(mm)+1)*(lzem(mp-kp)+1)
  end do; end do; end do
  end do
+
+    allocate(lio(0:let,0:lze))
+ do k=0,lze; kp=k*(leto+1)*(lxio+1)
+ do j=0,let; jp=j*(lxio+1)
+    lio(j,k)=jp+kp
+ end do
+ end do
+
  end subroutine setup
 
 !====================================================================================
@@ -268,12 +283,6 @@ contains
 !=====CREATE GRID
 !====================================================================================
   subroutine getGrid
-    allocate(lio(0:let,0:lze))
- do k=0,lze; kp=k*(leto+1)*(lxio+1)
- do j=0,let; jp=j*(lxio+1)
-    lio(j,k)=jp+kp
- end do
- end do
 
     call makegrid
     call MPI_BARRIER(icom,ierr)
@@ -310,9 +319,9 @@ contains
      m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
      de(:,1)=rr(:,1); de(:,2)=rr(:,2); de(:,3)=rr(:,3)
  
-     allocate(xxi(0:lmx),xet(0:lmx),xze(0:lmx))
-     allocate(yxi(0:lmx),yet(0:lmx),yze(0:lmx))
-     allocate(zxi(0:lmx),zet(0:lmx),zze(0:lmx))
+     allocate(xxi(0:ltomb-1),xet(0:ltomb-1),xze(0:ltomb-1))
+     allocate(yxi(0:ltomb-1),yet(0:ltomb-1),yze(0:ltomb-1))
+     allocate(zxi(0:ltomb-1),zet(0:ltomb-1),zze(0:ltomb-1))
 
      !xxi=qo(:,1);xet=qo(:,2);xze=qo(:,3)
      !yxi=qa(:,1);yet=qa(:,2);yze=qa(:,3)
@@ -333,9 +342,15 @@ contains
                +qa(:,1)*xim(:,2)+qa(:,2)*etm(:,2)+qa(:,3)*zem(:,2)&
                +de(:,1)*xim(:,3)+de(:,2)*etm(:,3)+de(:,3)*zem(:,3))
 
-     xxi=xim(:,1)*yaco(:);xet=etm(:,1)*yaco(:);xze=zem(:,1)*yaco(:)
-     yxi=xim(:,2)*yaco(:);yet=etm(:,2)*yaco(:);yze=zem(:,2)*yaco(:)
-     zxi=xim(:,3)*yaco(:);zet=etm(:,3)*yaco(:);zze=zem(:,3)*yaco(:)
+     varr=xim(:,1)*yaco(:); call joinBlock; xxi=lvarr
+     varr=etm(:,1)*yaco(:); call joinBlock; xet=lvarr
+     varr=zem(:,1)*yaco(:); call joinBlock; xze=lvarr
+     varr=xim(:,2)*yaco(:); call joinBlock; yxi=lvarr
+     varr=etm(:,2)*yaco(:); call joinBlock; yet=lvarr
+     varr=zem(:,2)*yaco(:); call joinBlock; yze=lvarr
+     varr=xim(:,3)*yaco(:); call joinBlock; zxi=lvarr
+     varr=etm(:,3)*yaco(:); call joinBlock; zet=lvarr
+     varr=zem(:,3)*yaco(:); call joinBlock; zze=lvarr
 
  do nn=1,3; do ip=0,1; i=ip*ijk(1,nn)
  do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
@@ -376,12 +391,39 @@ contains
  end subroutine readRestart
 
 !====================================================================================
+!=====READ GRID
+!====================================================================================
+ subroutine readGrid
+
+         open(9,file='data/grid'//cnzone,access='stream',shared); lh=0
+         lp=lpos(myid)
+      do m=1,3; lq=(m-1)*ltomb
+      do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+         read(9,pos=nr*(lp+lq+lio(j,k))+1) xyz2(l:l+lxi,m)
+      end do; end do
+      end do
+         close(9)
+ end subroutine readGrid
+!====================================================================================
+!=====WRITE GRID
+!====================================================================================
+ subroutine writeGrid
+
+         open(9,file='data/grid'//cnzone,access='stream',shared); lh=0
+         lp=lpos(myid)
+      do m=1,3; lq=(m-1)*ltomb
+      do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+         write(9,pos=nr*(lp+lq+lio(j,k))+1) xyz2(l:l+lxi,m)
+      end do; end do
+      end do
+         close(9)
+ end subroutine writeGrid
+!====================================================================================
 !=====WRITE RESTART FILE
 !====================================================================================
  subroutine writeRestart
 
-         call MPI_BARRIER(icom,ierr)
-         open(9,file=crestart,access='stream',shared); lh=0
+         open(9,file='i'//crestart,access='stream',shared); lh=0
       if(myid==mo(mb)) then
          write(9,pos=nr*lh+1) ni; lh=lh+1
          write(9,pos=nr*lh+1) ndti; lh=lh+1
@@ -407,30 +449,244 @@ contains
  implicit none
  integer, intent(in) :: n
 
-     if(.not.allocated(fxi))allocate(fxi(0:lmx),fet(0:lmx),fze(0:lmx))
-     if(.not.allocated(fetxi))allocate(fetxi(0:lmx))
-     if(.not.allocated(fzexi))allocate(fzexi(0:lmx),fzeet(0:lmx))
-     if(.not.allocated(fzeetxi))allocate(fzeetxi(0:lmx))
+     if(.not.allocated(fetxi))allocate(f(0:ltomb-1))
+     if(.not.allocated(fxi))allocate(fxi(0:ltomb-1),fet(0:ltomb-1),fze(0:ltomb-1))
+     if(.not.allocated(fetxi))allocate(fetxi(0:ltomb-1))
+     if(.not.allocated(fzexi))allocate(fzexi(0:ltomb-1),fzeet(0:ltomb-1))
+     if(.not.allocated(fzeetxi))allocate(fzeetxi(0:ltomb-1))
 
+     varr=qo(:,n); call joinBlock; f=lvarr
      rr(:,1)=qo(:,n)
      m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
-     fxi(:)=rr(:,1); fet(:)=rr(:,2); fze(:)=rr(:,3)
+     varr=rr(:,1); call joinBlock; fxi=lvarr
+     varr=rr(:,2); call joinBlock; fet=lvarr
+     varr=rr(:,3); call joinBlock; fze=lvarr
  
-     rr(:,1)=fet(:)
+     rr(:,1)=rr(:,2)
      m=2; call mpigo(ntdrv,nrone,n45go,m); call deriv(1,1)
-     fetxi(:)=rr(:,1);
+     varr=rr(:,1); call joinBlock; fetxi=lvarr
  
-     rr(:,1)=fze(:)
+     rr(:,1)=rr(:,3)
      m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(2,1); call deriv(1,1)
-     fzexi(:)=rr(:,1); fzeet(:)=rr(:,2);
+     varr=rr(:,1); call joinBlock; fzexi=lvarr
+     varr=rr(:,2); call joinBlock; fzeet=lvarr
 
-     rr(:,1)=fzeet(:)
+     rr(:,1)=rr(:,2)
      m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(1,1)
-     fzeetxi(:)=rr(:,1);
+     varr=rr(:,1); call joinBlock; fzeetxi=lvarr
 
  end subroutine getDeri
     
 
+!====================================================================================
+!=====COMPUTE VARIABLE DERIVATIVES
+!====================================================================================
+ subroutine interpolate(n,tol)
+ implicit none
+ integer, intent(in) :: n
+ real(nr), intent(in) :: tol
+ real(nr),dimension(12) :: r
+ real(nr) :: res
+ integer :: m
+ integer :: xi0,xi1,et0,et1,ze0,ze1
+ integer :: l000,l010,l100,l110,l001,l011,l101,l111
+ real(nr) :: x000,x010,x100,x110,x001,x011,x101,x111
+ real(nr) :: xn00,xn10,xn0,xn01,xn11,xn1
+ real(nr),dimension(3) :: xs,start,xin,hxi,hxn
+ real(nr),dimension(3,3) :: jaco
+ real(nr) :: err1,thisxi,thiset,thisze,xn,yn,zn
+ real(nr) :: xxin,xetn,xzen
+ real(nr) :: yxin,yetn,yzen
+ real(nr) :: zxin,zetn,zzen
+ if ((myid==0).and.(n==1)) then
+    write(*,"('Interpolation procedure in progress')")
+ end if
+
+do k = 0, lzei
+   do j = 0, leti
+      do i = 0, lxii;l2=indx4(i,j,k,1)
+         if (n==1) then
+            xs(:)=(/xyz2(l2,1),xyz2(l2,2),xyz2(l2,3)/)
+               if (i==0) then
+                  start(1)=(nint(real(lxio*i/lxiio,nr)))
+               else
+                  l=indx4(i-1,j,k,1)
+                  start(1)=(ixis(l,1))
+               end if
+               start(1)=max(start(1),0.0_nr);
+               start(1)=min(start(1),real(lxio,nr))
+               if (j==0) then
+                  start(2)=(nint(real(leto*j/letio,nr)))
+               else
+                  l=indx4(i,j-1,k,1)
+                  start(2)=(ixis(l,2))
+               end if
+               start(2)=max(start(2),0.0_nr);
+               start(2)=min(start(2),real(leto,nr))
+               if (k==0) then
+                  start(3)=(nint(real(lzeo*k/lzeio,nr)))
+               else
+                  l=indx4(i,j,k-1,1)
+                  start(3)=(ixis(l,3))
+               end if
+               start(3)=max(start(3),0.0_nr);
+               start(3)=min(start(3),real(lzeo,nr))
+            xin(:)=(/start(1),start(2),start(3)/)
+            hxi(:)=(/0,0,0/)
+            err1=1
+            do while(err1>tol)
+            xin=xin+hxi
+            xin(:)=max(xin(:),(/0.0_nr,0.0_nr,0.0_nr/));
+            xin(:)=min(xin(:),(/real(lxio,nr),real(leto,nr),real(lzeo,nr)/))
+            thisxi=xin(1);thiset=xin(2);thisze=xin(3)
+            if (mod(thisxi,1.0_nr)==0) then
+               if (thisxi==lxio) then
+                  xi0=thisxi-1;xi1=thisxi;
+                  else
+                  xi0=thisxi;xi1=thisxi+1
+               end if
+               else
+               xi0=floor(thisxi);xi1=ceiling(thisxi)
+            end if
+            if (mod(thiset,1.0_nr)==0) then
+               if (thiset==leto) then
+                  et0=thiset-1;et1=thiset;
+                  else
+                  et0=thiset;et1=thiset+1
+               end if
+               else
+               et0=floor(thiset);et1=ceiling(thiset)
+            end if
+            if (mod(thisze,1.0_nr)==0) then
+               if (thisze==lzeo) then
+                  ze0=thisze-1;ze1=thisze;
+                  else
+                  ze0=thisze;ze1=thisze+1
+               end if
+               else
+               ze0=floor(thisze);ze1=ceiling(thisze)
+            end if
+            l000=indx5(xi0,et0,ze0,1);
+            l010=indx5(xi0,et1,ze0,1);
+            l100=indx5(xi1,et0,ze0,1);
+            l110=indx5(xi1,et1,ze0,1);
+            l001=indx5(xi0,et0,ze1,1);
+            l101=indx5(xi1,et0,ze1,1);
+            l011=indx5(xi0,et1,ze1,1);
+            l111=indx5(xi1,et1,ze1,1);
+            do m = 1, 12
+               selectcase(m)
+               case(1,2,3)
+               x000=xyz(l000,m);x010=xyz(l010,m);x100=xyz(l100,m);x110=xyz(l110,m);
+               x001=xyz(l001,m);x101=xyz(l101,m);x011=xyz(l011,m);x111=xyz(l111,m)
+               case(4)
+               x000=xxi(l000);x010=xxi(l010);x100=xxi(l100);x110=xxi(l110);
+               x001=xxi(l001);x101=xxi(l101);x011=xxi(l011);x111=xxi(l111)
+               case(5)
+               x000=xet(l000);x010=xet(l010);x100=xet(l100);x110=xet(l110);
+               x001=xet(l001);x101=xet(l101);x011=xet(l011);x111=xet(l111)
+               case(6)
+               x000=xze(l000);x010=xze(l010);x100=xze(l100);x110=xze(l110);
+               x001=xze(l001);x101=xze(l101);x011=xze(l011);x111=xze(l111)
+               case(7)
+               x000=yxi(l000);x010=yxi(l010);x100=yxi(l100);x110=yxi(l110);
+               x001=yxi(l001);x101=yxi(l101);x011=yxi(l011);x111=yxi(l111)
+               case(8)
+               x000=yet(l000);x010=yet(l010);x100=yet(l100);x110=yet(l110);
+               x001=yet(l001);x101=yet(l101);x011=yet(l011);x111=yet(l111)
+               case(9)
+               x000=yze(l000);x010=yze(l010);x100=yze(l100);x110=yze(l110);
+               x001=yze(l001);x101=yze(l101);x011=yze(l011);x111=yze(l111)
+               case(10)
+               x000=zxi(l000);x010=zxi(l010);x100=zxi(l100);x110=zxi(l110);
+               x001=zxi(l001);x101=zxi(l101);x011=zxi(l011);x111=zxi(l111)
+               case(11)
+               x000=zet(l000);x010=zet(l010);x100=zet(l100);x110=zet(l110);
+               x001=zet(l001);x101=zet(l101);x011=zet(l011);x111=zet(l111)
+               case(12)
+               x000=zze(l000);x010=zze(l010);x100=zze(l100);x110=zze(l110);
+               x001=zze(l001);x101=zze(l101);x011=zze(l011);x111=zze(l111)
+               end select
+               xn00=(xi1-thisxi)*x000+(thisxi-xi0)*x100;
+               xn10=(xi1-thisxi)*x010+(thisxi-xi0)*x110;
+               xn0=(et1-thiset)*xn00+(thiset-et0)*xn10;
+               xn01=(xi1-thisxi)*x001+(thisxi-xi0)*x101;
+               xn11=(xi1-thisxi)*x011+(thisxi-xi0)*x111;
+               xn1=(et1-thiset)*xn01+(thiset-et0)*xn11;
+               res=(ze1-thisze)*xn0+(thisze-ze0)*xn1;
+               select case (m)
+               case(1);xn=res;case(2);yn=res;case(3);zn=res;
+               case(4);xxin=res;case(5);xetn=res;case(6);xzen=res;
+               case(7);yxin=res;case(8);yetn=res;case(9);yzen=res;
+               case(10);zxin=res;case(11);zetn=res;case(12);zzen=res;
+               end select
+            end do
+            hxn=xs(:)-(/xn,yn,zn/)
+            jaco(1,:)=(/xxin,yxin,zxin/)
+            jaco(2,:)=(/xetn,yetn,zetn/)
+            jaco(3,:)=(/xzen,yzen,zzen/)
+            hxi(1)=sum(jaco(1,:)*hxn(:))
+            hxi(2)=sum(jaco(2,:)*hxn(:))
+            hxi(3)=sum(jaco(3,:)*hxn(:))
+            err1=sqrt(hxn(1)**2+hxn(2)**2+hxn(3)**2)
+            end do
+         ixis(l2,:)=(/thisxi,thiset,thisze/)
+         end if
+         qb(l2,n)=htrilinr(ixis(l2,1),ixis(l2,2),ixis(l2,3))
+      end do
+   end do
+end do
+ if ((myid==mo(mb)).and.(n==5)) then
+    write(*,"('Block ',i2,' done!')") mb
+ end if
+ end subroutine interpolate
+
+!====================================================================================
+! ====READ DATA FOR POST-PROCESSING
+!====================================================================================
+ subroutine interead(num)
+ implicit none
+ integer, intent (in) :: num
+ integer :: lp,lq,l,k,j
+  lp=0
+     lq=(num-1)*ltomb
+        read(8,pos=nr*(lp+lq)+1) varr(:)
+ end subroutine interead
+
+
+!====================================================================================
+! ====READ DATA FOR POST-PROCESSING
+!====================================================================================
+ subroutine joinBlock
+ implicit none
+ integer :: i,j,k,l,lp
+
+ if(.not.allocated(lvarr)) allocate(lvarr(0:ltomb-1),lvarr2(0:ltomb-1))
+ lvarr=0_nr;lvarr2=0_nr
+
+ do k = 0, lze
+    do j = 0, let
+       do i = 0, lxi; l=indx3(i,j,k,1)
+          lp=i+lio(j,k)+lpos(myid)
+          lvarr2(lp)=varr(l)
+       end do
+    end do
+ end do
+
+ CALL MPI_ALLREDUCE(lvarr2,lvarr,ltomb,MPI_REAL8,MPI_SUM,ncom,ierr)
+    
+ end subroutine joinBlock
+!===== FUNCTION FOR MAIN INDEX TRANSFORMATION IN 3D
+
+ function indx5(i,j,k,nn) result(lm)
+
+ integer,intent(in) :: i,j,k,nn
+ integer :: lm
+
+ lm=i+lio(j,k)+lpos(myid)
+
+
+ end function indx5
 !===== FUNCTION FOR MAIN INDEX TRANSFORMATION IN 3D
 
  function indx4(i,j,k,nn) result(lm)
@@ -446,62 +702,8 @@ contains
 
  end function indx4
 
-!===== FUNCTION FOR TRILINEAR INTERPOLATION
- function trilinr(xi,et,ze) result(xn)
- implicit none
- real(nr) :: xn
- real(nr), intent(in) :: xi,et,ze
- integer :: xi0,xi1,et0,et1,ze0,ze1
- integer :: l000,l010,l100,l110,l001,l011,l101,l111
- real(nr) :: x000,x010,x100,x110,x001,x011,x101,x111
- real(nr) :: xn00,xn10,xn0,xn01,xn11,xn1
-
- if (mod(xi,1.0_nr)==0) then
-    if (xi==lxi) then
-       xi0=xi-1;xi1=xi;
-       else
-       xi0=xi;xi1=xi+1
-    end if
-    else
-    xi0=floor(xi);xi1=ceiling(xi)
- end if
- if (mod(et,1.0_nr)==0) then
-    if (et==let) then
-       et0=et-1;et1=et;
-       else
-       et0=et;et1=et+1
-    end if
-    else
-    et0=floor(et);et1=ceiling(et)
- end if
- if (mod(ze,1.0_nr)==0) then
-    if (ze==lze) then
-       ze0=ze-1;ze1=ze;
-       else
-       ze0=ze;ze1=ze+1
-    end if
-    else
-    ze0=floor(ze);ze1=ceiling(ze)
- end if
- l000=indx3(xi0,et0,ze0,1);x000=varr(l000)
- l010=indx3(xi0,et1,ze0,1);x010=varr(l010)
- l100=indx3(xi1,et0,ze0,1);x100=varr(l100)
- l110=indx3(xi1,et1,ze0,1);x110=varr(l110)
- l001=indx3(xi0,et0,ze1,1);x001=varr(l001)
- l101=indx3(xi1,et0,ze1,1);x101=varr(l101)
- l011=indx3(xi0,et1,ze1,1);x011=varr(l011)
- l111=indx3(xi1,et1,ze1,1);x111=varr(l111)
- xn00=(xi1-xi)*x000+(xi-xi0)*x100;
- xn10=(xi1-xi)*x010+(xi-xi0)*x110;
- xn0=(et1-et)*xn00+(et-et0)*xn10;
- xn01=(xi1-xi)*x001+(xi-xi0)*x101;
- xn11=(xi1-xi)*x011+(xi-xi0)*x111;
- xn1=(et1-et)*xn01+(et-et0)*xn11;
- xn=(ze1-ze)*xn0+(ze-ze0)*xn1;
-
- end function trilinr
  
-!===== FUNCTION FOR HERMITEAN INTERPOLATION
+!===== FUNCTION FOR 3D HERMITEAN INTERPOLATION
  function htrilinr(xi,et,ze) result(fs)
  implicit none
  real(nr) :: fs
@@ -530,7 +732,7 @@ contains
  real(nr) :: fze00,fze10,fze01,fze11,fze0,fze1
 
  if (mod(xi,1.0_nr)==0) then
-    if (xi==lxi) then
+    if (xi==lxio) then
        xi0=xi-1;xi1=xi;
        else
        xi0=xi;xi1=xi+1
@@ -539,7 +741,7 @@ contains
     xi0=floor(xi);xi1=ceiling(xi)
  end if
  if (mod(et,1.0_nr)==0) then
-    if (et==let) then
+    if (et==leto) then
        et0=et-1;et1=et;
        else
        et0=et;et1=et+1
@@ -548,7 +750,7 @@ contains
     et0=floor(et);et1=ceiling(et)
  end if
  if (mod(ze,1.0_nr)==0) then
-    if (ze==lze) then
+    if (ze==lzeo) then
        ze0=ze-1;ze1=ze;
        else
        ze0=ze;ze1=ze+1
@@ -556,14 +758,14 @@ contains
     else
     ze0=floor(ze);ze1=ceiling(ze)
  end if
- l000=indx3(xi0,et0,ze0,1);f000=qo(l000,n)
- l010=indx3(xi0,et1,ze0,1);f010=qo(l010,n)
- l100=indx3(xi1,et0,ze0,1);f100=qo(l100,n)
- l110=indx3(xi1,et1,ze0,1);f110=qo(l110,n)
- l001=indx3(xi0,et0,ze1,1);f001=qo(l001,n)
- l101=indx3(xi1,et0,ze1,1);f101=qo(l101,n)
- l011=indx3(xi0,et1,ze1,1);f011=qo(l011,n)
- l111=indx3(xi1,et1,ze1,1);f111=qo(l111,n)
+ l000=indx5(xi0,et0,ze0,1);f000=f(l000)
+ l010=indx5(xi0,et1,ze0,1);f010=f(l010)
+ l100=indx5(xi1,et0,ze0,1);f100=f(l100)
+ l110=indx5(xi1,et1,ze0,1);f110=f(l110)
+ l001=indx5(xi0,et0,ze1,1);f001=f(l001)
+ l101=indx5(xi1,et0,ze1,1);f101=f(l101)
+ l011=indx5(xi0,et1,ze1,1);f011=f(l011)
+ l111=indx5(xi1,et1,ze1,1);f111=f(l111)
  fxi000=fxi(l000);fet000=fet(l000);fze000=fze(l000);
  fxi010=fxi(l010);fet010=fet(l010);fze010=fze(l010);
  fxi100=fxi(l100);fet100=fet(l100);fze100=fze(l100);

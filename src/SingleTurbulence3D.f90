@@ -337,6 +337,10 @@
 
  subroutine spongego
 
+ real(nr) :: tgustd,tguste
+
+ tgustd=37.6_nr; tguste=5.0_nr
+
  if(ltz/=-1) then ! rpt-ltz=# of points involved in inflow gust
     vit(:,:)=0
  if(timo-tgusto+dtk>0) then
@@ -366,8 +370,14 @@
  do ll=0,lsz; l=lcsz(ll)
     rr(l,:)=0; ss(l,1)=gamm1*asz(ll)*yaco(l)
  end do
+ if (timo+dtk>tgustd) then
+    ra0=timo-tgustd+dtk; ra1=min(ra0*half*pi/tguste,half*pi)
+    fctr=cos(ra1)**2
+ else
+    fctr=1
+ end if
  do ll=0,ltz; l=lctz(ll)
-    rr(l,:)=vit(ll,:)
+    rr(l,:)=vit(ll,:)*fctr
  end do
 !    fctr=half*gamm1
  do ll=0,lsz; l=lcsz(ll)

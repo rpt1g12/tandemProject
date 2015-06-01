@@ -119,7 +119,8 @@ contains
      if (ispost) then
      close(8)
      else
-     close(0,status='delete')
+     close(0)
+     !close(0,status='delete')
      end if
   do n=ns,ne
      res=varmin(n); call MPI_ALLREDUCE(res,fctr,1,MPI_REAL8,MPI_MIN,icom,ierr); varmin(n)=fctr
@@ -296,13 +297,13 @@ contains
 !====================================================================================
 !=====COMPUTE LIFT COEFFICIENT OVER AEROFOILS
 !====================================================================================
- subroutine clpost(ele,dir,nvar)
+ subroutine clpost(ele,nvar)
  
  use problemcase, only: span,delt1,delt2
  implicit none
     
-    integer, intent(in) :: ele,nvar,dir
-    integer :: bblock,tblock,m,ll
+    integer, intent(in) :: ele,nvar
+    integer :: bblock,tblock,m,ll,dir
     real(nr) :: dynp,clp,clv,tcl
     logical :: flag
  
@@ -336,46 +337,99 @@ contains
     flag=.true.
     end if
  
-    if (wflag.and.flag) then
-    ! Compute Dynamic pressure
-    dynp=two/(amachoo*amachoo*span)
-    if (ispost) then
-       call gettw(nvar)
-       do ll = 0, lcwall; l=lwall(ll)
-         clp=clp+(p(l)*wnor(ll,dir)*area(ll))
-         if (nviscous==1) then
-         clv=clv+tw(ll,dir)*area(ll)
-         end if
-       end do
-    else
-       if(.not.allocated(tw)) allocate(tw(0:lcwall,3))
-       do ll = 0, lcwall; l=lwall(ll)
-         if (nviscous==1) then
-         tw(ll,1)=(txx(l)*wnor(ll,1)+txy(l)*wnor(ll,2)+tzx(l)*wnor(ll,3))/reoo
-         tw(ll,2)=(txy(l)*wnor(ll,1)+tyy(l)*wnor(ll,2)+tyz(l)*wnor(ll,3))/reoo
-         tw(ll,3)=(tzx(l)*wnor(ll,1)+tyz(l)*wnor(ll,2)+tzz(l)*wnor(ll,3))/reoo
-         clv=clv+tw(ll,dir)*area(ll)
-         end if
-         clp=clp+(p(l)*wnor(ll,dir)*area(ll))
-       end do
-    end if
-    tcl=(clp+clv)*dynp
-    if (myid==mp) then
-       do m = 1, (npc(mb,1)*npc(mb,3)-1)
-       CALL MPI_RECV(clp,1,MPI_REAL8,MPI_ANY_SOURCE,10,MPI_COMM_WORLD,ista,ierr)
-       tcl=tcl+clp
-       end do
-    else
-       CALL MPI_SEND(tcl,1,MPI_REAL8,mp,10,MPI_COMM_WORLD,ierr)
-    end if
-    end if
- 
+    do dir = 1, 2
+    clp=0;clv=0;tcl=0;
+       if (wflag.and.flag) then
+          ! Compute Dynamic pressure
+          dynp=two/(amachoo*amachoo*span)
+          if (dir==1) then
+             if (ispost) then
+                call gettw(nvar)
+             else
+                call gettwrun
+             end if
+          end if
+          do ll = 0, lcwall; l=lwall(ll)
+            clp=clp+(p(l)*wnor(ll,dir)*area(ll))
+            if (nviscous==1) then
+            clv=clv+tw(ll,dir)*area(ll)
+            end if
+          end do
+          tcl=(clp+clv)*dynp
+          if (myid==mp) then
+             do m = 1, (npc(mb,1)*npc(mb,3)-1)
+             CALL MPI_RECV(clp,1,MPI_REAL8,MPI_ANY_SOURCE,10,MPI_COMM_WORLD,ista,ierr)
+             tcl=tcl+clp
+             end do
+          else
+             CALL MPI_SEND(tcl,1,MPI_REAL8,mp,10,MPI_COMM_WORLD,ierr)
+          end if
+       end if
     CALL MPI_ALLREDUCE(tcl,cl(ele,dir),1,MPI_REAL8,MPI_SUM,icom,ierr)
+    end do
  
  end subroutine clpost
 
 !====================================================================================
-!=====COMPUTE WALL SHEAR STRESS
+!=====COMPUTE WALL SHEAR STRESS AT RUNTIME
+!====================================================================================
+ subroutine gettwrun
+ use subroutines3d, only: mpigo,deriv
+ implicit none
+ integer :: nn,ll
+
+    if (wflag) then
+    if (nviscous==1) then
+     de(:,1)=1/qa(:,1)
+     de(:,2)=qa(:,2)
+     de(:,3)=qa(:,3)
+     de(:,4)=qa(:,4)
+     de(:,5)=gam*p(:)*de(:,1)
+     ss(:,1)=srefp1dre*de(:,5)**1.5_nr/(de(:,5)+srefoo)
+     de(:,1)=ss(:,1)
+ 
+     rr(:,1)=de(:,2)
+     m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     txx(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
+     hzz(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
+     tzx(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
+ 
+     rr(:,1)=de(:,3)
+     m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     txy(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
+     tyy(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
+     hxx(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
+ 
+     rr(:,1)=de(:,4)
+     m=4; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     hyy(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
+     tyz(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
+     tzz(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
+ 
+     fctr=2.0_nr/3
+     rr(:,1)=de(:,1)*yaco(:)
+     de(:,5)=fctr*(txx(:)+tyy(:)+tzz(:))
+ 
+     txx(:)=yaco(:)*(2*txx(:)-de(:,5))
+     tyy(:)=yaco(:)*(2*tyy(:)-de(:,5))
+     tzz(:)=yaco(:)*(2*tzz(:)-de(:,5))
+     txy(:)=yaco(:)*(txy(:)+hzz(:))
+     tyz(:)=yaco(:)*(tyz(:)+hxx(:))
+     tzx(:)=yaco(:)*(tzx(:)+hyy(:))
+ 
+       if(.not.allocated(tw)) allocate(tw(0:lcwall,3))
+       do ll = 0, lcwall; l=lwall(ll)
+         tw(ll,1)=(txx(l)*wnor(ll,1)+txy(l)*wnor(ll,2)+tzx(l)*wnor(ll,3))/reoo
+         tw(ll,2)=(txy(l)*wnor(ll,1)+tyy(l)*wnor(ll,2)+tyz(l)*wnor(ll,3))/reoo
+         tw(ll,3)=(tzx(l)*wnor(ll,1)+tyz(l)*wnor(ll,2)+tzz(l)*wnor(ll,3))/reoo
+       end do
+    end if
+    end if
+    
+ end subroutine gettwrun
+
+!====================================================================================
+!=====COMPUTE WALL SHEAR STRESS FROM WRITTEN DATA
 !====================================================================================
  subroutine gettw(nvar)
  use subroutines3d, only: mpigo,deriv

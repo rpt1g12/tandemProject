@@ -88,6 +88,7 @@
 
  real(nr),dimension(:,:,:),pointer :: drva,drvb,send,recv,cm
  real(nr),dimension(:,:),pointer :: cmm
+ real(nr),dimension(:),pointer :: pvarr
 
  real(nr),dimension(:,:,:),allocatable,target :: drva1,drva2,drva3
  real(nr),dimension(:,:,:),allocatable,target :: drvb1,drvb2,drvb3
@@ -162,7 +163,7 @@
  integer, dimension(:), allocatable ::lwall
  real(nr), dimension(:), allocatable ::area
  real(nr), dimension(:,:), allocatable ::wnor,wtan,tw
- real(nr), dimension(:,:), allocatable :: xyz
+ real(nr), dimension(:,:), allocatable,target :: xyz
  logical :: wflag
 
 !===== POST-PROCESSING VARIABLES BY RPT
