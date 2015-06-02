@@ -176,6 +176,7 @@
  real(nr), dimension(2,2) :: cl
 
 !===== ADITIONAL INPUTO VARIABLES BY RPT
+ integer  :: nto,iwrec
  integer  :: forcing
  real(nr) :: tgustd,tguste
  real(nr) :: talphas,talphar,aoa

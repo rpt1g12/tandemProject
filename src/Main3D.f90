@@ -28,7 +28,7 @@
 
     open(9,file='inputo.dat',shared)
     read(9,*) cinput,mbk
-    read(9,*) cinput,nts
+    read(9,*) cinput,nts,nto,iwrec
     read(9,*) cinput,nscrn,nsgnl
     read(9,*) cinput,ndata
     read(9,*) cinput,nkrk
@@ -351,28 +351,35 @@
 
     inquire(iolength=lp) varr
     open(0,file=cdata,access='direct',recl=lp)
- do nn=1,3
- ! rpt-Increasigng the record count
- nwrec=nwrec+1
-    varr(:)=ss(:,nn); write(0,rec=nwrec) varr(:)
- end do
- ! rpt-If ngrid is 1 then store the grid metrics and increase the record count
- if (ngridv==1) then
- do nn=1,3
- nwrec=nwrec+1
-    varr(:)=xim(:,nn); write(0,rec=nwrec) varr(:)
- end do
- do nn=1,3
- nwrec=nwrec+1
-    varr(:)=etm(:,nn); write(0,rec=nwrec) varr(:)
- end do
- do nn=1,3
- nwrec=nwrec+1
-    varr(:)=zem(:,nn); write(0,rec=nwrec) varr(:)
- end do
+ if ((1-nto)*nts==0) then
+    do nn=1,3
+    ! rpt-Increasigng the record count
+    nwrec=nwrec+1
+       varr(:)=ss(:,nn); write(0,rec=nwrec) varr(:)
+    end do
+    ! rpt-If ngrid is 1 then store the grid metrics and increase the record count
+    if (ngridv==1) then
+       do nn=1,3
+       nwrec=nwrec+1
+          varr(:)=xim(:,nn); write(0,rec=nwrec) varr(:)
+       end do
+       do nn=1,3
+       nwrec=nwrec+1
+          varr(:)=etm(:,nn); write(0,rec=nwrec) varr(:)
+       end do
+       do nn=1,3
+       nwrec=nwrec+1
+          varr(:)=zem(:,nn); write(0,rec=nwrec) varr(:)
+       end do
+    end if
+ nrec=nwrec
+ else
+ nrec=3+9*ngridv
+ if (nto==2) then
+    nwrec=iwrec
+ end if
  end if
 
- nrec=nwrec
 
 !===== SETTING UP SPONGE ZONE PARAMETERS
 
@@ -424,6 +431,9 @@
      write(*,"('============================================')")
      end if
     ndati=-1; nsigi=-1; dtsum=0
+    if (nto==2) then
+       ndati=0
+    end if
 !============================================
 !===== BEGINNING OF TIME MARCHING IN SOLUTION
 !============================================
@@ -436,10 +446,6 @@
   end if
 
   if(myid==0.and.mod(n,nscrn)==0) then
-  if(mod(n,20)==0) then
-     write(*,"(3x,'n',8x,'time',9x,'Cl',9x,'Cd',5x)")  
-     write(*,"('============================================')")
-  end if
      !Change ra0 to the angle of attack needed!!!
      ra0=aoa*pi/180;ra1=cos(ra0);ra2=sin(ra0)
      write(*,"(i8,f12.5,f12.7,f12.7)") &
@@ -810,6 +816,9 @@
    rr(:,1)=p(:); nwrec=nwrec+1
    varr(:)=rr(:,1); write(0,rec=nwrec) varr(:)
    !======================================
+   if(myid==0) then
+      write(*,"('===>nwrec= ',i8)") nwrec
+   end if
 
    !===== GENERATING RESTART DATA FILE
    
@@ -867,7 +876,11 @@
     wte=MPI_WTIME(); res=wte-wts
     call MPI_ALLREDUCE(res,wtime,1,MPI_REAL8,MPI_SUM,icom,ierr)
  if(myid==0) then
-    open(9,file='data/timeouts.dat')
+    if (nto==2) then
+       open(9,file='data/timeouts.dat',position='append')
+    else
+       open(9,file='data/timeouts.dat')
+    end if
     write(9,'(es15.7)') times(:)
     close(9)
 
@@ -885,6 +898,12 @@
     if(myid==0) then
        write(*,'("Simulation time was ",f6.2," hours")') wtime/(3600_nr*npro)
        write(*,*) "Writing Output files..."
+    end if
+    if (nto==2) then
+       ndata=ndati+(iwrec-nrec)/5-1
+       if (myid==0) then
+          write(*,*) ndata
+       end if
     end if
    call post(average=.false.)
  end if

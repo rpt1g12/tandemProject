@@ -117,9 +117,13 @@ contains
      varmin(n)=minval(varr(:)); varmax(n)=maxval(varr(:))
   end do
      if (ispost) then
-     close(8)
+        close(8)
      else
-     close(0,status='delete')
+        if (nto==0) then
+        close(0,status='delete')
+        else
+        close(0)
+        end if
      end if
   do n=ns,ne
      res=varmin(n); call MPI_ALLREDUCE(res,fctr,1,MPI_REAL8,MPI_MIN,icom,ierr); varmin(n)=fctr
