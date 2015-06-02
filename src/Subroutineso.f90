@@ -192,10 +192,10 @@
  subroutine movef(dtko,dtk)
 
  real(nr),intent(in) :: dtko,dtk
- real(nr) :: talphas,talphar,alphamax
+ real(nr) :: alphamax
 
- talphas=25.5_nr;talphar=5.0_nr
- alphamax=6.0_nr*pi/180_nr
+ !talphas=25.5_nr;talphar=5.0_nr
+ alphamax=aoa*pi/180_nr
 
  if(nsmf==0) then
     ra0=pi/timf; ra1=ra0*min(timo,timf); ra2=ra0*min(timo+dtko,timf)

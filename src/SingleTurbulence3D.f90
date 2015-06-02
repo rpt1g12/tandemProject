@@ -337,9 +337,9 @@
 
  subroutine spongego
 
- real(nr) :: tgustd,tguste
+ !real(nr) :: tgustd,tguste
 
- tgustd=37.6_nr; tguste=5.0_nr
+ !tgustd=37.6_nr; tguste=5.0_nr
 
  if(ltz/=-1) then ! rpt-ltz=# of points involved in inflow gust
     vit(:,:)=0

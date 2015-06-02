@@ -43,6 +43,9 @@
     read(9,*) cinput,tmax,timf,tsam
     read(9,*) cinput,fltk,fltkbc
     read(9,*) cinput,dto
+    read(9,*) cinput,forcing
+    read(9,*) cinput,tgustd,tguste
+    read(9,*) cinput,aoa,talphas,talphar
     close(9)
 
     cinput=cinput; fltk=pi*fltk; fltkbc=pi*fltkbc
@@ -171,7 +174,9 @@
 
 !===== ALLOCATION OF MAIN ARRAYS
 
-    allocate(qo(0:lmx,5),qa(0:lmx,5),qb(0:lmx,5),de(0:lmx,5))
+    !allocate(qo(0:lmx,5),qa(0:lmx,5),qb(0:lmx,5),de(0:lmx,5))
+    ! RPT-take out qb
+    allocate(qo(0:lmx,5),qa(0:lmx,5),de(0:lmx,5))
     allocate(xim(0:lmx,3),etm(0:lmx,3),zem(0:lmx,3),rr(0:lmx,3),ss(0:lmx,3))
     allocate(p(0:lmx),yaco(0:lmx),varr(0:lmx))
 
@@ -375,7 +380,9 @@
 
 !===== SETTING UP FORCING PARAMETERS
 
-    !call forceup
+    if (forcing==1) then
+    call forceup
+    end if
 
 !===== INITIAL CONDITIONS
 
@@ -401,11 +408,7 @@
  end do
     close(9)
  end if
-    qb(:,:)=0
-
-!============================================
-!===== BEGINNING OF TIME MARCHING IN SOLUTION
-!============================================
+    !qb(:,:)=0
 
     wts=MPI_WTIME()
 
@@ -413,21 +416,33 @@
     open(1,file='signal.dat'); close(1,status='delete')
  end if
     call MPI_BARRIER(icom,ierr)
+    wte=MPI_WTIME()
     open(1,file='signal.dat',access='direct',form='formatted',recl=16,shared)
 
+     if (myid==0) then
+     write(*,"(3x,'n',8x,'time',9x,'Cl',9x,'Cd',5x)")  
+     write(*,"('============================================')")
+     end if
     ndati=-1; nsigi=-1; dtsum=0
+!============================================
+!===== BEGINNING OF TIME MARCHING IN SOLUTION
+!============================================
  do while(timo-tmax<0.and.(dt/=0.or.n<=2))
 
   if (n.ge.2) then
-    !call clpost(1,ndati) 
+    call clpost(1,ndati) 
   else
     cl=0
   end if
 
   if(myid==0.and.mod(n,nscrn)==0) then
+  if(mod(n,20)==0) then
+     write(*,"(3x,'n',8x,'time',9x,'Cl',9x,'Cd',5x)")  
+     write(*,"('============================================')")
+  end if
      !Change ra0 to the angle of attack needed!!!
-     ra0=6.0_nr*pi/180;ra1=cos(ra0);ra2=sin(ra0)
-     write(*,"(' n =',i8,'   time =',f12.5,' Cl1 = ',f10.5,', Cl2 = ',f10.5)") &
+     ra0=aoa*pi/180;ra1=cos(ra0);ra2=sin(ra0)
+     write(*,"(i8,f12.5,f12.7,f12.7)") &
      n,timo,cl(1,2)*ra1-cl(1,1)*ra2,cl(1,2)*ra2+cl(1,1)*ra1
   end if
 
@@ -607,7 +622,9 @@
 
 ! ----- IMPLEMENTATION OF FORCING
 
-     !call forcego
+     if (forcing==1) then
+     call forcego
+     end if
 
 ! ----- PREPARATION FOR GCBC & GCIC
 

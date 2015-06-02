@@ -174,6 +174,11 @@
  real(nr), dimension(:), allocatable :: wvarr
 
  real(nr), dimension(2,2) :: cl
+
+!===== ADITIONAL INPUTO VARIABLES BY RPT
+ integer  :: forcing
+ real(nr) :: tgustd,tguste
+ real(nr) :: talphas,talphar,aoa
 !=====
 
  end module mainvar3d
