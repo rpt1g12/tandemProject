@@ -375,9 +375,7 @@
  nrec=nwrec
  else
  nrec=3+9*ngridv
- if (nto==2) then
-    nwrec=iwrec
- end if
+ nwrec=iwrec
  end if
 
 
