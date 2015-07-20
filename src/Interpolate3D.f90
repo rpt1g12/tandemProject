@@ -11,7 +11,7 @@
  use rpt
  use rptinter
  implicit none
- logical :: flag
+ logical :: iflag,gflag
  real(nr) :: tol
 
 
@@ -23,7 +23,7 @@
 
     mpro=npro-1; icom=MPI_COMM_WORLD; info=MPI_INFO_NULL
     wts=MPI_WTIME()
-    flag=.true.
+    iflag=.true.;gflag=.true.
 
     allocate(lxim(0:mpro),letm(0:mpro),lzem(0:mpro),lpos(0:mpro),vmpi(0:mpro))
     allocate(ista(MPI_STATUS_SIZE,12))
@@ -34,7 +34,7 @@ lxiio=lxio;letio=leto;lzeio=lzeo
 allocate(qb(0:lmx,5))
 call prepareArrays
      allocate(xyz2(0:lmx,3),ixis(0:lmx,3))
-if (.true.) then
+if (gflag) then
 call getGrid
      do i = 1, 3
         xyz2(:,i)=ss(:,i)
@@ -46,7 +46,7 @@ end if
 
 call deallocateArrays
 
-if (flag) then
+if (iflag) then
    call setup(160,320,160,160,80,100)
    color=mb;ncom=mb
    call prepareArrays
@@ -61,9 +61,25 @@ if (flag) then
    ra0 = minval(yaco,1)
    CALL MPI_ALLREDUCE(ra0,tol,1,MPI_REAL8,MPI_MIN,ncom,ierr)
    tol=abs(1.0_nr/tol**(1.0_nr/3.0_nr))
-   write(*,*) tol,myid
    call readRestart
-   
+   if (myid==0) then
+   write(*,"('Last time step was at:',f7.4)") timo
+   end if
+
+   ! Get boundary values
+   do n = 1, 2
+   ra0=minval(xyz(:,n),1)
+   ra1=maxval(xyz(:,n),1)
+   CALL MPI_ALLREDUCE(ra0,bounds(0,n),1,MPI_REAL8,MPI_MIN,icom,ierr)
+   CALL MPI_ALLREDUCE(ra1,bounds(1,n),1,MPI_REAL8,MPI_MAX,icom,ierr)
+   bounds(0,n)=bounds(0,n)-2*sml
+   bounds(1,n)=bounds(1,n)+2*sml
+   end do
+   bounds(0,3)=-half*span;bounds(1,3)=half*span
+   ! Set outside values
+   outside(1)=rhooo
+   outside(2:4)=0.0_nr
+   outside(5)=poo*hamm1/rhooo
    do n = 1, 5
       call getDeri(n)
       call interpolate(n,tol)
@@ -87,7 +103,7 @@ if (flag) then
             write(*,'("Interpolation time was ",f6.2," minutes")') wtime/(60_nr*npro)
          end if
       else
-         write(*,'("Simulation time was ",f6.2," hours")') wtime/(3600_nr*npro)
+         write(*,'("Interpolation time was ",f6.2," hours")') wtime/(3600_nr*npro)
       end if
    end if
 end if
