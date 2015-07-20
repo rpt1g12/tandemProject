@@ -206,7 +206,7 @@
     ! rpt-this is sigma(x,y,z)
     de(l,1)=ra0*(1+cos(pi*(1-rr(l,1))*(1-rr(l,2))*(1-rr(l,3)))) 
     ! rpt-this is lambda(x)
-    de(l,2)=ra1*(1-tanh(ss(l,1)))+1
+    de(l,2)=ra1*(1-tanh(ss(l,1)))+3/szco
  if(de(l,1)-sml>0) then
     ll=ll+1; de(ll,5)=l+sml ! rpt-this gives the l's containing sponge points,why sum sml??
  end if
@@ -217,9 +217,11 @@
  do ll=0,lsz; l=de(ll,5); lcsz(ll)=l
     ! rpt-asz=sigma(x,y,z) and bsc=sigma(x,y,z)*lambda(x)
     asz(ll)=de(l,1)/yaco(l); bsz(ll)=asz(ll)*de(l,2)
+    !qb(l,1)=asz(ll)*yaco(l);qb(l,2)=bsz(ll)*yaco(l)
  end do
  end if
 
+    !===GUST===
     ll=-1; ra0=tlb*(2.5_nr-cutlb)
  do lh=0,lsz; l=lcsz(lh)
  ! rpt-mark points where the gust is going to happen
@@ -336,10 +338,6 @@
 !===== SPONGE IMPLEMENTATION
 
  subroutine spongego
-
- !real(nr) :: tgustd,tguste
-
- !tgustd=37.6_nr; tguste=5.0_nr
 
  if(ltz/=-1) then ! rpt-ltz=# of points involved in inflow gust
     vit(:,:)=0
