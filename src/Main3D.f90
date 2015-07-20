@@ -43,9 +43,10 @@
     read(9,*) cinput,tmax,timf,tsam
     read(9,*) cinput,fltk,fltkbc
     read(9,*) cinput,dto
-    read(9,*) cinput,forcing
+    read(9,*) cinput,forcing,amfor
     read(9,*) cinput,tgustd,tguste
     read(9,*) cinput,aoa,talphas,talphar
+    read(9,*) cinput,LES,smago1,smago2
     close(9)
 
     cinput=cinput; fltk=pi*fltk; fltkbc=pi*fltkbc
@@ -65,11 +66,11 @@
     call inputext
 
     ! rpt-Forcing parameters
-    xfor=cos(delt1)-0.5_nr-1.0_nr+(0.1_nr);
-    yfor=-sin(delt1)+(0.129_nr);
-    rfor=5.0e-3
-    amfor=1e-3*amachoo
-    tsfor=15.0e0;tefor=35.000e0
+    xfor=-(0.5_nr+3*cos(aoa*pi/180_nr))!cos(delt1)-0.5_nr-1.0_nr+(0.1_nr);
+    yfor=-3*sin(aoa*pi/180_nr)!-sin(delt1)+(0.129_nr);
+    rfor=5.0e-1
+    amfor=amfor*amachoo/100.0e0
+    tsfor=151.751e0;tefor=200.000e0
 !===== DOMAIN DECOMPOSITION & BOUNDARY INFORMATION
 
     mo(0)=0
@@ -175,6 +176,7 @@
 !===== ALLOCATION OF MAIN ARRAYS
 
     !allocate(qo(0:lmx,5),qa(0:lmx,5),qb(0:lmx,5),de(0:lmx,5))
+    !qb(:,:)=0
     ! RPT-take out qb
     allocate(qo(0:lmx,5),qa(0:lmx,5),de(0:lmx,5))
     allocate(xim(0:lmx,3),etm(0:lmx,3),zem(0:lmx,3),rr(0:lmx,3),ss(0:lmx,3))
@@ -351,7 +353,7 @@
 
     inquire(iolength=lp) varr
     open(0,file=cdata,access='direct',recl=lp)
- if ((1-nto)*nts==0) then
+ if ((1-nto)*nts*nto==0) then
     do nn=1,3
     ! rpt-Increasigng the record count
     nwrec=nwrec+1
@@ -367,7 +369,9 @@
        nwrec=nwrec+1
           varr(:)=etm(:,nn); write(0,rec=nwrec) varr(:)
        end do
-       do nn=1,3
+       nwrec=nwrec+1
+          varr(:)=-1/yaco(:); write(0,rec=nwrec) varr(:)
+       do nn=2,3
        nwrec=nwrec+1
           varr(:)=zem(:,nn); write(0,rec=nwrec) varr(:)
        end do
@@ -375,7 +379,9 @@
  nrec=nwrec
  else
  nrec=3+9*ngridv
- nwrec=iwrec
+ if (nto==2) then
+    nwrec=iwrec
+ end if
  end if
 
 
@@ -437,10 +443,12 @@
 !============================================
  do while(timo-tmax<0.and.(dt/=0.or.n<=2))
 
+  if (mod(n,nscrn)==0) then
   if (n.ge.2) then
     call clpost(1,ndati) 
   else
     cl=0
+  end if
   end if
 
   if(myid==0.and.mod(n,nscrn)==0) then
@@ -479,8 +487,9 @@
      de(:,4)=qa(:,4)*de(:,1)
 
      p(:)=gamm1*(qa(:,5)-half*(qa(:,2)*de(:,2)+qa(:,3)*de(:,3)+qa(:,4)*de(:,4)))
-     de(:,5)=gam*p(:)*de(:,1)
-     ss(:,1)=srefp1dre*de(:,5)**1.5_nr/(de(:,5)+srefoo)
+     de(:,5)=gam*p(:)*de(:,1) ! rpt-This is temperature
+     ss(:,1)=srefp1dre*de(:,5)**1.5_nr/(de(:,5)+srefoo) ! rpt-This is
+                                                        !     Sutherland's law
 
 ! ----- DETERMINATION OF TIME STEP SIZE & OUTPUT TIME
 
@@ -547,14 +556,41 @@
      fctr=2.0_nr/3
      rr(:,1)=de(:,1)*yaco(:)
      rr(:,2)=gamm1prndtli*rr(:,1)
-     de(:,5)=fctr*(txx(:)+tyy(:)+tzz(:))
+     !qb(:,3)=de(:,1)
 
-     txx(:)=rr(:,1)*(2*txx(:)-de(:,5))
-     tyy(:)=rr(:,1)*(2*tyy(:)-de(:,5))
-     tzz(:)=rr(:,1)*(2*tzz(:)-de(:,5))
-     txy(:)=rr(:,1)*(txy(:)+hzz(:))
-     tyz(:)=rr(:,1)*(tyz(:)+hxx(:))
-     tzx(:)=rr(:,1)*(tzx(:)+hyy(:))
+     selectcase(LES)
+     case(1)
+        de(:,1)=(txx(:)*txx(:)+tyy(:)*tyy(:)+tzz(:)*tzz(:)+& !rpt- SijSij
+                 (hzz(:)+txy(:))*(hzz(:)+txy(:))+&
+                 (hyy(:)+tzx(:))*(hyy(:)+tzx(:))+&
+                 (hxx(:)+tyz(:))*(hxx(:)+tyz(:)))
+        varr(:)=(-1/yaco(:))**1.5 ! rpt- Volume
+        rr(:,3)=qa(:,1)*smago1**2*varr(:)*sqrt(2*(de(:,1))) ! rpt-nuSGS
+        !qb(:,2)=rr(:,3)
+        !qb(:,4)=qb(:,2)/qb(:,3)
+        rr(:,1)=rr(:,1)+rr(:,3)*yaco(:)
+        rr(:,2)=rr(:,2)+tgamm1prndtli*rr(:,3)*yaco(:)   
+        rr(:,3)=fctr*(qa(:,1)*smago2*varr(:)*de(:,1)) ! rpt-2/3*ro*kSGS
+        de(:,5)=fctr*(txx(:)+tyy(:)+tzz(:))
+
+
+        txx(:)=rr(:,1)*(2*txx(:)-de(:,5))-rr(:,3)
+        tyy(:)=rr(:,1)*(2*tyy(:)-de(:,5))-rr(:,3)
+        tzz(:)=rr(:,1)*(2*tzz(:)-de(:,5))-rr(:,3)
+        txy(:)=rr(:,1)*(txy(:)+hzz(:))
+        tyz(:)=rr(:,1)*(tyz(:)+hxx(:))
+        tzx(:)=rr(:,1)*(tzx(:)+hyy(:))
+     case(0)
+        de(:,5)=fctr*(txx(:)+tyy(:)+tzz(:))
+
+        txx(:)=rr(:,1)*(2*txx(:)-de(:,5))
+        tyy(:)=rr(:,1)*(2*tyy(:)-de(:,5))
+        tzz(:)=rr(:,1)*(2*tzz(:)-de(:,5))
+        txy(:)=rr(:,1)*(txy(:)+hzz(:))
+        tyz(:)=rr(:,1)*(tyz(:)+hxx(:))
+        tzx(:)=rr(:,1)*(tzx(:)+hyy(:))
+     end select
+
      hxx(:)=rr(:,2)*ss(:,1)+de(:,2)*txx(:)+de(:,3)*txy(:)+de(:,4)*tzx(:)
      hyy(:)=rr(:,2)*ss(:,2)+de(:,2)*txy(:)+de(:,3)*tyy(:)+de(:,4)*tyz(:)
      hzz(:)=rr(:,2)*ss(:,3)+de(:,2)*tzx(:)+de(:,3)*tyz(:)+de(:,4)*tzz(:)
@@ -809,10 +845,12 @@
       varr(:)=qa(:,1); write(0,rec=nwrec) varr(:)
    do m = 2, 4
    nwrec=nwrec+1
+      !varr(:)=qb(:,m); write(0,rec=nwrec) varr(:)
       varr(:)=((qa(:,m)/qa(:,1))+umf(m-1)); write(0,rec=nwrec) varr(:)
+      !varr(:)=qa(:,m); write(0,rec=nwrec) varr(:)
    end do
-   rr(:,1)=p(:); nwrec=nwrec+1
-   varr(:)=rr(:,1); write(0,rec=nwrec) varr(:)
+   nwrec=nwrec+1
+   varr(:)=p(:); write(0,rec=nwrec) varr(:)
    !======================================
    if(myid==0) then
       write(*,"('===>nwrec= ',i8)") nwrec
