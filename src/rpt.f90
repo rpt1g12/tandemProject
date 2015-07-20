@@ -157,20 +157,21 @@ contains
  end do
  lfor=ll
  if (lfor.ne.-1) then
-    allocate(lcfor(0:lfor),xafor(0:lfor,3),yafor(0:lfor,3),bfor(0:lfor,3))
+    allocate(lcfor(0:lfor),xafor(0:lfor,3),bfor(0:lfor,3))
  do ll = 0, lfor; l=de(ll,5); lcfor(ll)=l
     bfor(ll,1)=cos(ra1*ss(l,3))
     bfor(ll,2)=cos(3*ra1*ss(l,3))
     bfor(ll,3)=cos(4*ra1*ss(l,3))
-    ra2=rr(l,1)
-    ra3=(qo(l,2)-qo(l,1))
-    xafor(ll,1)=half*exp(-ra0*ra2)*bfor(ll,1)*ra3
-    xafor(ll,2)=half*exp(-ra0*ra2)*bfor(ll,2)*ra3
-    xafor(ll,3)=half*exp(-ra0*ra2)*bfor(ll,3)*ra3
-    ra3=(qa(l,2)-qa(l,1))
-    yafor(ll,1)=half*exp(-ra0*ra2)*bfor(ll,1)*ra3
-    yafor(ll,2)=half*exp(-ra0*ra2)*bfor(ll,2)*ra3
-    yafor(ll,3)=half*exp(-ra0*ra2)*bfor(ll,3)*ra3
+    ra1=half*exp(-ra0*rr(l,1))/yaco(l)
+    !rpt- Xeta-Xxi
+    !ra3=(qo(l,2)-qo(l,1))
+    !ra1=half*exp(-ra0*rr(l,1))*(qo(l,2)-qo(l,1))
+    !rpt- Yeta-Yxi
+    !ra3=(qa(l,2)-qa(l,1))
+    !ra2=half*exp(-ra0*rr(l,1))*(qa(l,2)-qa(l,1))
+    xafor(ll,1)=ra1*bfor(ll,1)
+    xafor(ll,2)=ra1*bfor(ll,2)
+    xafor(ll,3)=ra1*bfor(ll,3)
  end do
  end if
  end subroutine forceup
@@ -185,8 +186,8 @@ contains
    ra2=amfor*cos(ra0*53.6_nr*amachoo)/3
    ra3=amfor*cos(ra0*53.6_nr*amachoo)/3
    do ll = 0, lfor; l=lcfor(ll)
-     de(l,2)=de(l,2)+ra1*xafor(ll,1)+ra2*xafor(ll,2)+ra3*xafor(ll,3)
-     de(l,3)=de(l,3)+ra1*yafor(ll,1)+ra2*yafor(ll,2)+ra3*yafor(ll,3)
+     de(l,2)=de(l,2)+qa(l,1)*(ra1*xafor(ll,1)+ra2*xafor(ll,2)+ra3*xafor(ll,3))
+     de(l,3)=de(l,3)-qa(l,1)*(ra1*xafor(ll,1)+ra2*xafor(ll,2)+ra3*xafor(ll,3))
    end do
  end if
  end subroutine forcego
@@ -386,42 +387,49 @@ contains
 
 
    if (nviscous==1) then
-    de(:,1)=1/qa(:,1)
-    de(:,2)=qa(:,2)
-    de(:,3)=qa(:,3)
-    de(:,4)=qa(:,4)
-    de(:,5)=gam*p(:)*de(:,1)
-    ss(:,1)=srefp1dre*de(:,5)**1.5_nr/(de(:,5)+srefoo)
-    de(:,1)=ss(:,1)
+     de(:,1)=1/qa(:,1)
+     de(:,2)=qa(:,2)
+     de(:,3)=qa(:,3)
+     de(:,4)=qa(:,4)
+     de(:,5)=gam*p(:)*de(:,1)
+     ss(:,1)=srefp1dre*de(:,5)**1.5_nr/(de(:,5)+srefoo)
+     de(:,1)=ss(:,1)
  
-    rr(:,1)=de(:,2)
-    m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
-    txx(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
-    hzz(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
-    tzx(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
- 
-    rr(:,1)=de(:,3)
-    m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
-    txy(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
-    tyy(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
-    hxx(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
- 
-    rr(:,1)=de(:,4)
-    m=4; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
-    hyy(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
-    tyz(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
-    tzz(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
- 
-    fctr=2.0_nr/3
-    rr(:,1)=de(:,1)*yaco(:)
-    de(:,5)=fctr*(txx(:)+tyy(:)+tzz(:))
- 
-    txx(:)=yaco(:)*(2*txx(:)-de(:,5))
-    tyy(:)=yaco(:)*(2*tyy(:)-de(:,5))
-    tzz(:)=yaco(:)*(2*tzz(:)-de(:,5))
-    txy(:)=yaco(:)*(txy(:)+hzz(:))
-    tyz(:)=yaco(:)*(tyz(:)+hxx(:))
-    tzx(:)=yaco(:)*(tzx(:)+hyy(:))
+     rr(:,1)=de(:,2)
+     m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     txx(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
+     hzz(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
+     tzx(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
+
+     rr(:,1)=de(:,3)
+     m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     txy(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
+     tyy(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
+     hxx(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
+
+     rr(:,1)=de(:,4)
+     m=4; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     hyy(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
+     tyz(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
+     tzz(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
+
+     rr(:,1)=de(:,5)
+     m=5; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     ss(:,1)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
+     ss(:,2)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
+     ss(:,3)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
+
+     fctr=2.0_nr/3
+     rr(:,1)=de(:,1)*yaco(:)
+     rr(:,2)=gamm1prndtli*rr(:,1)
+     de(:,5)=fctr*(txx(:)+tyy(:)+tzz(:))
+
+     txx(:)=rr(:,1)*(2*txx(:)-de(:,5))
+     tyy(:)=rr(:,1)*(2*tyy(:)-de(:,5))
+     tzz(:)=rr(:,1)*(2*tzz(:)-de(:,5))
+     txy(:)=rr(:,1)*(txy(:)+hzz(:))
+     tyz(:)=rr(:,1)*(tyz(:)+hxx(:))
+     tzx(:)=rr(:,1)*(tzx(:)+hyy(:))
  
       if (wflag) then
       if(.not.allocated(tw)) allocate(tw(0:lcwall,3))
