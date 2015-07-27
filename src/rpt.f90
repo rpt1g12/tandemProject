@@ -11,6 +11,169 @@ use mpi
 contains
 
 !====================================================================================
+!===== POST-PROCESSING & GENERATING PLOT3D DATA FILES
+!====================================================================================
+ subroutine plot3d(gflag,sflag,bflag)
+
+ integer, intent(in) :: gflag,sflag,bflag
+ integer :: n
+ character(8) :: ctime
+ 
+ write(ctime,"(f8.4)") timo
+    
+
+ if (bflag==1) then
+    if (gflag==1) then
+      if (myid==0) then
+        open(9,file='out/grid.xyz'); close(9,status='delete')
+      end if
+      CALL MPI_BARRIER(icom,ierr)
+      open (unit=9, file='out/grid.xyz', access='stream',shared)
+      lh=0
+      if (myid==0) then
+       write(9,pos=4*lh+1) mbk+1; lh=lh+1 ! Number of zones
+       do mm = 0, mbk
+          write(9,pos=4*lh+1) int4(lximb(mm)+1); lh=lh+1 ! IMax
+          write(9,pos=4*lh+1) int4(letmb(mm)+1); lh=lh+1 ! JMax
+          write(9,pos=4*lh+1) int4(lzemb(mm)+1); lh=lh+1 ! KMax
+       end do
+       lhmb(mb)=lh
+       do mm = 0, mbk-1
+          lhmb(mm+1)=lhmb(mm)+3*(lximb(mm)+1)*(letmb(mm)+1)*(lzemb(mm)+1)
+       end do
+      end if
+       call MPI_BCAST(lhmb,mbk+1,MPI_INTEGER,0,icom,ierr)
+       lp=lpos(myid)+lhmb(mb)
+       ns=1; ne=3
+       do n=ns,ne; lq=(n-1)*ltomb
+          varr(:)=ss(:,n)
+       do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+          write(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
+       end do; end do
+       end do
+       close(9)
+      CALL MPI_BARRIER(icom,ierr)
+        if (myid==0) then
+        write(*,*) 'Grid written!'
+        end if
+    end if
+
+    if (sflag==1) then
+       if (myid==0) then
+         open(9,file='out/solT'//ctime//'.q'); close(9,status='delete')
+       end if
+       CALL MPI_BARRIER(icom,ierr)
+       open (unit=9, file='out/solT'//ctime//'.q', access='stream',shared)
+       lh=0
+       if (myid==0) then
+        write(9,pos=4*lh+1) mbk+1; lh=lh+1 ! Number of zones
+        do mm = 0, mbk
+           write(9,pos=4*lh+1) int4(lximb(mm)+1); lh=lh+1 ! IMax
+           write(9,pos=4*lh+1) int4(letmb(mm)+1); lh=lh+1 ! JMax
+           write(9,pos=4*lh+1) int4(lzemb(mm)+1); lh=lh+1 ! KMax
+        end do
+        lhmb(mb)=lh
+        do mm = 0, mbk-1
+           lhmb(mm+1)=lhmb(mm)+4+5*(lximb(mm)+1)*(letmb(mm)+1)*(lzemb(mm)+1)
+        end do
+       end if
+        call MPI_BCAST(lhmb,mbk+1,MPI_INTEGER,0,icom,ierr)
+        if (myid==mo(mb)) then
+           lh=lhmb(mb)
+           write(9,pos=4*lh+1) amachoo; lh=lh+1 ! Mach Number
+           write(9,pos=4*lh+1) aoa; lh=lh+1  
+           write(9,pos=4*lh+1) reoo; lh=lh+1 ! Reynolds Number
+           write(9,pos=4*lh+1) timo; lh=lh+1 ! Time
+        end if
+        lp=lpos(myid)+lhmb(mb)+4
+        ns=1; ne=5
+        do n=ns,ne; lq=(n-ns)*ltomb
+           selectcase(n)
+           case(1,5); varr(:)=qa(:,n)
+           case(2,3,4); varr(:)=qa(:,n)+qa(:,1)*umf(n-1)
+           end select
+        do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+          write(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
+        end do; end do
+        end do
+        close(9)
+        if (myid==0) then
+           write(*,"('Solution written! T= ',8a)") ctime 
+        end if
+    end if
+ else
+    if (gflag==1) then
+       if (myid==mo(mb)) then
+         open(9,file='out/'//czone//'.xyz'); close(9,status='delete')
+       end if
+       CALL MPI_BARRIER(icom,ierr)
+       open (unit=9, file='out/'//czone//'.xyz', access='stream',shared)
+       lh=0
+       if (myid==mo(mb)) then
+        write(9,pos=4*lh+1) 1; lh=lh+1 ! Number of zones
+        write(9,pos=4*lh+1) int4(lximb(mb)+1); lh=lh+1 ! IMax
+        write(9,pos=4*lh+1) int4(letmb(mb)+1); lh=lh+1 ! JMax
+        write(9,pos=4*lh+1) int4(lzemb(mb)+1); lh=lh+1 ! KMax
+        lhmb(mb)=lh
+       end if
+       do mm=0,mbk
+          call MPI_BCAST(lhmb(mm),1,MPI_INTEGER,mo(mm),icom,ierr)
+       end do
+       lp=lpos(myid)+lhmb(mb)
+       ns=1; ne=3
+       do n=ns,ne; lq=(n-1)*ltomb
+          varr(:)=ss(:,n)
+          do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+             write(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
+          end do; end do
+       end do
+       close(9)
+       if (myid==mo(mb)) then
+          write(*,"('Grid written for block ',i2)") mb 
+       end if
+    end if
+    if (sflag==1) then
+       if (myid==mo(mb)) then
+         open(9,file='out/sol'//czone//'T'//ctime//'.q'); close(9,status='delete')
+       end if
+       CALL MPI_BARRIER(icom,ierr)
+       open (unit=9, file='out/sol'//czone//'T'//ctime//'.q', access='stream',shared)
+       lh=0
+       if (myid==mo(mb)) then
+        write(9,pos=4*lh+1) 1; lh=lh+1 ! Number of zones
+        write(9,pos=4*lh+1) int4(lximb(mb)+1); lh=lh+1 ! IMax
+        write(9,pos=4*lh+1) int4(letmb(mb)+1); lh=lh+1 ! JMax
+        write(9,pos=4*lh+1) int4(lzemb(mb)+1); lh=lh+1 ! KMax
+        write(9,pos=4*lh+1) amachoo; lh=lh+1 ! Mach Number
+        write(9,pos=4*lh+1) aoa; lh=lh+1  
+        write(9,pos=4*lh+1) reoo; lh=lh+1 ! Reynolds Number
+        write(9,pos=4*lh+1) timo; lh=lh+1 ! Time
+        lhmb(mb)=lh
+       end if
+       do mm=0,mbk
+          call MPI_BCAST(lhmb(mm),1,MPI_INTEGER,mo(mm),icom,ierr)
+       end do
+       lp=lpos(myid)+lhmb(mb)
+       ns=1; ne=5
+       do n=ns,ne; lq=(n-ns)*ltomb
+           selectcase(n)
+           case(1,5); varr(:)=qa(:,n)
+           case(2,3,4); varr(:)=qa(:,n)+qa(:,1)*umf(n-1)
+           end select
+          do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+             write(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
+          end do; end do
+       end do
+       close(9)
+       if (myid==0) then
+          write(*,"('Solution written! T= ',8a)") ctime 
+       end if
+    end if
+ end if
+          
+ end subroutine plot3d
+
+!====================================================================================
 !===== POST-PROCESSING & GENERATING TECPLOT DATA FILE
 !====================================================================================
  subroutine post(average)
@@ -434,9 +597,9 @@ contains
       if (wflag) then
       if(.not.allocated(tw)) allocate(tw(0:lcwall,3))
       do ll = 0, lcwall; l=lwall(ll)
-        tw(ll,1)=qa(l,1)*(txx(l)*wnor(ll,1)+txy(l)*wnor(ll,2)+tzx(l)*wnor(ll,3))/reoo
-        tw(ll,2)=qa(l,1)*(txy(l)*wnor(ll,1)+tyy(l)*wnor(ll,2)+tyz(l)*wnor(ll,3))/reoo
-        tw(ll,3)=qa(l,1)*(tzx(l)*wnor(ll,1)+tyz(l)*wnor(ll,2)+tzz(l)*wnor(ll,3))/reoo
+        tw(ll,1)=qa(l,1)*(txx(l)*wnor(ll,1)+txy(l)*wnor(ll,2)+tzx(l)*wnor(ll,3))!/reoo
+        tw(ll,2)=qa(l,1)*(txy(l)*wnor(ll,1)+tyy(l)*wnor(ll,2)+tyz(l)*wnor(ll,3))!/reoo
+        tw(ll,3)=qa(l,1)*(tzx(l)*wnor(ll,1)+tyz(l)*wnor(ll,2)+tzz(l)*wnor(ll,3))!/reoo
       end do
       end if
    end if

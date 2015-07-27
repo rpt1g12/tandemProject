@@ -47,6 +47,7 @@
     read(9,*) cinput,tgustd,tguste
     read(9,*) cinput,aoa,talphas,talphar
     read(9,*) cinput,LES,smago1,smago2
+    read(9,*) cinput,output,ogrid,osol,oblock
     close(9)
 
     cinput=cinput; fltk=pi*fltk; fltkbc=pi*fltkbc
@@ -337,6 +338,7 @@
     call wallArea
     call walldir
 
+
  do nn=1,3; do ip=0,1; i=ip*ijk(1,nn)
  do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
  do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
@@ -351,38 +353,43 @@
 
 !===== SETTING UP OUTPUT FILE & STORING GRID DATA
 
-    inquire(iolength=lp) varr
-    open(0,file=cdata,access='direct',recl=lp)
- if ((1-nto)*nts*nto==0) then
-    do nn=1,3
-    ! rpt-Increasigng the record count
-    nwrec=nwrec+1
-       varr(:)=ss(:,nn); write(0,rec=nwrec) varr(:)
-    end do
-    ! rpt-If ngrid is 1 then store the grid metrics and increase the record count
-    if (ngridv==1) then
+ selectcase(output)
+ case(0)
+       inquire(iolength=lp) varr
+       open(0,file=cdata,access='direct',recl=lp)
+    if ((1-nto)*nts*nto==0) then
        do nn=1,3
+       ! rpt-Increasigng the record count
        nwrec=nwrec+1
-          varr(:)=xim(:,nn); write(0,rec=nwrec) varr(:)
+          varr(:)=ss(:,nn); write(0,rec=nwrec) varr(:)
        end do
-       do nn=1,3
-       nwrec=nwrec+1
-          varr(:)=etm(:,nn); write(0,rec=nwrec) varr(:)
-       end do
-       nwrec=nwrec+1
-          varr(:)=-1/yaco(:); write(0,rec=nwrec) varr(:)
-       do nn=2,3
-       nwrec=nwrec+1
-          varr(:)=zem(:,nn); write(0,rec=nwrec) varr(:)
-       end do
+       ! rpt-If ngrid is 1 then store the grid metrics and increase the record count
+       if (ngridv==1) then
+          do nn=1,3
+          nwrec=nwrec+1
+             varr(:)=xim(:,nn); write(0,rec=nwrec) varr(:)
+          end do
+          do nn=1,3
+          nwrec=nwrec+1
+             varr(:)=etm(:,nn); write(0,rec=nwrec) varr(:)
+          end do
+          nwrec=nwrec+1
+             varr(:)=-1/yaco(:); write(0,rec=nwrec) varr(:)
+          do nn=2,3
+          nwrec=nwrec+1
+             varr(:)=zem(:,nn); write(0,rec=nwrec) varr(:)
+          end do
+       end if
+    nrec=nwrec
+    else
+    nrec=3+9*ngridv
+    if (nto==2) then
+       nwrec=iwrec
     end if
- nrec=nwrec
- else
- nrec=3+9*ngridv
- if (nto==2) then
-    nwrec=iwrec
- end if
- end if
+    end if
+ case(1)
+   call plot3d(gflag=ogrid,sflag=0,bflag=oblock)
+ end select
 
 
 !===== SETTING UP SPONGE ZONE PARAMETERS
@@ -435,7 +442,7 @@
      write(*,"('============================================')")
      end if
     ndati=-1; nsigi=-1; dtsum=0
-    if (nto==2) then
+    if ((nto==2).and.(output==0)) then
        ndati=0
     end if
 !============================================
@@ -839,22 +846,24 @@
    if(myid==0) then
       write(*,"('===> saving output ',i3,' at time =',f12.8)") ndati,timo
    end if
+   selectcase(output)
+   case(1)
+      call plot3d(gflag=0,sflag=osol,bflag=oblock)
+   case(0)
+      !==========SAVING INSTANTANEUS DENSITY, VELOCITY AND PRESSURE
+      nwrec=nwrec+1
+         varr(:)=qa(:,1); write(0,rec=nwrec) varr(:)
+      do m = 2, 4
+      nwrec=nwrec+1
+        varr(:)=((qa(:,m)/qa(:,1))+umf(m-1)); write(0,rec=nwrec) varr(:)
+      end do
+      nwrec=nwrec+1
+      varr(:)=p(:); write(0,rec=nwrec) varr(:)
+      if(myid==0) then
+         write(*,"('===>nwrec= ',i8)") nwrec
+      end if
+   end select
 
-   !==========SAVING INSTANTANEUS DENSITY, VELOCITY AND PRESSURE
-   nwrec=nwrec+1
-      varr(:)=qa(:,1); write(0,rec=nwrec) varr(:)
-   do m = 2, 4
-   nwrec=nwrec+1
-      !varr(:)=qb(:,m); write(0,rec=nwrec) varr(:)
-      varr(:)=((qa(:,m)/qa(:,1))+umf(m-1)); write(0,rec=nwrec) varr(:)
-      !varr(:)=qa(:,m); write(0,rec=nwrec) varr(:)
-   end do
-   nwrec=nwrec+1
-   varr(:)=p(:); write(0,rec=nwrec) varr(:)
-   !======================================
-   if(myid==0) then
-      write(*,"('===>nwrec= ',i8)") nwrec
-   end if
 
    !===== GENERATING RESTART DATA FILE
    
@@ -931,6 +940,7 @@
     end if
     ndata=ndati
  else
+   if (output==0) then
     if(myid==0) then
        write(*,'("Simulation time was ",f6.2," hours")') wtime/(3600_nr*npro)
        write(*,*) "Writing Output files..."
@@ -941,7 +951,8 @@
           write(*,*) ndata
        end if
     end if
-   call post(average=.false.)
+      call post(average=.false.)
+   end if
  end if
 
 if (myid==0) then

@@ -184,6 +184,7 @@
  real(nr) :: tgustd,tguste
  real(nr) :: talphas,talphar,aoa
  real(nr) :: smago1,smago2
+ integer  :: output,ogrid,osol,oblock
 !=====
 
  end module mainvar3d
