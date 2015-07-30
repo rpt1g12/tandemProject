@@ -634,8 +634,8 @@ contains
        case(1)
           call p3dread(gsflag=0,nout=nvar)
        end select
-    if (nviscous==1) then
        p(:)=qo(:,5)
+    if (nviscous==1) then
        de(:,1)=1/qo(:,1)
        de(:,2)=qo(:,2)
        de(:,3)=qo(:,3)
@@ -786,9 +786,10 @@ nfile=5
        else
        selectcase(n)
           case(1); qo(:,n)=varr(:)
-          case(2,3,4); qo(:,n)=varr(:)/qo(:,1)
-          case(5); qo(:,n)=&
-          gamm1*(varr(:)-half*qo(:,1)*(qo(:,2)*qo(:,2)+qo(:,3)*qo(:,3)+qo(:,4)*qo(:,4)))
+          ! If the data was written in conservatives variables change this
+          case(2,3,4); qo(:,n)=varr(:)!/qo(:,1)
+          case(5); qo(:,n)=varr(:)!&
+          !gamm1*(varr(:)-half*qo(:,1)*(qo(:,2)*qo(:,2)+qo(:,3)*qo(:,3)+qo(:,4)*qo(:,4)))
        end select
        end if
        end do
