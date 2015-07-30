@@ -951,7 +951,9 @@
           write(*,*) ndata
        end if
     end if
+      if (output==0) then
       call post(average=.false.)
+      end if
    end if
  end if
 
