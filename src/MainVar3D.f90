@@ -175,6 +175,7 @@
  logical :: tecplot,ispost
  real(nr), dimension(:,:), allocatable :: wplus
  real(nr), dimension(:), allocatable :: wvarr
+ character(18),dimension(:),allocatable :: ofiles 
 
  real(nr), dimension(2,2) :: cl
 
