@@ -767,10 +767,10 @@ nfile=5
           lhmb(mm+1)=lhmb(mm)+4+5*(lximb(mm)+1)*(letmb(mm)+1)*(lzemb(mm)+1)
        end do
           lh=lhmb(mb)
-          read(nfile,pos=4*lh+1) res; !amachoo=res; lh=lh+1 ! Mach Number
-          read(nfile,pos=4*lh+1) res; !aoa=res; lh=lh+1  
-          read(nfile,pos=4*lh+1) res; !reoo=res; lh=lh+1 ! Reynolds Number
-          read(nfile,pos=4*lh+1) res; !timo=res; lh=lh+1 ! Time
+          read(nfile,pos=4*lh+1) res; amachoo=res; lh=lh+1 ! Mach Number
+          read(nfile,pos=4*lh+1) res; aoa=res; lh=lh+1  
+          read(nfile,pos=4*lh+1) res; reoo=res; lh=lh+1 ! Reynolds Number
+          read(nfile,pos=4*lh+1) res; timo=res; lh=lh+1 ! Time
        lp=lpos(myid)+lhmb(mb)+4
        ns=1; ne=5
        do n=ns,ne; lq=(n-ns)*ltomb

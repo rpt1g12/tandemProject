@@ -46,7 +46,7 @@ contains
     close(9)
 
 !===== INPUT PARAMETERS POSTPROCESS
-    open(9,file='inpost.dat',shared)
+    open(9,file='ipost.dat',shared)
     read(9,*) cinput,favg,fwavg
     read(9,*) cinput,fcoef,fcf,fcp
     read(9,*) cinput,floc

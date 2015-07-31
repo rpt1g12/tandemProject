@@ -148,11 +148,11 @@ end if
 !==WRITE WSS
 if (fwss==1) then
 if (output==1) then
-do n = ndata+1, ndata+1
+do n = 0, ndata+1
    call gettw(n)
    do i = 1, 3
       qo(:,i)=0
-      if (myid==7) then
+      if (wflag) then
          do m = 0, lcwall; l=lwall(m)
             qo(l,i)=tw(m,i)
          end do
@@ -180,10 +180,12 @@ end if
 
 !==COMPUTE Cp
 if (fcp==1) then
-   call fillqo(ndata+1)
+   do n = 0, ndata+1
+   call fillqo(n)
    ra0=two/(amachoo**2)
    qo(:,1)=(p(:)-poo)*ra0
-   cinput='Cp'; call wffile(cinput,ndata+1,1)
+   cinput='Cp'; call wffile(cinput,n,1)
+   end do
 end if
 
 !===== WRITE TECPLOT FILE
