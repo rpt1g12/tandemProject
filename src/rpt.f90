@@ -13,17 +13,9 @@ contains
 !====================================================================================
 !===== POST-PROCESSING & GENERATING PLOT3D DATA FILES
 !====================================================================================
- subroutine plot3d(gflag,sflag,bflag)
-
- integer, intent(in) :: gflag,sflag,bflag
+ subroutine plot3dgrid()
  integer :: n
- character(8) :: ctime
- 
- write(ctime,"(f8.4)") timo
-    
 
- if (bflag==1) then
-    if (gflag==1) then
       if (myid==0) then
         open(9,file='out/grid.xyz'); close(9,status='delete')
       end if
@@ -56,9 +48,13 @@ contains
         if (myid==0) then
         write(*,*) 'Grid written!'
         end if
-    end if
+    
+ end subroutine plot3dgrid
 
-    if (sflag==1) then
+ subroutine plot3dsolution(ctime)
+ character(8), intent (in) :: ctime
+ integer :: n
+
        if (myid==0) then
          open(9,file='out/solT'//ctime//'.q'); close(9,status='delete')
        end if
@@ -103,76 +99,25 @@ contains
         if (myid==0) then
            write(*,"('Solution written! T= ',8a)") ctime 
         end if
-    end if
- else
+    
+ end subroutine plot3dsolution
+
+ subroutine plot3d(gflag,sflag,bflag)
+
+ integer, intent(in) :: gflag,sflag,bflag
+ integer :: n
+ character(8) :: ctime
+ 
+ write(ctime,"(f8.4)") timo
+    
+
     if (gflag==1) then
-       if (myid==mo(mb)) then
-         open(9,file='out/'//czone//'.xyz'); close(9,status='delete')
-       end if
-       CALL MPI_BARRIER(icom,ierr)
-       open (unit=9, file='out/'//czone//'.xyz', access='stream',shared)
-       lh=0
-       if (myid==mo(mb)) then
-        write(9,pos=4*lh+1) 1; lh=lh+1 ! Number of zones
-        write(9,pos=4*lh+1) int4(lximb(mb)+1); lh=lh+1 ! IMax
-        write(9,pos=4*lh+1) int4(letmb(mb)+1); lh=lh+1 ! JMax
-        write(9,pos=4*lh+1) int4(lzemb(mb)+1); lh=lh+1 ! KMax
-        lhmb(mb)=lh
-       end if
-       do mm=0,mbk
-          call MPI_BCAST(lhmb(mm),1,MPI_INTEGER,mo(mm),icom,ierr)
-       end do
-       lp=lpos(myid)+lhmb(mb)
-       ns=1; ne=3
-       do n=ns,ne; lq=(n-1)*ltomb
-          varr(:)=ss(:,n)
-          do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-             write(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
-          end do; end do
-       end do
-       close(9)
-       if (myid==mo(mb)) then
-          write(*,"('Grid written for block ',i2)") mb 
-       end if
+       call plot3dgrid
     end if
+
     if (sflag==1) then
-       if (myid==mo(mb)) then
-         open(9,file='out/sol'//czone//'T'//ctime//'.q'); close(9,status='delete')
-       end if
-       CALL MPI_BARRIER(icom,ierr)
-       open (unit=9, file='out/sol'//czone//'T'//ctime//'.q', access='stream',shared)
-       lh=0
-       if (myid==mo(mb)) then
-        write(9,pos=4*lh+1) 1; lh=lh+1 ! Number of zones
-        write(9,pos=4*lh+1) int4(lximb(mb)+1); lh=lh+1 ! IMax
-        write(9,pos=4*lh+1) int4(letmb(mb)+1); lh=lh+1 ! JMax
-        write(9,pos=4*lh+1) int4(lzemb(mb)+1); lh=lh+1 ! KMax
-        write(9,pos=4*lh+1) real(amachoo,kind=4); lh=lh+1 ! Mach Number
-        write(9,pos=4*lh+1) real(aoa,kind=4); lh=lh+1  
-        write(9,pos=4*lh+1) real(reoo,kind=4); lh=lh+1 ! Reynolds Number
-        write(9,pos=4*lh+1) real(timo,kind=4); lh=lh+1 ! Time
-        lhmb(mb)=lh
-       end if
-       do mm=0,mbk
-          call MPI_BCAST(lhmb(mm),1,MPI_INTEGER,mo(mm),icom,ierr)
-       end do
-       lp=lpos(myid)+lhmb(mb)
-       ns=1; ne=5
-       do n=ns,ne; lq=(n-ns)*ltomb
-           selectcase(n)
-           case(1,5); varr(:)=qa(:,n)
-           case(2,3,4); varr(:)=qa(:,n)+qa(:,1)*umf(n-1)
-           end select
-          do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-             write(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
-          end do; end do
-       end do
-       close(9)
-       if (myid==0) then
-          write(*,"('Solution written! T= ',8a)") ctime 
-       end if
+       call plot3dsolution(ctime)
     end if
- end if
           
  end subroutine plot3d
 

@@ -1,9 +1,9 @@
 #/bin/bash --login
 
 #PBS -l select=35
-#PBS -l walltime=20:30:00
+#PBS -l walltime=3:59:59
 #PBS -S /bin/bash
-#PBS -A e313
+#PBS -A e01-JWK2015
 # PBS -q standard
 
 export PBS_O_WORKDIR=$(readlink -f $PBS_O_WORKDIR)
