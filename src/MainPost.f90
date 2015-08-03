@@ -80,7 +80,7 @@ end if
 
 !===COMPUTE FORCE COEFFICIENT
 if (fcoef==1) then
-do n = 0, ndata+1
+do n = 0, ndata
 call clpost(ele=1,nvar=n)
 if (myid==0) then
      ra0=aoa*pi/180;ra1=cos(ra0);ra2=sin(ra0)
