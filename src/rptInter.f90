@@ -28,6 +28,7 @@ real(nr) :: dti,dtsi,dtei,timoi,wtsi,wtei
 integer :: ndti,ni
 
 real(nr), dimension(0:1,1:3) :: bounds
+real(nr) :: nspan
 real(nr), dimension(1:5) :: outside
 contains
 
@@ -67,6 +68,7 @@ contains
     allocate(lximb(0:mbk),letmb(0:mbk),lzemb(0:mbk),lhmb(0:mbk),mo(0:mbk),npc(0:mbk,3))
 
     call inputext
+    npc(:,:)=1
 
     lxi0=ilxi0
     lxi1=ilxi1
@@ -518,25 +520,23 @@ do k = 0, lzei
              qb(l2,n)=outside(n)
          elseif (xs(2)>bounds(1,2)) then
              qb(l2,n)=outside(n)
-         !elseif (xs(3)<bounds(0,3)) then
-         !    qb(l2,n)=outside(n)
-         !elseif (xs(3)>bounds(1,3)) then
-         !    qb(l2,n)=outside(n)
          else
            if (n==1) then
+              if (xs(3)<bounds(0,3)) then
+                  xs(3)=bounds(1,3)-mod(abs(xs(3))-bounds(1,3),2*bounds(1,3))
+              elseif (xs(3)>bounds(1,3)) then
+                  xs(3)=bounds(0,3)+mod(abs(xs(3))-bounds(1,3),2*bounds(1,3))
+              end if
                  if (i==0) then
                     start(1)=0
                  else
                     l=indx4(i-1,j,k,1)
                     start(1)=(ixis(l,1))
-                    if (myid==0) then
-                       write(*,*) start(1) 
-                    end if
                  end if
                  start(1)=max(start(1),0.0_nr);
                  start(1)=min(start(1),real(lxio,nr))
                  if (j==0) then
-                    start(2)=(nint(real(leto*j/letio,nr)))
+                    start(2)=0
                  else
                     l=indx4(i,j-1,k,1)
                     start(2)=(ixis(l,2))
@@ -544,7 +544,7 @@ do k = 0, lzei
                  start(2)=max(start(2),0.0_nr);
                  start(2)=min(start(2),real(leto,nr))
                  if (k==0) then
-                    start(3)=(nint(real(lzeo*k/lzeio,nr)))
+                    start(3)=0
                  else
                     l=indx4(i,j,k-1,1)
                     start(3)=(ixis(l,3))
