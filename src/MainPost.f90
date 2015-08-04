@@ -80,7 +80,7 @@ end if
 
 !===COMPUTE FORCE COEFFICIENT
 if (fcoef==1) then
-do n = 0, ndata
+do n = 0, ndata+1
 call clpost(ele=1,nvar=n)
 if (myid==0) then
      ra0=aoa*pi/180;ra1=cos(ra0);ra2=sin(ra0)
@@ -148,7 +148,7 @@ end if
 !==WRITE WSS
 if (fwss==1) then
 if (output==1) then
-do n = 0, ndata+1
+do n = ndata+1, ndata+1
    call gettw(n)
    do i = 1, 3
       qo(:,i)=0
@@ -180,11 +180,20 @@ end if
 
 !==COMPUTE Cp
 if (fcp==1) then
-   do n = 0, ndata+1
-   call fillqo(n)
-   ra0=two/(amachoo**2)
-   qo(:,1)=(p(:)-poo)*ra0
-   cinput='Cp'; call wffile(cinput,n,1)
+   do n = ndata+1, ndata+1
+      call fillqo(n)
+      ra0=two/(amachoo**2)
+      qo(:,1)=(p(:)-poo)*ra0
+      cinput='Cp'; call wffile(cinput,n,1)
+   end do
+end if
+
+!==COMPUTE VORTICITY
+if (fcurl==1) then
+   do n = ndata+1, ndata+1
+      call getCurl(n)
+      qo(:,1:3)=ss(:,1:3)
+      cinput='omega'; call wffile(cinput,n,3)
    end do
 end if
 
