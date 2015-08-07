@@ -940,11 +940,10 @@
     end if
     ndata=ndati
  else
-   if (output==0) then
     if(myid==0) then
        write(*,'("Simulation time was ",f6.2," hours")') wtime/(3600_nr*npro)
-       write(*,*) "Writing Output files..."
     end if
+   if (output==0) then
     if (nto==2) then
        ndata=ndati+(iwrec-nrec)/5-1
        if (myid==0) then
