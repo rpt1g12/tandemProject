@@ -561,8 +561,8 @@ contains
 
     de(:,1)=de(:,1)*yaco(:); de(:,2)=de(:,2)*yaco(:); de(:,3)=de(:,3)*yaco(:)
     ra0=aoa*pi/180;ra1=cos(ra0);ra2=sin(ra0)
-    ss(:,1)=de(:,2)*ra1-de(:,1)*ra2
-    ss(:,2)=de(:,2)*ra2+de(:,1)*ra1
+    ss(:,1)=de(:,1)*ra1+de(:,2)*ra2
+    ss(:,2)=de(:,2)*ra1-de(:,1)*ra2
     ss(:,3)=de(:,3)
 
  end subroutine getCurl
