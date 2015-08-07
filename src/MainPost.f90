@@ -12,6 +12,8 @@
  use rptpost
  implicit none
 
+ integer :: tblck
+
 !===== PREPARATION FOR PARALLEL COMPUTING
 
     call MPI_INIT(ierr)
@@ -24,6 +26,10 @@
     allocate(ista(MPI_STATUS_SIZE,12))
 
 call setup
+selectcase(mbk)
+case(11); tblck=7
+case(19); tblck=13
+end select
 selectcase(output)
 case(1)
    call flst
@@ -50,7 +56,7 @@ end select
 
 call getMetrics
 ngridv=1
-if (myid==7) then
+if (myid==tblck) then
    write(*,*) sum(area)
 end if
 
@@ -82,7 +88,7 @@ end if
 if (fcoef==1) then
 do n = 0, ndata+1
 call clpost(ele=1,nvar=n)
-if (myid==0) then
+if (myid==tblck) then
      ra0=aoa*pi/180;ra1=cos(ra0);ra2=sin(ra0)
    write(*,*) cl(1,2)*ra1-cl(1,1)*ra2,cl(1,2)*ra2+cl(1,1)*ra1,n
 end if
@@ -95,7 +101,7 @@ call findll(0.5_nr,-0.05_nr,0.0_nr,l,m)
 if (myid==m) then
    write(*,"(f6.2,1x,f6.2,1x,f6.2,1x,i3,i10)") xyz(l,1),xyz(l,2),xyz(l,3),m,l
     open(7,file='data/signal.dat')
-    write(7,"('t uprime')") 
+    write(tblck,"('t uprime')") 
    do n = 0, ndata
       res=0
       selectcase(output)
@@ -109,7 +115,7 @@ if (myid==m) then
          call p3dread(0,n)
          res=(qo(l,2)-qa(l,2))
       end select
-      write(7,"(f10.5,f10.5)") times(n),res
+      write(tblck,"(f10.5,f10.5)") times(n),res
    end do
    close(7)
 end if
@@ -118,7 +124,7 @@ end if
 !==COMPUTE WALL DISTANCES
 if (fwplus==1) then
 call getwplus(nvar=ndata+1)
-if (myid==7) then
+if (myid==tblck) then
  open(7,file='out/wplus.dat')
  write(7,"('x y z x+ y+ z+')") 
  do nn = 0, lcwall;l=lwall(nn)
@@ -165,7 +171,7 @@ end if
 
 !==COMPUTE Cf 
 if (fcf==1) then
-if (myid==7) then
+if (myid==tblck) then
 call gettw(ndata+1)
    open(7,file='data/Cf.dat')
    write(7,"('x cf')") 
