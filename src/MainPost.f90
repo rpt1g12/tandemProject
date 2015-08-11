@@ -203,6 +203,15 @@ if (fcurl==1) then
    end do
 end if
 
+!==COMPUTE VORTICITY TURN
+if (fcurl==0) then
+   do n = ndata+1, ndata+1
+      call getCurlTurn(n)
+      qo(:,1:2)=ss(:,1:2)
+      cinput='turn'; call wffile(cinput,n,2)
+   end do
+end if
+
 !===== WRITE TECPLOT FILE
 CALL MPI_BARRIER(icom,ierr)
 if (output==0) then
