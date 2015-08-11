@@ -561,11 +561,56 @@ contains
 
     de(:,1)=de(:,1)*yaco(:); de(:,2)=de(:,2)*yaco(:); de(:,3)=de(:,3)*yaco(:)
     ra0=aoa*pi/180;ra1=cos(ra0);ra2=sin(ra0)
-    ss(:,1)=de(:,1)*ra1+de(:,2)*ra2
-    ss(:,2)=de(:,2)*ra1-de(:,1)*ra2
+    ss(:,1)=de(:,1)!*ra1+de(:,2)*ra2
+    ss(:,2)=de(:,2)!*ra1-de(:,1)*ra2
     ss(:,3)=de(:,3)
 
  end subroutine getCurl
+
+!====================================================================================
+!===== SUBROUTINE FOR CALCULATING VORTICITY TURNING
+!====================================================================================
+ subroutine getCurlTurn(nvar)
+
+    implicit none
+    integer, intent(in) :: nvar
+    selectcase(output)
+    case(0)
+    call fillqo(nvar)
+    case(1)
+    call p3dread(0,nvar)
+    p(:)=qo(:,5)
+    end select
+
+    de(:,1:3)=0
+
+    qa(:,:)=0
+    rr(:,1)=qo(:,2)
+    m=1; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+    de(:,2)=de(:,2)+rr(:,1)*xim(:,3)+rr(:,2)*etm(:,3)+rr(:,3)*zem(:,3)
+    de(:,3)=de(:,3)-rr(:,1)*xim(:,2)-rr(:,2)*etm(:,2)-rr(:,3)*zem(:,2)
+    qa(:,2)=de(:,3)
+    qa(:,3)=-de(:,2)
+
+    rr(:,1)=qo(:,3)
+    m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+    de(:,3)=de(:,3)+rr(:,1)*xim(:,1)+rr(:,2)*etm(:,1)+rr(:,3)*zem(:,1)
+    de(:,1)=de(:,1)-rr(:,1)*xim(:,3)-rr(:,2)*etm(:,3)-rr(:,3)*zem(:,3)
+
+    rr(:,1)=qo(:,4)
+    m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+    de(:,1)=de(:,1)+rr(:,1)*xim(:,2)+rr(:,2)*etm(:,2)+rr(:,3)*zem(:,2)
+    de(:,2)=de(:,2)-rr(:,1)*xim(:,1)-rr(:,2)*etm(:,1)-rr(:,3)*zem(:,1)
+
+    qa(:,2)=qa(:,2)*yaco(:)
+    qa(:,3)=qa(:,3)*yaco(:)
+
+    de(:,1)=de(:,1)*yaco(:); de(:,2)=de(:,2)*yaco(:); de(:,3)=de(:,3)*yaco(:)
+    ss(:,1)=de(:,2)*qa(:,2)
+    ss(:,2)=de(:,3)*qa(:,3)
+
+
+ end subroutine getCurlTurn
 
 !====================================================================================
 !=====FIND INDEX FROM X,Y, AND Z COORDINATES
