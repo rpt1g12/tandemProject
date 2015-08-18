@@ -441,27 +441,28 @@ contains
 !====================================================================================
 !=====AVERAGE IN SPACE OVER WALL SURFACE
 !====================================================================================
- subroutine wavg(dir,wall)
+ subroutine wavg(dir,wall,fname)
     implicit none
     integer, intent(in) :: dir
     logical, intent(in) :: wall
+    character(16), intent(in) :: fname
     integer :: idir,odir,ia,oa,l,ls,le,lp1,lm1,lw,lws,lwe
     real(nr), dimension(:), allocatable :: delt
     real(nr), dimension(:,:), allocatable :: avg
-    character, dimension(1) :: str
+    character, dimension(1) :: str,str2
     if (wflag) then
     if (.not.wall) then
     call getatWall
     end if
     select case(dir)
-    case(1); idir=lxi; odir=lze; ia=1; oa=3; str='z'
-    case(2); idir=lze; odir=lxi; ia=3; oa=1; str='x'
+    case(1); idir=lxi; odir=lze; ia=1; oa=3; str='z'; str2='X'
+    case(2); idir=lze; odir=lxi; ia=3; oa=1; str='x'; str2='Z'
     end select
     allocate(delt(0:idir))
     allocate(avg(0:odir,2))
     ! OPEN FILE TO OUTPUT RESUT
-    open(7,file='out/avg.dat')
-    write(7,"(1a,' var')") str
+    open(7,file='out/'//str2//'AVG'//trim(fname)//'.csv')
+    write(7,"(1a,1x,16a)") str,trim(fname)
     do j = 0, odir
        lws=indx2(0,j,dir);lwe=indx2(idir,j,dir)
        ls=lwall(lws);le=lwall(lwe)
@@ -476,7 +477,7 @@ contains
           delt(i)=fctr*abs(xyz(lm1,ia)-xyz(lp1,ia))
           avg(j,2)=avg(j,2)+delt(i)*wvarr(lw)
        end do
-     write(7,"(f10.5,' ',f10.5)") avg(j,1),avg(j,2)
+     write(7,"(f10.5,1x,f10.5)") avg(j,1),avg(j,2)
     end do
     close(7)
     end if
@@ -830,6 +831,10 @@ end subroutine flst
    if (l==0) exit
    cout(l:l)='0'
    end do
+
+   if (n==(ndata+1)) then
+      cout='AVG'
+   end if
 
    if (myid==0) then
      open(9,file='out/'//trim(fname)//cout//'.f'); close(9,status='delete')

@@ -6,7 +6,7 @@ nkrk		4
 nviscous	1
 nsmf		0
 nfskp		0
-nrestart	1
+nrestart	0
 reoo-tempoo	3.0e5		273.0e0
 amach1-2-3	0.4e0		0.0e0		0.0e0
 wtemp		1.0e0
@@ -16,6 +16,6 @@ fltk-bc		0.85e0		0.85e0
 dto		-0.01725e0
 forcing-amfor%	0	0.8e0
 tgustd-tguste	35.0e0 	5.0e0
-aoa-aoas-aoae	20.0e0 	35.5e0	10.0e0
+aoa-aoas-aoae	10.0e0 	35.5e0	10.0e0
 LES-smago1-2	0	0.16e0	0.0066e0
 output		1	1	1	1

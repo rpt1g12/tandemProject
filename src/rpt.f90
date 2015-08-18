@@ -386,7 +386,7 @@ contains
     bblock1 = 4; tblock1 = 7
     bblock2 = 12; tblock2 = 13
     end select
-    u=(/0,0,1/)
+    u=(/0.0_nr,0.0_nr,1.0_nr/)
  
     if (wflag) then
     ! Find top or bottom

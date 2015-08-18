@@ -60,6 +60,7 @@ if (myid==tblck) then
    write(*,*) sum(area)
 end if
 
+
 !===== COMPUTE AVERAGE VALUES IF NOT AVAILABLE YET
 if (favg==1) then
 selectcase(output)
@@ -125,16 +126,13 @@ end if
 if (fwplus==1) then
 call getwplus(nvar=ndata+1)
 if (myid==tblck) then
- open(7,file='out/wplus.dat')
- write(7,"('x y z x+ y+ z+')") 
- do nn = 0, lcwall;l=lwall(nn)
- write(7,"(f10.5,' ',f10.5,' ',f10.5,' ',f10.5,' ',f10.5,' ',f10.5)")&
-       xyz(l,1),xyz(l,2),xyz(l,3),wplus(nn,1),wplus(nn,2),wplus(nn,3)
- end do
- close(7)
  if(.not.allocated(wvarr)) allocate(wvarr(0:lcwall))
+ wvarr=wplus(:,1)
+ cinput='xplus'; call wavg(dir=2,wall=.true.,fname=cinput)
  wvarr=wplus(:,2)
- call wavg(dir=2,wall=.true.)
+ cinput='yplus'; call wavg(dir=2,wall=.true.,fname=cinput)
+ wvarr=wplus(:,3)
+ cinput='zplus'; call wavg(dir=2,wall=.true.,fname=cinput)
 end if
 end if
 
@@ -154,7 +152,7 @@ end if
 !==WRITE WSS
 if (fwss==1) then
 if (output==1) then
-do n = ndata+1, ndata+1
+do n = 0, ndata+1
    call gettw(n)
    do i = 1, 3
       qo(:,i)=0
@@ -171,22 +169,31 @@ end if
 
 !==COMPUTE Cf 
 if (fcf==1) then
-if (myid==tblck) then
-call gettw(ndata+1)
-   open(7,file='data/Cf.dat')
-   write(7,"('x cf')") 
-   ra0=two/(amachoo**2)
-   do n = 0, lcwall; l=lwall(n)
-      ra1=DOT_PRODUCT(tw(n,:),wtan(n,:))
-      write(7,"(f10.5,f10.5)")  xyz(l,1),-ra1*ra0
-   end do
-   close(7)
+if (output==1) then
+do n = ndata+1, ndata+1
+   call gettw(n)
+   qo(:,:)=0
+   if (wflag) then
+   if(.not.allocated(wvarr)) allocate(wvarr(0:lcwall))
+      do i = 1, 3
+         do m = 0, lcwall; l=lwall(m)
+            qo(l,1)=qo(l,1)+tw(m,i)*wtan(m,i)
+            wvarr(m)=qo(l,1)
+         end do
+      end do
+      qo(:,1)=qo(:,1)*two/amachoo**2
+      if (myid==tblck) then
+         cinput='Cf'; call wavg(dir=2,wall=.true.,fname=cinput)
+      end if
+   end if
+  cinput='Cf'; call wffile(cinput,ndata+1,1)
+end do
 end if
 end if
 
 !==COMPUTE Cp
 if (fcp==1) then
-   do n = ndata+1, ndata+1
+   do n = 0, ndata+1
       call fillqo(n)
       ra0=two/(amachoo**2)
       qo(:,1)=(p(:)-poo)*ra0
@@ -204,7 +211,7 @@ if (fcurl==1) then
 end if
 
 !==COMPUTE VORTICITY TURN
-if (fcurl==0) then
+if (fcurl==2) then
    do n = ndata+1, ndata+1
       call getCurlTurn(n)
       qo(:,1:2)=ss(:,1:2)
