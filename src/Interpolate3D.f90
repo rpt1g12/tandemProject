@@ -28,7 +28,7 @@
     allocate(lxim(0:mpro),letm(0:mpro),lzem(0:mpro),lpos(0:mpro),vmpi(0:mpro))
     allocate(ista(MPI_STATUS_SIZE,12))
 
-   call setup(210,315,210,210,90,200)
+   call setup(280,350,280,240,90,100)
 lxii=lxi;leti=let;lzei=lze
 lxiio=lxio;letio=leto;lzeio=lzeo
 allocate(qb(0:lmx,5))
@@ -40,6 +40,7 @@ call getGrid
         xyz2(:,i)=ss(:,i)
      end do
 call writeGrid
+call plot3dGrid
 else
 call readGrid
 end if
@@ -96,12 +97,12 @@ if (iflag) then
    
    
    call deallocateArrays
-   call setup(210,315,210,210,90,200)
+   call setup(280,350,280,240,90,100)
    call prepareArrays
    qa=qb
    p(:)=qa(:,5)
    ss(:,1:3)=xyz2(:,1:3)
-   call plot3d(1,1,1)
+   call plot3d(0,1,1)
    call writeRestart
     if(myid==mo(mb)) then
        write(*,*) "Finished",mb

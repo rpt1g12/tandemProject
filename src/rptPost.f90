@@ -832,7 +832,7 @@ end subroutine flst
    cout(l:l)='0'
    end do
 
-   if (n==(ndata+1)) then
+   if (nout==(ndata+1)) then
       cout='AVG'
    end if
 

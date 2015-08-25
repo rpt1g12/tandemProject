@@ -25,20 +25,22 @@
     allocate(lxim(0:mpro),letm(0:mpro),lzem(0:mpro),lpos(0:mpro),vmpi(0:mpro))
     allocate(ista(MPI_STATUS_SIZE,12))
 
+!===== SETUP SEQUENCE
 call setup
+
 selectcase(mbk)
-case(11); tblck=7
-case(19); tblck=13
+   case(11); tblck=7
+   case(19); tblck=13
 end select
+
 selectcase(output)
-case(1)
-   call flst
-case(0)
-   !call postDat
-   allocate(times(0:ndata))
+   case(1);call flst
+   case(0); !call postDat; allocate(times(0:ndata))
 end select
+
 tecplot=.false.; ispost=.true.
 nread=0
+
 ! RPT-READ X,Y,Z COORDINATES
 selectcase(output)
 case(0)
@@ -63,26 +65,24 @@ end if
 
 !===== COMPUTE AVERAGE VALUES IF NOT AVAILABLE YET
 if (favg==1) then
-selectcase(output)
-case(0)
-!call average
-case(1)
-call p3daverage
-end select
+   selectcase(output)
+      case(0); !call average
+      case(1); call p3daverage
+   end select
 end if
 
 !!===== WRITE AVERAGE VALUES 
 if (fwavg==1) then
-selectcase(output)
-case(0)
-do nn=1,5
-   varr(:)=qa(:,nn)
-   nwrec=nwrec+1
-   call postwrite(nwrec)
-end do
-case(1)
-   call p3dwaverage
-end select
+   selectcase(output)
+   case(0)
+   do nn=1,5
+      varr(:)=qa(:,nn)
+      nwrec=nwrec+1
+      call postwrite(nwrec)
+   end do
+   case(1)
+      call p3dwaverage
+   end select
 end if
 
 !===COMPUTE FORCE COEFFICIENT
@@ -139,20 +139,20 @@ end if
 !==COMUPTE Q-CRITERION
 if (fqcrit==1) then
 do n = ndata+1, ndata+1
-call qcriterion(n)
-selectcase(output)
-case(0)
-nwrec=nwrec+1; call postwrite(nwrec) ! ADD A LINE IN POST SUBROUTINE
-case(1)
-  cinput='Q'; qo(:,1)=varr(:); call wffile(cinput,n,1)
-end select
+   call qcriterion(n)
+   selectcase(output)
+   case(0)
+   nwrec=nwrec+1; call postwrite(nwrec) ! ADD A LINE IN POST SUBROUTINE
+   case(1)
+     cinput='Q'; qo(:,1)=varr(:); call wffile(cinput,n,1)
+   end select
 end do
 end if
 
 !==WRITE WSS
 if (fwss==1) then
 if (output==1) then
-do n = 0, ndata+1
+do n = ndata+1, ndata+1
    call gettw(n)
    do i = 1, 3
       qo(:,i)=0
@@ -193,7 +193,7 @@ end if
 
 !==COMPUTE Cp
 if (fcp==1) then
-   do n = 0, ndata+1
+   do n = ndata+1, ndata+1
       call fillqo(n)
       ra0=two/(amachoo**2)
       qo(:,1)=(p(:)-poo)*ra0

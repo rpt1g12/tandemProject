@@ -3,4 +3,4 @@ fcoef-fcf-fcp	1	1	1
 floc		0	
 fwplus		0	
 fqcrit-fwss	0	1
-fcurl		0	
+fcurl		1	
