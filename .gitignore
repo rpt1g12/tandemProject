@@ -1,0 +1,14 @@
+/data/*
+!/data/.info
+/irsta/*
+!/irsta/.info
+/rsta/*
+!/rsta/.info
+/misc/*
+!/misc/.info
+/out/*
+!/out/.info
+!/rsta/.info
+/layouts/
+aerofoil.dat
+signal.dat
