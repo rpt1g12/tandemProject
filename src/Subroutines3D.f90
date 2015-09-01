@@ -15,7 +15,7 @@
 
  subroutine mpigo(nt,nrt,n45,itag)
 
- integer,intent(in) :: nt,nrt,n45,itag
+ integer(k4),intent(in) :: nt,nrt,n45,itag
 
  select case(nt); case(0); mp=lmd; case(1); mp=lmf; end select
 
@@ -70,7 +70,7 @@
 
  subroutine deriv(nn,nz)
 
- integer,intent(in) :: nn,nz
+ integer(k4),intent(in) :: nn,nz
 
     nt=0; ns=ndf(0,0,nn); ne=ndf(1,0,nn)
 
@@ -130,7 +130,7 @@
 
  subroutine filte(nn,nz)
 
- integer,intent(in) :: nn,nz
+ integer(k4),intent(in) :: nn,nz
 
     nt=1; ns=ndf(0,1,nn); ne=ndf(1,1,nn)
 
@@ -217,8 +217,8 @@
 
  subroutine eleme(l,cm)
 
- integer,intent(in) :: l
- real(nr),dimension(3),intent(in) :: cm
+ integer(k4),intent(in) :: l
+ real(k8),dimension(3),intent(in) :: cm
 
     rhoi=1/qa(l,1); ao=sqrt(gam*rhoi*p(l)); aoi=1/ao
     ve(:)=rhoi*qa(l,2:4); hv2=half*(ve(1)*ve(1)+ve(2)*ve(2)+ve(3)*ve(3))
@@ -230,7 +230,7 @@
 
  subroutine xtq2r(cm)
 
- real(nr),dimension(3),intent(in) :: cm
+ real(k8),dimension(3),intent(in) :: cm
 
     ho=gamm1*aoi*aoi; bo=1-ho*hv2; co=aoi*vn; dm(:)=aoi*cm(:); rv(:)=ho*ve(:)
 
@@ -270,7 +270,7 @@
 
  subroutine xtr2q(cm)
 
- real(nr),dimension(3),intent(in) :: cm
+ real(k8),dimension(3),intent(in) :: cm
 
     bo=hv2+hamm1*ao*ao; co=ao*vn; dm(:)=ao*cm(:)
 
