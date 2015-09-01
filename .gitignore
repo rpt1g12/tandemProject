@@ -13,3 +13,8 @@
 aerofoil.dat
 signal.dat
 *.exe
+*.swp
+*.mod
+inflowsignal.dat
+tecplot*
+walltime*
