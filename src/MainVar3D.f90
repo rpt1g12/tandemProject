@@ -17,8 +17,10 @@
 
  real(k8),parameter :: pi=3.141592653589793
  real(k8),parameter :: zero=0,one=1,half=0.5,sqrt2=sqrt(2.0),sqrt2i=1/sqrt2,sml=1.0d-6,free=1.0d+6
+ real(k8),parameter :: two=2,quarter=0.25_k8
  real(k8),parameter :: gam=1.4,gamm1=gam-1,ham=1/gam,hamm1=1/gamm1
  real(k8),parameter :: prndtl=0.71,gamm1prndtli=1/(gamm1*prndtl)
+ real(k8),parameter :: tprndtl=0.99_k8,tgamm1prndtli=1/(gamm1*tprndtl)
 
  real(k8),parameter :: alpha=0.5862704032801503
  real(k8),parameter :: beta=0.09549533555017055
