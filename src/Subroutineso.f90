@@ -98,7 +98,7 @@
     fctr=1/(30+5*(7-16*fltr)*cosf(1)+2*(1+8*fltr)*cosf(2)-3*cosf(3))
     alphz=(20*(2*fltr-1)-30*cosf(1)+12*(2*fltr-1)*cosf(2)-2*cosf(3))*fctr
     betz=(2*(13-8*fltr)+(33-48*fltr)*cosf(1)+6*cosf(2)-cosf(3))*half*fctr
-    za=60*(1-fltr)*cos(half*fltk)**4*fctr; zb=-0.4_nr*za; zc=za/15
+    za=60*(1-fltr)*cos(half*fltk)**4*fctr; zb=-0.4_k8*za; zc=za/15
 
  end subroutine fcint
 
@@ -194,8 +194,8 @@
  real(k8),intent(in) :: dtko,dtk
  real(k8) :: alphamax
 
- !talphas=25.5_nr;talphar=5.0_nr
- alphamax=aoa*pi/180_nr
+ !talphas=25.5_k8;talphar=5.0_k8
+ alphamax=aoa*pi/180_k8
 
  if(nsmf==0) then
     ra0=pi/timf; ra1=ra0*min(timo,timf); ra2=ra0*min(timo+dtko,timf)
@@ -253,15 +253,15 @@
 
  real(k8) :: blas,spr,eta,etb
 
-    blas=0.3320573362151963_nr; spr=sqrt(prndtl)
+    blas=0.3320573362151963_k8; spr=sqrt(prndtl)
     ra0=half*pi; ra1=3*blas*blas/560; ra2=11*blas/420
  do i=0,lbl
     fctr=1/sqrt(x(i))
     eta=fctr*sqrtrema*y(i); etb=spr*eta
-    res=0.000001_nr*eta**4*exp(eta**1.3625_nr)
+    res=0.000001_k8*eta**4*exp(eta**1.3625_k8)
     blu(i)=(blas*eta+ra1*eta**4+res)/(1+ra2*eta**3+res)
-    blv(i)=0.8604_nr*fctr*sqrtremai*(sin(ra0*tanh(exp(0.177_nr*eta)-1)))**1.96_nr
-    res=0.000001_nr*etb**4*exp(etb**1.3625_nr)
+    blv(i)=0.8604_k8*fctr*sqrtremai*(sin(ra0*tanh(exp(0.177_k8*eta)-1)))**1.96_k8
+    res=0.000001_k8*etb**4*exp(etb**1.3625_k8)
     blm(i)=(blas*etb+ra1*etb**4+res)/(1+ra2*etb**3+res)
  end do
 
