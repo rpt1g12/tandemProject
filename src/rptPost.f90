@@ -257,7 +257,7 @@ contains
       open(9,file='data/post.dat',shared)
       read(9,*) cinput,ngridv
       read(9,*) cinput,ndata
-      read(9,*) cinput,nrec
+      read(9,*) cinput,nrecg
       read(9,*) cinput,nwrec
       read(9,*) cinput,lsta
       close(9)
@@ -352,9 +352,9 @@ contains
        write(*,"(f5.1,'% Averaged')") real(ndata*(m-1)+n)*100.0e0/real(ndata*totVar)
     end if
        if (tecplot) then
-       call tpostread((n*totVar+nrec+m),lsta)
+       call tpostread((n*totVar+nrecg+m),lsta)
        else
-       call postread((n*totVar+nrec+m))
+       call postread((n*totVar+nrecg+m))
        end if
        rr(:,1)=rr(:,1)+delt(n)*varr(:)
     end do
@@ -643,7 +643,7 @@ contains
     selectcase(output)
     case(0)
     ! READ VARIABLES
-    nread=nrec+(totVar*nvar)
+    nread=nrecg+(totVar*nvar)
     do nn = 1, 5
      if (tecplot) then
      nread=nread+1; call tpostread(nread,lsta)

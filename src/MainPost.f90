@@ -108,7 +108,7 @@ if (myid==m) then
       selectcase(output)
       case(0)
          do i = 2, 2
-         nread=nrec+i+(n*totVar)
+         nread=nrecg+i+(n*totVar)
          call postread(nread)
          res=(varr(l)-qa(l,i))
          end do

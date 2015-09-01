@@ -152,7 +152,7 @@
 
 !===== INTEGER VARIABLES FOR RECORDING BY RPT
 
- integer :: nrec,nwrec,nread,totVar
+ integer(k4) :: nrecg,nwrec,nread,totVar
 
 !===== VARIABLES FOR FORCING BY RPT
 
