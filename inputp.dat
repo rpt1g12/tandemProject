@@ -1,21 +1,21 @@
-lxi0-to-4	210	315	210
-let0		210     90
-lze0		100
+lxi0-to-4	100	100	100
+let0		100     40
+lze0		25
 nbody-nthick	2	2
 ngridv		1
 npbxi0-to-5	1	1	1	1	1	1
 npbxi6-to-11	1	1	1	1	1	1
 napbet0-to-5	1	1	1	1	1	1     
 npbet6-to-11	1	1	1	1	1	1	
-npbze0-to-5	2	2	2	2	2	2
-npbze6-to-11	2	2	2	2	2	2
+npbze0-to-5	1	1	1	1	1	1
+npbze6-to-11	1	1	1	1	1	1
 nito-nits-litr	0	1	10
-smgrid-domlen	0.0075e0	10.0e0
-ximod-etamod	0.3e0		0.05e0
-span-wlew-wlea	0.22e0		0.11e0		0.015e0
+smgrid-domlen	0.0075e0	5.0e0
+ximod-etamod	0.5e0		0.1e0
+span-wlew-wlea	0.1e0		0.11e0		0.00e0
 gap-chord1-2	1.0e0		1.0e0		1.0e0
 delt1-2(deg)	00.0e0		0.0e0		
-szth1-th2-xt-co	2.0e0		2.0e0		4.0e0		12.0e0
+szth1-th2-xt-co	1.0e0		1.0e0		2.0e0		12.0e0
 tgusto		5.0e0
 ck1-2-3		0.001e0		0.0e0		0.0e0
 amp2-3		0.0e0		0.0e0
