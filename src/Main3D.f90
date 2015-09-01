@@ -22,7 +22,8 @@
     mpro=npro-1; icom=MPI_COMM_WORLD; info=MPI_INFO_NULL
 
     allocate(lxim(0:mpro),letm(0:mpro),lzem(0:mpro),lpos(0:mpro),vmpi(0:mpro))
-    allocate(ista(MPI_STATUS_SIZE,12))
+
+	ll=max(npro,12); allocate(ista(MPI_STATUS_SIZE,ll),ireq(ll))
 
 !===== INPUT PARAMETERS
 
