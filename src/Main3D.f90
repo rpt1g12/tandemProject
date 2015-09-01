@@ -22,8 +22,7 @@
     mpro=npro-1; icom=MPI_COMM_WORLD; info=MPI_INFO_NULL
 
     allocate(lxim(0:mpro),letm(0:mpro),lzem(0:mpro),lpos(0:mpro),vmpi(0:mpro))
-
-	ll=max(npro,12); allocate(ista(MPI_STATUS_SIZE,ll),ireq(ll))
+    allocate(ista(MPI_STATUS_SIZE,12))
 
 !===== INPUT PARAMETERS
 
@@ -61,10 +60,6 @@
     ispost=.false.
     ! rpt-Position of signal sampling
     xpos=-1.0_k8;ypos=0.01_k8;zpos=0.005_k8
-
-	abc(:,0)=(/a01,a02,a03,a04,a05,a06/)
-	abc(:,1)=(/a10,a12,a13,a14,a15,a16/)
-	abc(:,2)=(/a20,a21,a23,a24,a25,a26/)
 
     allocate(times(0:ndata))
     allocate(lximb(0:mbk),letmb(0:mbk),lzemb(0:mbk),lhmb(0:mbk),mo(0:mbk),npc(0:mbk,3))
@@ -385,9 +380,9 @@
              varr(:)=zem(:,nn); write(0,rec=nwrec) varr(:)
           end do
        end if
-    nrecg=nwrec
+    nrec=nwrec
     else
-    nrecg=3+9*ngridv
+    nrec=3+9*ngridv
     if (nto==2) then
        nwrec=iwrec
     end if
@@ -950,7 +945,7 @@
     end if
    if (output==0) then
     if (nto==2) then
-       ndata=ndati+(iwrec-nrecg)/5-1
+       ndata=ndati+(iwrec-nrec)/5-1
        if (myid==0) then
           write(*,*) ndata
        end if
@@ -965,7 +960,7 @@ if (myid==0) then
    open(9,file='data/post.dat')
    write(9,*) 'ngridv ',ngridv
    write(9,*) 'ndata  ',ndata
-   write(9,*) 'nrecg   ',nrecg
+   write(9,*) 'nrec   ',nrec
    write(9,*) 'nwrec  ',nwrec
    write(9,*) 'lhmb   ',lhmb(mb)
    close(9)

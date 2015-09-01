@@ -491,13 +491,13 @@
  do m = 1, totVar
     rr(:,1)=0
  do n=0,ndata
-    read(0,rec=(n*totVar)+nrecg+m) varr(:)
+    read(0,rec=(n*totVar)+nrec+m) varr(:)
     rr(:,1)=rr(:,1)+delt(n)*varr(:)
  end do
  !   ss(:,1)=0
  !do n=0,ndata
  !   varr(:)=varr(:)-rr(:,1)
- !   write(0,rec=(n*5)+nrecg+m) varr(:)
+ !   write(0,rec=(n*5)+nrec+m) varr(:)
  !   ss(:,1)=ss(:,1)+delt(n)*varr(:)**2
  !end do
     !varr=sqrt(ss(:,1))

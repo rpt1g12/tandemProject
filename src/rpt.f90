@@ -567,7 +567,7 @@ contains
     ! READ VARIABLES
        selectcase(output)
        case(0)
-       nread=nrecg+(totVar*nvar)
+       nread=nrec+(totVar*nvar)
        do nn = 1, 5
         if (tecplot) then
         nread=nread+1; call tpostread(nread,lsta)
