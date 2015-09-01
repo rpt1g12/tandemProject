@@ -108,7 +108,7 @@
  integer(k4),dimension(-2:2) :: ilag
  integer(k4),dimension(3) :: nbsize,nbcs,nbce,ncds,ncde,ms,me
  integer(8) :: lp,lq,ltomb
- integer(k4) :: lxio,leto,lzeo,lxi,let,lze,lmx,lim
+ integer(k4) :: lxio,leto,lzeo,lxi,let,lze,lmx,lim,nrec
  integer(k4) :: i,ii,is,ie,ip,iq,j,jj,js,je,jp,jq,jk,k,kk,kp,l,lh,ll
  integer(k4) :: m,ma,mb,mh,mm,mp,mbk,n,ndt,nn,nk,ns,ne,np,nt,nz,ndati,nsigi,nout,nfile
  integer(k4) :: nts,nscrn,nsgnl,ndata,nviscous,nkrk,nsmf,nfskp,nrestart
@@ -151,7 +151,7 @@
 
 !===== INTEGER VARIABLES FOR RECORDING BY RPT
 
- integer(k4) :: nrec,nwrec,nread,totVar
+ integer(k4) :: ngrec,nwrec,nread,totVar
 
 !===== VARIABLES FOR FORCING BY RPT
 

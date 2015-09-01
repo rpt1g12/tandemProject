@@ -385,9 +385,9 @@
              varr(:)=zem(:,nn); write(0,rec=nwrec) varr(:)
           end do
        end if
-    nrec=nwrec
+    ngrec=nwrec
     else
-    nrec=3+9*ngridv
+    ngrec=3+9*ngridv
     if (nto==2) then
        nwrec=iwrec
     end if
@@ -950,7 +950,7 @@
     end if
    if (output==0) then
     if (nto==2) then
-       ndata=ndati+(iwrec-nrec)/5-1
+       ndata=ndati+(iwrec-ngrec)/5-1
        if (myid==0) then
           write(*,*) ndata
        end if
@@ -965,7 +965,7 @@ if (myid==0) then
    open(9,file='data/post.dat')
    write(9,*) 'ngridv ',ngridv
    write(9,*) 'ndata  ',ndata
-   write(9,*) 'nrec   ',nrec
+   write(9,*) 'ngrec   ',ngrec
    write(9,*) 'nwrec  ',nwrec
    write(9,*) 'lhmb   ',lhmb(mb)
    close(9)
