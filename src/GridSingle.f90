@@ -7,32 +7,32 @@ module gridgen
  use subroutineso
  implicit none
 
- integer,parameter :: lnaca=1000
- real(nr),parameter :: pi4=pi/4.0_nr
- integer :: lxi0,lxi1,lxi2,let0,let1,lze0
- integer :: lxit,lett,lxisz,im,jm
- integer :: lxis0,lxie0,lxis1,lxie1,lxis2,lxie2
- integer :: lets0,lete0,lets1,lete1,lets2,lete2,lets3,lete3
- integer :: lxis,lxie,lxib
- integer :: lets,lete,letb
+ integer(k4),parameter :: lnaca=1000
+ real(k8),parameter :: pi4=pi/4.0_k8
+ integer(k4) :: lxi0,lxi1,lxi2,let0,let1,lze0
+ integer(k4) :: lxit,lett,lxisz,im,jm
+ integer(k4) :: lxis0,lxie0,lxis1,lxie1,lxis2,lxie2
+ integer(k4) :: lets0,lete0,lets1,lete1,lets2,lete2,lets3,lete3
+ integer(k4) :: lxis,lxie,lxib
+ integer(k4) :: lets,lete,letb
 
- real(nr),dimension(0:lnaca,2:3,2) :: xnaca,ynaca
+ real(k8),dimension(0:lnaca,2:3,2) :: xnaca,ynaca
 
- real(nr),dimension(0:5) :: xa,xb,xc,xd,xe,xf
- real(nr),dimension(0:3) :: ya,yb,yc,yd,ye,yf,yg
- real(nr),dimension(0:5,0:2,0:1) :: hslo
- real(nr),dimension(0:3,0:3,0:1) :: vslo
+ real(k8),dimension(0:5) :: xa,xb,xc,xd,xe,xf
+ real(k8),dimension(0:3) :: ya,yb,yc,yd,ye,yf,yg
+ real(k8),dimension(0:5,0:2,0:1) :: hslo
+ real(k8),dimension(0:3,0:3,0:1) :: vslo
 
- real(nr),dimension(:,:),allocatable :: xx,yy,zz
- real(nr),dimension(:),allocatable :: zs
- real(nr),dimension(:,:),allocatable :: xp,yp,xq,yq
- real(nr),dimension(:),allocatable :: pxi,qet
+ real(k8),dimension(:,:),allocatable :: xx,yy,zz
+ real(k8),dimension(:),allocatable :: zs
+ real(k8),dimension(:,:),allocatable :: xp,yp,xq,yq
+ real(k8),dimension(:),allocatable :: pxi,qet
 
- real(nr) :: rs,re,rp,ts,te,shs1,she1,shs2,she2,shs,she,shswle
- real(nr) :: xo,xjct,yo,yjct,sho,pp,qq
- real(nr) :: am,err,tmp,tmpa,tmpb,gf
- real(nr) :: k1,k2,k3,k4,x0,x1
- real(nr) :: deg1,deg2
+ real(k8) :: rs,re,rp,ts,te,shs1,she1,shs2,she2,shs,she,shswle
+ real(k8) :: xo,xjct,yo,yjct,sho,pp,qq
+ real(k8) :: am,err,tmp,tmpa,tmpb,gf
+ real(k8) :: k01,k02,k03,k04,x0,x1
+ real(k8) :: deg1,deg2
 
  contains
 
@@ -40,16 +40,16 @@ module gridgen
 
  subroutine gridaerofoil(ngridv,nthick,litr,smgrid,domlen,span,wlew,wlea,szth1,szth2,szxt,tla,tlb,cutlb,c1,delt1,ximod,etamod)
 
- integer,intent(in) :: ngridv,litr,nthick
- real(nr),intent(in) :: smgrid,domlen,span,wlew,wlea,szth1,szth2,szxt,tla,tlb,c1,delt1
- real(nr),intent(in) :: ximod,etamod,cutlb
- real(nr) :: lsz1,lsz2
- real(nr) :: lbl,lwle
- real(nr) :: alph
- real(nr) :: oxp,oyp
- real(nr) :: tmps,tmpe,tmpc
- real(nr) :: sha,shb,shc
- integer :: smod
+ integer(k4),intent(in) :: ngridv,litr,nthick
+ real(k8),intent(in) :: smgrid,domlen,span,wlew,wlea,szth1,szth2,szxt,tla,tlb,c1,delt1
+ real(k8),intent(in) :: ximod,etamod,cutlb
+ real(k8) :: lsz1,lsz2
+ real(k8) :: lbl,lwle
+ real(k8) :: alph
+ real(k8) :: oxp,oyp
+ real(k8) :: tmps,tmpe,tmpc
+ real(k8) :: sha,shb,shc
+ integer(k4) :: smod
  logical :: flag
 
     lxit=lxi0+lxi1+lxi2+2; lett=2*(let0+let1)+3
@@ -78,10 +78,10 @@ module gridgen
 
 if(myid==mo(mb)) then
     no(2)=mb/100; no(1)=mod(mb,100)/10; no(0)=mod(mb,10); cno=achar(no+48)
-    open(1,file='misc/grid'//cno(2)//cno(1)//cno(0)//'.dat',access='stream')
+    open(1,file='misc/grid'//cno(2)//cno(1)//cno(0)//'.dat',access='stream',form='unformatted')
 
  do k=0,lze0
-    zs(k)=span*(real(lze0-k,nr)/lze0-half)
+    zs(k)=span*(real(lze0-k,k8)/lze0-half)
 !---BLOCKS' BOUNDARIES
     sho=tla/litr; ll=2*litr; lsz1=ll*sho; lsz2=szth1+szxt
 !---WAVY LEADING-EDGE PROFILE
@@ -116,8 +116,8 @@ if(myid==mo(mb)) then
     fctr=2*pi/wlew; shswle=shs*sqrt(1+0*(fctr*wlea*cos(fctr*(zs(k)-zs(0))))**2)
 
 !----- INITIAL AND END HORIZONTAL SLOPES
-    deg1=(25_nr*pi/180_nr)
-    deg2=(10_nr*pi/180_nr)
+    deg1=(25_k8*pi/180_k8)
+    deg2=(10_k8*pi/180_k8)
     hslo(0,:,:)=zero
     hslo(1,0,:)=(/zero,-tan(delt1)/)
     hslo(1,1,:)=(/tan(-deg1-delt1),tan(deg2-delt1)/)
@@ -187,7 +187,7 @@ if(myid==mo(mb)) then
           do i=lxis+1,lxis+ll
              xp(i,n)=xp(i-1,n)+half*shs1; err=1
              do while(abs(err)>sml)
-                yp(i,n)=naca(xp(i,n),tmp,21.0_nr,n)!ylagi(i,n,m)
+                yp(i,n)=naca(xp(i,n),tmp,21.0_k8,n)!ylagi(i,n,m)
                 err=sqrt((xp(i,n)-xp(i-1,n))**2+(yp(i,n)-yp(i-1,n))**2)/shs1-1;
                 xp(i,n)=xp(i,n)-half**5*err*shs1
              end do
@@ -197,7 +197,7 @@ if(myid==mo(mb)) then
           ip=lxis+ll;im=lxib-ll 
           call gridf(xp(:,n),pxi,xo,tmp,sho,she1,lxit,im,ip)
           do i=lxis+ll+1,lxie-1
-             yp(i,n)=naca(xp(i,n),tmp,21.0_nr,n)!ylagi(i,n,m)
+             yp(i,n)=naca(xp(i,n),tmp,21.0_k8,n)!ylagi(i,n,m)
           end do
           yp(lxie,n)=zero
           ! ROTATE AND MOVE AEROFOILS
@@ -268,17 +268,17 @@ if(myid==mo(mb)) then
    do n = 0,1
       do m = 0,2
       selectcase(n)
-      case(0); k1=ya(m);k3=ya(m+1)
-      case(1); k1=yc(m);k3=yc(m+1)
+      case(0); k01=ya(m);k03=ya(m+1)
+      case(1); k01=yc(m);k03=yc(m+1)
       end select
       selectcase(m)
       case(0); is=lxis0;ie=lxie0;x0=xa(n);x1=xc(n)
       case(1); is=lxis1;ie=lxie1;x0=xc(n);x1=xd(n)
       case(2); is=lxis2;ie=lxie2;x0=xd(n);x1=xf(n)
       end select     
-      k2=hslo(n,m,0);k4=hslo(n,m,1)
+      k02=hslo(n,m,0);k04=hslo(n,m,1)
       do i = is, ie
-         yp(i,n)=inter(k1,k2,k3,k4,x0,x1,xp(i,n))
+         yp(i,n)=inter(k01,k02,k03,k04,x0,x1,xp(i,n))
       end do
       end do
    end do
@@ -286,17 +286,17 @@ if(myid==mo(mb)) then
    do n = 4,5
       do m = 0,2
       selectcase(n)
-      case(4); k1=ye(m);k3=ye(m+1)
-      case(5); k1=yg(m);k3=yg(m+1)
+      case(4); k01=ye(m);k03=ye(m+1)
+      case(5); k01=yg(m);k03=yg(m+1)
       end select
       selectcase(m)
       case(0); is=lxis0;ie=lxie0;x0=xa(n);x1=xc(n)
       case(1); is=lxis1;ie=lxie1;x0=xc(n);x1=xd(n)
       case(2); is=lxis2;ie=lxie2;x0=xd(n);x1=xf(n)
       end select     
-      k2=hslo(n,m,0);k4=hslo(n,m,1)
+      k02=hslo(n,m,0);k04=hslo(n,m,1)
       do i = is, ie
-         yp(i,n)=inter(k1,k2,k3,k4,x0,x1,xp(i,n))
+         yp(i,n)=inter(k01,k02,k03,k04,x0,x1,xp(i,n))
       end do
       end do
    end do
@@ -307,9 +307,9 @@ if(myid==mo(mb)) then
       case(0); is=lxis0;ie=lxie0;x0=xa(n);x1=xc(n)
       case(2); is=lxis2;ie=lxie2;x0=xd(n);x1=xf(n)
       end select     
-      k1=yd(m);k3=yd(m+1);k2=hslo(n,m,0);k4=hslo(n,m,1)
+      k01=yd(m);k03=yd(m+1);k02=hslo(n,m,0);k04=hslo(n,m,1)
       do i = is, ie
-         yp(i,n)=inter(k1,k2,k3,k4,x0,x1,xp(i,n))
+         yp(i,n)=inter(k01,k02,k03,k04,x0,x1,xp(i,n))
          yp(i,n+1)=yp(i,n)
       end do
       end do
@@ -362,17 +362,17 @@ if(myid==mo(mb)) then
    do m = 0,3
       selectcase(m)
       case(0); is=lets0;ie=lete0;x0=ya(n);x1=yc(n)
-               k1=xc(m);k3=xc(m+1)
+               k01=xc(m);k03=xc(m+1)
       case(1); is=lets1;ie=lete1;x0=yc(n);x1=yd(n)
-               k1=xc(m);k3=xc(m+1)
+               k01=xc(m);k03=xc(m+1)
       case(2); is=lets2;ie=lete2;x0=yd(n);x1=ye(n)
-               k1=xc(m+1);k3=xc(m+2)
+               k01=xc(m+1);k03=xc(m+2)
       case(3); is=lets3;ie=lete3;x0=ye(n);x1=yf(n)
-               k1=xc(m+1);k3=xc(m+2)
+               k01=xc(m+1);k03=xc(m+2)
       end select     
-      k2=vslo(n,m,0);k4=vslo(n,m,1)
+      k02=vslo(n,m,0);k04=vslo(n,m,1)
       do i = is, ie
-         xq(i,n)=inter(k1,k2,k3,k4,x0,x1,yq(i,n))
+         xq(i,n)=inter(k01,k02,k03,k04,x0,x1,yq(i,n))
       end do
    end do
    !-INTERFACE 2
@@ -398,8 +398,8 @@ if(myid==mo(mb)) then
                tmpa=int(rs/abs(rs-sml)); tmpb=int(re/abs(re-sml))
       end select
       do j=js,je; do i=is,ie
-         pp=real(i-is,nr)/(ie-is); qq=real(j-js,nr)/(je-js)
-         tmp=sin(half*pi*pp); ra0=(gf*real(je-j,nr)/(je-js)+gf*qq); ra1=one+(2-one)*ra0**2
+         pp=real(i-is,k8)/(ie-is); qq=real(j-js,k8)/(je-js)
+         tmp=sin(half*pi*pp); ra0=(gf*real(je-j,k8)/(je-js)+gf*qq); ra1=one+(2-one)*ra0**2
          pxi(i)=(1-nn)*tmp**ra1+nn*tmp**2
          ts=tmpa*tmpb*(1-pxi(i))+1-tmpb; te=1-ts
          xx(i,j)=(xp(i,n+1)-xp(i,n))*(ts*(xq(j,m)-xq(js,m)+qq*(1-tmpa))/(xq(je,m)-xq(js,m)+1-tmpa)&
@@ -424,7 +424,7 @@ if(myid==mo(mb)) then
      case(1,4,7,10); is=lxis1; ie=lxie1;
      case(2,5,8,11); is=lxis2; ie=lxie2
    end select
-   np=nr*(je-js+1)*(ie-is+1)
+   np=k8*(je-js+1)*(ie-is+1)
    write(1,pos=np*k+1) ((xx(i,j),i=is,ie),j=js,je)
    write(1,pos=np*(k+lze0+1)+1) ((yy(i,j),i=is,ie),j=js,je)
    write(1,pos=np*(k+2*lze0+2)+1) ((zz(i,j),i=is,ie),j=js,je)
@@ -457,8 +457,8 @@ end if
 
  function ylagi(i,n,m) result(yi)
 
- integer,intent(in) :: i,n,m
- real(nr) :: yi
+ integer(k4),intent(in) :: i,n,m
+ real(k8) :: yi
 
     is=0; ie=lnaca; ii=minloc(abs(xnaca(:,n,m)-xp(i,n)),1)-1; ip=ii
  if(ii-is<=1) then; ip=is+2; end if
@@ -476,10 +476,10 @@ end if
 
 !===== NACA FUNCTION
  function naca(x,c,t0,n) result(y)
-    real(nr),intent(in) :: x,c,t0
-    integer, intent(in) :: n
-    real(nr) :: y
-    real(nr) :: t,k,xc
+    real(k8),intent(in) :: x,c,t0
+    integer(k4), intent(in) :: n
+    real(k8) :: y
+    real(k8) :: t,k,xc
 
     t=t0*0.01e0
     k=0.991148635e0
@@ -493,21 +493,21 @@ end if
  end function naca
  
 !===== FUNCTION FOR INTERFACE POINTS
- function inter(k1,k2,k3,k4,x0,x1,x) result(y)
+ function inter(k01,k02,k03,k04,x0,x1,x) result(y)
 
- real(nr) :: y
- real(nr), intent(in) :: x,x0,x1,k1,k2,k3,k4
- real(nr) :: a,b,c,d,l,invl,fx
+ real(k8) :: y
+ real(k8), intent(in) :: x,x0,x1,k01,k02,k03,k04
+ real(k8) :: a,b,c,d,l,invl,fx
 
  l=x1-x0
- invl=1.0_nr/l
+ invl=1.0_k8/l
  fx=(x-x0)*invl
 
     a=(2*fx**3-3*fx**2+1);
     b=(fx**3-2*fx**2+fx);
     c=(-2*fx**3+3*fx**2);
     d=(fx**3-fx**2);
-    y=a*k1+b*l*k2+c*k3+d*l*k4;
+    y=a*k01+b*l*k02+c*k03+d*l*k04;
  
  end function inter
  !=====

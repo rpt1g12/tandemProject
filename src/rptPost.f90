@@ -257,7 +257,7 @@ contains
       open(9,file='data/post.dat',shared)
       read(9,*) cinput,ngridv
       read(9,*) cinput,ndata
-      read(9,*) cinput,nrec
+      read(9,*) cinput,ngrec
       read(9,*) cinput,nwrec
       read(9,*) cinput,lsta
       close(9)
@@ -275,15 +275,15 @@ contains
  subroutine getMetrics
  !===== COMPUTE INVERSE METRICS
      rr(:,1)=ss(:,1)
-     m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
      qo(:,1)=rr(:,1); qo(:,2)=rr(:,2); qo(:,3)=rr(:,3)
  
      rr(:,1)=ss(:,2)
-     m=2; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     m=2; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
      qa(:,1)=rr(:,1); qa(:,2)=rr(:,2); qa(:,3)=rr(:,3)
  
      rr(:,1)=ss(:,3)
-     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
      de(:,1)=rr(:,1); de(:,2)=rr(:,2); de(:,3)=rr(:,3)
  
      allocate(xyz(0:lmx,3))
@@ -352,9 +352,9 @@ contains
        write(*,"(f5.1,'% Averaged')") real(ndata*(m-1)+n)*100.0e0/real(ndata*totVar)
     end if
        if (tecplot) then
-       call tpostread((n*totVar+nrec+m),lsta)
+       call tpostread((n*totVar+ngrec+m),lsta)
        else
-       call postread((n*totVar+nrec+m))
+       call postread((n*totVar+ngrec+m))
        end if
        rr(:,1)=rr(:,1)+delt(n)*varr(:)
     end do
@@ -503,19 +503,19 @@ contains
      de(:,4)=qo(:,4)
  
      rr(:,1)=de(:,2)
-     m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
      txx(:)=yaco(:)*(xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3))
      hzz(:)=yaco(:)*(xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3))
      tzx(:)=yaco(:)*(xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3))
  
      rr(:,1)=de(:,3)
-     m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
      txy(:)=yaco(:)*(xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3))
      tyy(:)=yaco(:)*(xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3))
      hxx(:)=yaco(:)*(xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3))
  
      rr(:,1)=de(:,4)
-     m=4; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     m=4; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
      hyy(:)=yaco(:)*(xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3))
      tyz(:)=yaco(:)*(xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3))
      tzz(:)=yaco(:)*(xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3))
@@ -546,17 +546,17 @@ contains
     de(:,1:3)=0
 
     rr(:,1)=qo(:,2)
-    m=1; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+    m=1; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
     de(:,2)=de(:,2)+rr(:,1)*xim(:,3)+rr(:,2)*etm(:,3)+rr(:,3)*zem(:,3)
     de(:,3)=de(:,3)-rr(:,1)*xim(:,2)-rr(:,2)*etm(:,2)-rr(:,3)*zem(:,2)
 
     rr(:,1)=qo(:,3)
-    m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+    m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
     de(:,3)=de(:,3)+rr(:,1)*xim(:,1)+rr(:,2)*etm(:,1)+rr(:,3)*zem(:,1)
     de(:,1)=de(:,1)-rr(:,1)*xim(:,3)-rr(:,2)*etm(:,3)-rr(:,3)*zem(:,3)
 
     rr(:,1)=qo(:,4)
-    m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+    m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
     de(:,1)=de(:,1)+rr(:,1)*xim(:,2)+rr(:,2)*etm(:,2)+rr(:,3)*zem(:,2)
     de(:,2)=de(:,2)-rr(:,1)*xim(:,1)-rr(:,2)*etm(:,1)-rr(:,3)*zem(:,1)
 
@@ -587,19 +587,19 @@ contains
 
     qa(:,:)=0
     rr(:,1)=qo(:,2)
-    m=1; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+    m=1; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
     de(:,2)=de(:,2)+rr(:,1)*xim(:,3)+rr(:,2)*etm(:,3)+rr(:,3)*zem(:,3)
     de(:,3)=de(:,3)-rr(:,1)*xim(:,2)-rr(:,2)*etm(:,2)-rr(:,3)*zem(:,2)
     qa(:,2)=de(:,3)
     qa(:,3)=-de(:,2)
 
     rr(:,1)=qo(:,3)
-    m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+    m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
     de(:,3)=de(:,3)+rr(:,1)*xim(:,1)+rr(:,2)*etm(:,1)+rr(:,3)*zem(:,1)
     de(:,1)=de(:,1)-rr(:,1)*xim(:,3)-rr(:,2)*etm(:,3)-rr(:,3)*zem(:,3)
 
     rr(:,1)=qo(:,4)
-    m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+    m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
     de(:,1)=de(:,1)+rr(:,1)*xim(:,2)+rr(:,2)*etm(:,2)+rr(:,3)*zem(:,2)
     de(:,2)=de(:,2)-rr(:,1)*xim(:,1)-rr(:,2)*etm(:,1)-rr(:,3)*zem(:,1)
 
@@ -643,7 +643,7 @@ contains
     selectcase(output)
     case(0)
     ! READ VARIABLES
-    nread=nrec+(totVar*nvar)
+    nread=ngrec+(totVar*nvar)
     do nn = 1, 5
      if (tecplot) then
      nread=nread+1; call tpostread(nread,lsta)

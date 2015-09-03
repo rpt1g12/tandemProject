@@ -313,15 +313,15 @@ contains
  subroutine getMetrics
  !===== COMPUTE INVERSE METRICS
      rr(:,1)=ss(:,1)
-     m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
      qo(:,1)=rr(:,1); qo(:,2)=rr(:,2); qo(:,3)=rr(:,3)
  
      rr(:,1)=ss(:,2)
-     m=2; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     m=2; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
      qa(:,1)=rr(:,1); qa(:,2)=rr(:,2); qa(:,3)=rr(:,3)
  
      rr(:,1)=ss(:,3)
-     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
      de(:,1)=rr(:,1); de(:,2)=rr(:,2); de(:,3)=rr(:,3)
  
      allocate(xxi(0:ltomb-1),xet(0:ltomb-1),xze(0:ltomb-1))
@@ -462,22 +462,22 @@ contains
 
      varr=qo(:,n); call joinBlock; f=lvarr
      rr(:,1)=qo(:,n)
-     m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
      varr=rr(:,1); call joinBlock; fxi=lvarr
      varr=rr(:,2); call joinBlock; fet=lvarr
      varr=rr(:,3); call joinBlock; fze=lvarr
  
      rr(:,1)=rr(:,2)
-     m=2; call mpigo(ntdrv,nrone,n45go,m); call deriv(1,1)
+     m=2; call mpigo(ntdrv,nrone,n45go,m); call deriv(1,1,m)
      varr=rr(:,1); call joinBlock; fetxi=lvarr
  
      rr(:,1)=rr(:,3)
-     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(2,1); call deriv(1,1)
+     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(2,1,m); call deriv(1,1,m)
      varr=rr(:,1); call joinBlock; fzexi=lvarr
      varr=rr(:,2); call joinBlock; fzeet=lvarr
 
      rr(:,1)=rr(:,2)
-     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(1,1)
+     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(1,1,m)
      varr=rr(:,1); call joinBlock; fzeetxi=lvarr
 
  end subroutine getDeri
