@@ -25,6 +25,8 @@
 
 	ll=max(npro,12); allocate(ista(MPI_STATUS_SIZE,ll),ireq(ll))
 
+	inquire(iolength=ll) pi; nrec=ll/2
+
 !===== INPUT PARAMETERS
 
     open(9,file='inputo.dat',shared)
@@ -359,6 +361,16 @@
 !===== SETTING UP OUTPUT FILE & STORING GRID DATA
 
  selectcase(output)
+ case(2)
+ if(myid==0) then
+ do n=-1,ndata
+	open(0,file=ctecplt(n)); close(0,status='delete')
+ end do
+ end if
+    open(0,file=cdata,access='direct',form='unformatted',recl=nrec*(lmx+1))
+ do nn=1,3
+    varr(:)=ss(:,nn); write(0,rec=nn) varr(:); call vminmax(nn)
+ end do
  case(0)
        inquire(iolength=lp) varr
        open(0,file=cdata,access='direct',recl=lp)
