@@ -16,7 +16,7 @@
  character(len=*),parameter :: fmts='es15.8',fmtl='es23.16',fmtsa=fmts//',a',fmtla=fmtl//',a'
 
  real(k8),parameter :: pi=3.141592653589793_k8
- real(k8),parameter :: zero=0,one=1,half=0.5_k8,sqrt2=sqrt(2.0_k8),sqrt2i=1/sqrt2,sml=1.0e-6_k8
+ real(k8),parameter :: zero=0,one=1,half=0.5_k8,sqrt2=sqrt(2.0_k8),sqrt2i=1/sqrt2,sml=1.0e-6_k8,free=1.0d+6
  real(k8),parameter :: two=2,quarter=0.25_k8
  real(k8),parameter :: gam=1.4_k8,gamm1=gam-1,ham=1/gam,hamm1=1/gamm1
  real(k8),parameter :: prndtl=0.71_k8,gamm1prndtli=1/(gamm1*prndtl)

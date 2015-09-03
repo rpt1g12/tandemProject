@@ -194,7 +194,6 @@
  real(k8),intent(in) :: dtko,dtk
  real(k8) :: alphamax
 
- !talphas=25.5_k8;talphar=5.0_k8
  alphamax=aoa*pi/180_k8
 
  if(nsmf==0) then
@@ -340,6 +339,7 @@
  integer(k4),intent(in) :: nfile
  integer(k4),intent(inout) :: lh
  character(16),intent(in) :: cinput
+ integer(k4) :: ll
 
  do ll=1,len_trim(cinput)
     write(nfile,pos=4*lh+1) ichar(cinput(ll:ll)); lh=lh+1
