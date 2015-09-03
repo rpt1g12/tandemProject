@@ -72,6 +72,7 @@
 
  real(k8),dimension(:,:),allocatable :: xim,etm,zem
  real(k8),dimension(:),allocatable :: p,yaco
+ real(k8),dimension(:),allocatable :: sbcc
 
  real(k8),dimension(:,:),allocatable :: rr,ss
 
@@ -81,21 +82,23 @@
 
  real(k8),dimension(:,:),allocatable :: ran,sit,ait
  real(k8),dimension(:),allocatable :: xit,yit,zit
- real(k8),dimension(:),allocatable :: asz,bsz,csz,dsz
- real(k8),dimension(:),allocatable :: times,varmin,varmax,vmpi
+ real(k8),dimension(:),allocatable :: asz,bsz,csz
+ real(k8),dimension(:),allocatable :: times,vmpi
  real(4),dimension(:),allocatable :: varr
 
  real(k8),dimension(:,:,:),pointer :: drva,drvb,send,recv,cm
- real(k8),dimension(:,:),pointer :: cmm
- real(k8),dimension(:),pointer :: pvarr
 
  real(k8),dimension(:,:,:),allocatable,target :: drva1,drva2,drva3
  real(k8),dimension(:,:,:),allocatable,target :: drvb1,drvb2,drvb3
  real(k8),dimension(:,:,:),allocatable,target :: send1,send2,send3
  real(k8),dimension(:,:,:),allocatable,target :: recv1,recv2,recv3
  real(k8),dimension(:,:,:),allocatable,target :: cm1,cm2,cm3
- real(k8),dimension(:,:),allocatable,target :: cmm1,cmm2,cmm3
 
+ real(k8),dimension(:,:),allocatable :: varm
+ real(k8),dimension(:),allocatable :: varmin,varmax
+ real(k4),dimension(:),allocatable :: vart,vara,varb,vmean
+
+ character(13),dimension(:),allocatable :: ctecplt,cthead
  character(13),dimension(:),allocatable :: cfilet
  character(7),dimension(:),allocatable :: czonet
 
@@ -110,8 +113,9 @@
  integer(8) :: lp,lq,ltomb
  integer(k4) :: lxio,leto,lzeo,lxi,let,lze,lmx,lim,nrec
  integer(k4) :: i,ii,is,ie,ip,iq,j,jj,js,je,jp,jq,jk,k,kk,kp,l,lh,ll
- integer(k4) :: m,ma,mb,mh,mm,mp,mbk,n,ndt,nn,nk,ns,ne,np,nt,nz,ndati,nsigi,nout,nfile
+ integer(k4) :: m,ma,mb,mm,mp,mq,mbk,mps,mpe,n,ndt,nn,nk,ns,ne,np,nt,nz,ndati,nsigi,nout,nfile
  integer(k4) :: nts,nscrn,nsgnl,ndata,nviscous,nkrk,nsmf,nfskp,nrestart
+ integer(k8) :: nlmx,llmb,llmo,lis,lie,ljs,lje
 
  real(k8),dimension(0:lmp,0:1,0:1) :: pbci,pbco
  real(k8),dimension(-2:2,0:2,0:1) :: albed,albef
