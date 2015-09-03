@@ -293,15 +293,15 @@
 
 
     rr(:,1)=ss(:,1)
-    m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+    m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
     qo(:,1)=rr(:,1); qo(:,2)=rr(:,2); qo(:,3)=rr(:,3)
 
     rr(:,1)=ss(:,2)
-    m=2; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+    m=2; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
     qa(:,1)=rr(:,1); qa(:,2)=rr(:,2); qa(:,3)=rr(:,3)
 
     rr(:,1)=ss(:,3)
-    m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+    m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
     de(:,1)=rr(:,1); de(:,2)=rr(:,2); de(:,3)=rr(:,3)
 
     xim(:,1)=qa(:,2)*de(:,3)-de(:,2)*qa(:,3)
@@ -315,25 +315,25 @@
     zem(:,3)=qo(:,1)*qa(:,2)-qa(:,1)*qo(:,2)
 
 !    rr(:,3)=qa(:,2)*ss(:,3); rr(:,2)=qa(:,3)*ss(:,3)
-!    m=1; call mpigo(ntdrv,nrall,n45go,m); call deriv(3,3); call deriv(2,2); xim(:,m)=rr(:,3)-rr(:,2)
+!    m=1; call mpigo(ntdrv,nrall,n45go,m); call deriv(3,3,m); call deriv(2,2,m); xim(:,m)=rr(:,3)-rr(:,2)
 !    rr(:,3)=de(:,2)*ss(:,1); rr(:,2)=de(:,3)*ss(:,1)
-!    m=2; call mpigo(ntdrv,nrall,n45go,m); call deriv(3,3); call deriv(2,2); xim(:,m)=rr(:,3)-rr(:,2)
+!    m=2; call mpigo(ntdrv,nrall,n45go,m); call deriv(3,3,m); call deriv(2,2,m); xim(:,m)=rr(:,3)-rr(:,2)
 !    rr(:,3)=qo(:,2)*ss(:,2); rr(:,2)=qo(:,3)*ss(:,2)
-!    m=3; call mpigo(ntdrv,nrall,n45go,m); call deriv(3,3); call deriv(2,2); xim(:,m)=rr(:,3)-rr(:,2)
+!    m=3; call mpigo(ntdrv,nrall,n45go,m); call deriv(3,3,m); call deriv(2,2,m); xim(:,m)=rr(:,3)-rr(:,2)
 !
 !    rr(:,1)=qa(:,3)*ss(:,3); rr(:,3)=qa(:,1)*ss(:,3)
-!    m=1; call mpigo(ntdrv,nrall,n45go,m); call deriv(1,1); call deriv(3,3); etm(:,m)=rr(:,1)-rr(:,3)
+!    m=1; call mpigo(ntdrv,nrall,n45go,m); call deriv(1,1,m); call deriv(3,3,m); etm(:,m)=rr(:,1)-rr(:,3)
 !    rr(:,1)=de(:,3)*ss(:,1); rr(:,3)=de(:,1)*ss(:,1)
-!    m=2; call mpigo(ntdrv,nrall,n45go,m); call deriv(1,1); call deriv(3,3); etm(:,m)=rr(:,1)-rr(:,3)
+!    m=2; call mpigo(ntdrv,nrall,n45go,m); call deriv(1,1,m); call deriv(3,3,m); etm(:,m)=rr(:,1)-rr(:,3)
 !    rr(:,1)=qo(:,3)*ss(:,2); rr(:,3)=qo(:,1)*ss(:,2)
-!    m=3; call mpigo(ntdrv,nrall,n45go,m); call deriv(1,1); call deriv(3,3); etm(:,m)=rr(:,1)-rr(:,3)
+!    m=3; call mpigo(ntdrv,nrall,n45go,m); call deriv(1,1,m); call deriv(3,3,m); etm(:,m)=rr(:,1)-rr(:,3)
 !
 !    rr(:,2)=qa(:,1)*ss(:,3); rr(:,1)=qa(:,2)*ss(:,3)
-!    m=1; call mpigo(ntdrv,nrall,n45go,m); call deriv(2,2); call deriv(1,1); zem(:,m)=rr(:,2)-rr(:,1)
+!    m=1; call mpigo(ntdrv,nrall,n45go,m); call deriv(2,2,m); call deriv(1,1,m); zem(:,m)=rr(:,2)-rr(:,1)
 !    rr(:,2)=de(:,1)*ss(:,1); rr(:,1)=de(:,2)*ss(:,1)
-!    m=2; call mpigo(ntdrv,nrall,n45go,m); call deriv(2,2); call deriv(1,1); zem(:,m)=rr(:,2)-rr(:,1)
+!    m=2; call mpigo(ntdrv,nrall,n45go,m); call deriv(2,2,m); call deriv(1,1,m); zem(:,m)=rr(:,2)-rr(:,1)
 !    rr(:,2)=qo(:,1)*ss(:,2); rr(:,1)=qo(:,2)*ss(:,2)
-!    m=3; call mpigo(ntdrv,nrall,n45go,m); call deriv(2,2); call deriv(1,1); zem(:,m)=rr(:,2)-rr(:,1)
+!    m=3; call mpigo(ntdrv,nrall,n45go,m); call deriv(2,2,m); call deriv(1,1,m); zem(:,m)=rr(:,2)-rr(:,1)
 
     yaco(:)=3/(qo(:,1)*xim(:,1)+qo(:,2)*etm(:,1)+qo(:,3)*zem(:,1)&
               +qa(:,1)*xim(:,2)+qa(:,2)*etm(:,2)+qa(:,3)*zem(:,2)&
@@ -542,25 +542,25 @@
      de(:,1)=ss(:,1)
 
      rr(:,1)=de(:,2)
-     m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
      txx(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
      hzz(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
      tzx(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
 
      rr(:,1)=de(:,3)
-     m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
      txy(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
      tyy(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
      hxx(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
 
      rr(:,1)=de(:,4)
-     m=4; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     m=4; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
      hyy(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
      tyz(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
      tzz(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
 
      rr(:,1)=de(:,5)
-     m=5; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     m=5; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
      ss(:,1)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
      ss(:,2)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
      ss(:,3)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
@@ -620,7 +620,7 @@
      rr(:,1)=qa(:,1)*ss(:,1)
      rr(:,2)=qa(:,1)*ss(:,2)
      rr(:,3)=qa(:,1)*ss(:,3)
-     m=1; call mpigo(ntdrv,nrall,n45no,m); call deriv(1,1); call deriv(2,2); call deriv(3,3)
+     m=1; call mpigo(ntdrv,nrall,n45no,m); call deriv(1,1,m); call deriv(2,2,m); call deriv(3,3,m)
      de(:,m)=rr(:,1)+rr(:,2)+rr(:,3)
 
      rr(:,1)=qa(:,2)*ss(:,1)+xim(:,1)*p(:)
@@ -631,7 +631,7 @@
      rr(:,2)=rr(:,2)-etm(:,1)*txx(:)-etm(:,2)*txy(:)-etm(:,3)*tzx(:)
      rr(:,3)=rr(:,3)-zem(:,1)*txx(:)-zem(:,2)*txy(:)-zem(:,3)*tzx(:)
   end if
-     m=2; call mpigo(ntdrv,nrall,n45no,m); call deriv(1,1); call deriv(2,2); call deriv(3,3)
+     m=2; call mpigo(ntdrv,nrall,n45no,m); call deriv(1,1,m); call deriv(2,2,m); call deriv(3,3,m)
      de(:,m)=rr(:,1)+rr(:,2)+rr(:,3)
 
      rr(:,1)=qa(:,3)*ss(:,1)+xim(:,2)*p(:)
@@ -642,7 +642,7 @@
      rr(:,2)=rr(:,2)-etm(:,1)*txy(:)-etm(:,2)*tyy(:)-etm(:,3)*tyz(:)
      rr(:,3)=rr(:,3)-zem(:,1)*txy(:)-zem(:,2)*tyy(:)-zem(:,3)*tyz(:)
   end if
-     m=3; call mpigo(ntdrv,nrall,n45no,m); call deriv(1,1); call deriv(2,2); call deriv(3,3)
+     m=3; call mpigo(ntdrv,nrall,n45no,m); call deriv(1,1,m); call deriv(2,2,m); call deriv(3,3,m)
      de(:,m)=rr(:,1)+rr(:,2)+rr(:,3)
 
      rr(:,1)=qa(:,4)*ss(:,1)+xim(:,3)*p(:)
@@ -653,7 +653,7 @@
      rr(:,2)=rr(:,2)-etm(:,1)*tzx(:)-etm(:,2)*tyz(:)-etm(:,3)*tzz(:)
      rr(:,3)=rr(:,3)-zem(:,1)*tzx(:)-zem(:,2)*tyz(:)-zem(:,3)*tzz(:)
   end if
-     m=4; call mpigo(ntdrv,nrall,n45no,m); call deriv(1,1); call deriv(2,2); call deriv(3,3)
+     m=4; call mpigo(ntdrv,nrall,n45no,m); call deriv(1,1,m); call deriv(2,2,m); call deriv(3,3,m)
      de(:,m)=rr(:,1)+rr(:,2)+rr(:,3)
 
      de(:,5)=qa(:,5)+p(:)
@@ -665,7 +665,7 @@
      rr(:,2)=rr(:,2)-etm(:,1)*hxx(:)-etm(:,2)*hyy(:)-etm(:,3)*hzz(:)
      rr(:,3)=rr(:,3)-zem(:,1)*hxx(:)-zem(:,2)*hyy(:)-zem(:,3)*hzz(:)
   end if
-     m=5; call mpigo(ntdrv,nrall,n45no,m); call deriv(1,1); call deriv(2,2); call deriv(3,3)
+     m=5; call mpigo(ntdrv,nrall,n45no,m); call deriv(1,1,m); call deriv(2,2,m); call deriv(3,3,m)
      de(:,m)=rr(:,1)+rr(:,2)+rr(:,3)
 
 ! ----- IMPLEMENTATION OF SPONGE CONDITION
