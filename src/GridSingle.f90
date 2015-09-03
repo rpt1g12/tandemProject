@@ -78,7 +78,7 @@ module gridgen
 
 if(myid==mo(mb)) then
     no(2)=mb/100; no(1)=mod(mb,100)/10; no(0)=mod(mb,10); cno=achar(no+48)
-    open(1,file='misc/grid'//cno(2)//cno(1)//cno(0)//'.dat',access='stream')
+    open(1,file='misc/grid'//cno(2)//cno(1)//cno(0)//'.dat',access='stream',form='unformatted')
 
  do k=0,lze0
     zs(k)=span*(real(lze0-k,k8)/lze0-half)
