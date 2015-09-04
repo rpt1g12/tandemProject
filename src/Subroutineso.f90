@@ -209,38 +209,67 @@
     progmf=half*ra0*(fctr+dtk*dfdt)
     dudtmf(:)=progmf*uoo(:)
 
-    if (timo+dtk>talphas) then
-       ra3=timo-talphas
-       ra0=half*pi/talphar; ra1=ra0*min(ra3,talphar); ra2=ra0*min(ra3+dtk,talphar)   
-
-       fctr=cos(alphamax*sin(ra1)**2);
-       dfdt=-sin(alphamax*sin(ra2)**2)*alphamax*ra0*sin(2*ra2);
-       progmf=(fctr+dtk*dfdt);
-       umf(1)=progmf*amachoo;
-        
-       fctr=-sin(alphamax*sin(ra1)**2)*alphamax*ra0*sin(2*ra1);
-       dfdt=-cos(alphamax*sin(ra2)**2)*alphamax**2*ra0**2*sin(2*ra2)**2 &
-            -sin(alphamax*sin(ra2)**2)*2*alphamax*ra0**2*cos(2*ra2);
-       progmf=(fctr+dtk*dfdt);
-       dudtmf(1)=progmf*amachoo;
-       
-       fctr=sin(alphamax*sin(ra1)**2);
-       dfdt=cos(alphamax*sin(ra2)**2)*alphamax*ra0*sin(2*ra2);
-       progmf=(fctr+dtk*dfdt);
-       umf(2)=progmf*amachoo;
-        
-       fctr=cos(alphamax*sin(ra1)**2)*alphamax*ra0*sin(2*ra1);
-       dfdt=-sin(alphamax*sin(ra2)**2)*alphamax**2*ra0**2*sin(2*ra2)**2 &
-            +cos(alphamax*sin(ra2)**2)*2*alphamax*ra0**2*cos(2*ra2);
-       progmf=(fctr+dtk*dfdt);
-       dudtmf(2)=progmf*amachoo;
-       umf(3)=0;dudtmf(3)=0
+    if (talphas>0) then
+       call pich(alphamax)
     end if
  else
     umf(:)=uoo(:); dudtmf(:)=0
  end if
 
  end subroutine movef
+
+!=== PITCHING REFERENCE FRAME
+subroutine pich(alpha)
+real(k8), intent(in) :: alpha
+
+    if (talphar>0.0e0) then
+       if (timo+dtk>talphas) then
+          ra3=timo-talphas
+          ra0=half*pi/talphar; ra1=ra0*min(ra3,talphar); ra2=ra0*min(ra3+dtk,talphar)   
+
+          fctr=cos(alpha*sin(ra1)**2);
+          dfdt=-sin(alpha*sin(ra2)**2)*alpha*ra0*sin(2*ra2);
+          progmf=(fctr+dtk*dfdt);
+          umf(1)=progmf*amachoo;
+           
+          fctr=-sin(alpha*sin(ra1)**2)*alpha*ra0*sin(2*ra1);
+          dfdt=-cos(alpha*sin(ra2)**2)*alpha**2*ra0**2*sin(2*ra2)**2 &
+               -sin(alpha*sin(ra2)**2)*2*alpha*ra0**2*cos(2*ra2);
+          progmf=(fctr+dtk*dfdt);
+          dudtmf(1)=progmf*amachoo;
+          
+          fctr=sin(alpha*sin(ra1)**2);
+          dfdt=cos(alpha*sin(ra2)**2)*alpha*ra0*sin(2*ra2);
+          progmf=(fctr+dtk*dfdt);
+          umf(2)=progmf*amachoo;
+           
+          fctr=cos(alpha*sin(ra1)**2)*alpha*ra0*sin(2*ra1);
+          dfdt=-sin(alpha*sin(ra2)**2)*alpha**2*ra0**2*sin(2*ra2)**2 &
+               +cos(alpha*sin(ra2)**2)*2*alpha*ra0**2*cos(2*ra2);
+          progmf=(fctr+dtk*dfdt);
+          dudtmf(2)=progmf*amachoo;
+          umf(3)=0;dudtmf(3)=0
+       end if
+    elseif (talphar==0.0e0) then
+       ra0=pi/timf; ra1=ra0*min(timo,timf); ra2=ra0*min(timo+dtko,timf)
+
+       fctr=1-cos(ra1)
+       dfdt=ra0*sin(ra2)
+       progmf=half*(fctr+dtk*dfdt)
+       umf(:)=progmf
+
+       fctr=sin(ra1)
+       dfdt=ra0*cos(ra2)
+       progmf=half*ra0*(fctr+dtk*dfdt)
+       dudtmf(:)=progmf
+
+       umf(1)=umf(1)*amachoo*cos(alpha);dudtmf(1)=dudtmf(1)*amachoo*cos(alpha)
+       umf(2)=umf(2)*amachoo*sin(alpha);dudtmf(2)=dudtmf(2)*amachoo*sin(alpha)
+       umf(3)=umf(3)*uoo(3)            ;dudtmf(3)=dudtmf(3)*uoo(3)            
+    end if
+   
+end subroutine pich
+
 
 !===== SUBROUTINE FOR BLASIUS LAMINAR BOUNDARY LAYER
 
