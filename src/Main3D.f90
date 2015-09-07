@@ -62,7 +62,7 @@
     ! rpt-Do not use postprocessing subroutines
     ispost=.false.
     ! rpt-Position of signal sampling
-    xpos=-1.0_k8;ypos=0.01_k8;zpos=0.005_k8
+    !xpos=-1.0_k8;ypos=0.01_k8;zpos=0.005_k8
 
 	abc(:,0)=(/a01,a02,a03,a04,a05,a06/)
 	abc(:,1)=(/a10,a12,a13,a14,a15,a16/)
@@ -294,17 +294,17 @@
  end if
 
     !RPT-FIND POSITION FOR SIGNAL SAMPLING
-    idsignal=-1
-    varr(:)=sqrt((ss(:,1)-xpos)**2+(ss(:,2)-ypos)**2+(ss(:,3)-zpos)**2)
-    lsignal=minloc(varr(:),1)-1
-    ra0=varr(lsignal)
-    CALL MPI_ALLREDUCE(ra0,ra1,1,MPI_REAL8,MPI_MIN,icom,ierr)
-    if (abs(ra0-ra1)/ra0<sml) then
-       idsignal=myid
-    end if
-    if (myid==idsignal) then
-    open(6,file='data/signal.dat')
-    end if
+    !idsignal=-1
+    !varr(:)=sqrt((ss(:,1)-xpos)**2+(ss(:,2)-ypos)**2+(ss(:,3)-zpos)**2)
+    !lsignal=minloc(varr(:),1)-1
+    !ra0=varr(lsignal)
+    !CALL MPI_ALLREDUCE(ra0,ra1,1,MPI_REAL8,MPI_MIN,icom,ierr)
+    !if (abs(ra0-ra1)/ra0<sml) then
+    !   idsignal=myid
+    !end if
+    !if (myid==idsignal) then
+    !open(6,file='data/signal.dat')
+    !end if
 
 
     rr(:,1)=ss(:,1)
@@ -970,14 +970,14 @@
     nsigi=nsigi+1; call signalgo
  end if
 
- if (myid==idsignal) then
- if (timo.le.25.5_k8) then
-    ra0=qa(lsignal,2)/qa(lsignal,1)+umf(1)
-    ra1=qa(lsignal,3)/qa(lsignal,1)+umf(2)
-    ra2=qa(lsignal,4)/qa(lsignal,1)+umf(3)
-    write(6,"(es15.7,1x,es15.7,1x,es15.7,1x,es15.7)") ra0,ra1,ra2,timo
- end if
- end if
+ !if (myid==idsignal) then
+ !if (timo.le.25.5_k8) then
+ !   ra0=qa(lsignal,2)/qa(lsignal,1)+umf(1)
+ !   ra1=qa(lsignal,3)/qa(lsignal,1)+umf(2)
+ !   ra2=qa(lsignal,4)/qa(lsignal,1)+umf(3)
+ !   write(6,"(es15.7,1x,es15.7,1x,es15.7,1x,es15.7)") ra0,ra1,ra2,timo
+ !end if
+ !end if
 
 !==========================
 !===== END OF TIME MARCHING
@@ -988,9 +988,9 @@
     if (output==2) then
 	close(0)
     end if
-    if (myid==idsignal) then
-       close(6)
-    end if
+    !if (myid==idsignal) then
+    !   close(6)
+    !end if
 
     wte=MPI_WTIME(); res=wte-wts
     call MPI_ALLREDUCE(res,wtime,1,MPI_REAL8,MPI_SUM,icom,ierr)
