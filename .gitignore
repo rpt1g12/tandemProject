@@ -18,3 +18,5 @@ signal.dat
 inflowsignal.dat
 tecplot*
 walltime*
+*batch*
+display
