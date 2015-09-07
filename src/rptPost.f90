@@ -57,10 +57,14 @@ contains
 
     cinput=cinput; fltk=pi*fltk; fltkbc=pi*fltkbc
     rhooo=1; poo=1/gam; aoo=sqrt(gam*poo/rhooo); amachoo=sqrt(amach1**2+amach2**2+amach3**2)
-    srefoo=111.0_nr/tempoo; srefp1dre=(srefoo+1)/reoo; sqrtrema=sqrt(reoo*amachoo); sqrtremai=1/sqrtrema
+    srefoo=111.0_k8/tempoo; srefp1dre=(srefoo+1)/reoo; sqrtrema=sqrt(reoo*amachoo); sqrtremai=1/sqrtrema
     uoo(1)=amach1*aoo; uoo(2)=amach2*aoo; uoo(3)=amach3*aoo
     ! rpt-Initialising the record count 
     nwrec=0
+
+	abc(:,0)=(/a01,a02,a03,a04,a05,a06/)
+	abc(:,1)=(/a10,a12,a13,a14,a15,a16/)
+	abc(:,2)=(/a20,a21,a23,a24,a25,a26/)
 
     allocate(lximb(0:mbk),letmb(0:mbk),lzemb(0:mbk),lhmb(0:mbk),mo(0:mbk),npc(0:mbk,3))
 
@@ -89,8 +93,7 @@ contains
     no(4)=myid/10000; no(3)=mod(myid,10000)/1000;
     no(2)=mod(myid,1000)/100; no(1)=mod(myid,100)/10; no(0)=mod(myid,10)
     cno=achar(no+48); cnnode=cno(4)//cno(3)//cno(2)//cno(1)//cno(0)
-    cdata='misc/data'//cnnode//'.dat';
-    cturb='misc/turb'//cnnode//'.dat'
+    cdata='data/data'//cnnode//'.dat'; cturb='misc/turb'//cnnode//'.dat'
 
     call domdcomp
 
@@ -133,12 +136,21 @@ contains
 
 !===== SUBDOMAIN SIZES & WRITING START POSITIONS IN OUTPUT FILE
 
-    lxim(myid)=lxi; letm(myid)=let; lzem(myid)=lze
- do mp=0,mpro
-    call MPI_BCAST(lxim(mp),1,MPI_INTEGER,mp,icom,ierr)
-    call MPI_BCAST(letm(mp),1,MPI_INTEGER,mp,icom,ierr)
-    call MPI_BCAST(lzem(mp),1,MPI_INTEGER,mp,icom,ierr)
+ if(myid==0) then
+    lxim(0)=lxi; letm(0)=let; lzem(0)=lze
+ do mp=1,mpro
+	itag=1; call MPI_RECV(lxim(mp),1,MPI_INTEGER4,mp,itag,icom,ista,ierr)
+	itag=2; call MPI_RECV(letm(mp),1,MPI_INTEGER4,mp,itag,icom,ista,ierr)
+	itag=3; call MPI_RECV(lzem(mp),1,MPI_INTEGER4,mp,itag,icom,ista,ierr)
  end do
+ else; itag=myid
+	itag=1; call MPI_SEND(lxi,1,MPI_INTEGER4,0,itag,icom,ierr)
+	itag=2; call MPI_SEND(let,1,MPI_INTEGER4,0,itag,icom,ierr)
+	itag=3; call MPI_SEND(lze,1,MPI_INTEGER4,0,itag,icom,ierr)
+ end if
+	call MPI_BCAST(lxim(:),npro,MPI_INTEGER4,0,icom,ierr)
+	call MPI_BCAST(letm(:),npro,MPI_INTEGER4,0,icom,ierr)
+	call MPI_BCAST(lzem(:),npro,MPI_INTEGER4,0,icom,ierr)
 
     ltomb=(lxio+1)*(leto+1)*(lzeo+1)
 
@@ -320,6 +332,40 @@ contains
  end do
  end do
  end do; end do
+
+!===== EXTRA COEFFICIENTS FOR GCBC/GCIC
+
+    cbca(:,:)=0; cbca(1,1:2)=albed(1:2,0,0); cbca(2,1:3)=albed(0:2,1,0); cbca(3,1:3)=albed(-1:1,2,0)
+ if(mbci>=4) then
+    cbca(3,4)=albed(2,2,0)
+ do i=4,mbci
+    cbca(i,i-3:i)=(/beta,alpha,one,alpha/); if(i<mbci) then; cbca(i,i+1)=beta; end if
+ end do
+ end if
+    rbci(:)=0; rbci(1:3)=(/one,albed(-1,1,0),albed(-2,2,0)/)
+    call mtrxi(cbca,cbcs,1,mbci); sbci(:)=-matmul(cbcs(:,:),rbci(:))
+	fctr=pi/(mbci+1)
+ do i=1,mbci
+	sbci(i)=half*sbci(i)*(1+cos(i*fctr))
+ end do
+    ll=-1; rr(:,1)=0
+ do nn=1,3; do ip=0,1; np=nbc(ip,nn); i=ip*ijk(1,nn); iq=1-2*ip
+ if((np-10)*(np-20)*(np-25)*(np-30)==0) then
+ do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
+ do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
+    ll=ll+1; res=1/yaco(l); rr(l,1)=rr(l,1)+1; rr(ll,2)=res; rr(ll,3)=l+sml
+ do ii=1,mbci; l=indx3(i+iq*ii,j,k,nn)
+    ll=ll+1; rr(l,1)=rr(l,1)+1; rr(ll,2)=res*sbci(ii); rr(ll,3)=l+sml
+ end do
+ end do
+ end do
+ end if
+ end do; end do
+    lp=ll; allocate(sbcc(0:lp))
+ do ll=0,lp; l=rr(ll,3)
+    sbcc(ll)=rr(ll,2)/rr(l,1)
+ end do
+
  end subroutine getMetrics
 
 !====================================================================================
@@ -328,7 +374,7 @@ contains
  subroutine average
     implicit none
     integer :: totVar
-    real(nr),dimension(:),allocatable :: delt
+    real(k8),dimension(:),allocatable :: delt
     ! SELECT THE VARIABLE STRIDE
       totVar=5
     ! READ OUTPUT TIMES
@@ -369,7 +415,7 @@ contains
  implicit none
  integer, intent(in) :: nvar
  integer :: l,lp1,lm1,lw
- real(nr), dimension(0:lcwall) :: utau
+ real(k8), dimension(0:lcwall) :: utau
  if (wflag) then
     if(.not.allocated(wplus)) allocate(wplus(0:lcwall,3))
     call gettw(nvar)
@@ -447,8 +493,8 @@ contains
     logical, intent(in) :: wall
     character(16), intent(in) :: fname
     integer :: idir,odir,ia,oa,l,ls,le,lp1,lm1,lw,lws,lwe
-    real(nr), dimension(:), allocatable :: delt
-    real(nr), dimension(:,:), allocatable :: avg
+    real(k8), dimension(:), allocatable :: delt
+    real(k8), dimension(:,:), allocatable :: avg
     character, dimension(1) :: str,str2
     if (wflag) then
     if (.not.wall) then
@@ -618,9 +664,9 @@ contains
 !====================================================================================
  subroutine findll(xpos,ypos,zpos,l,id) 
     implicit none
-    real(nr), intent(in) :: xpos,ypos,zpos
+    real(k8), intent(in) :: xpos,ypos,zpos
     integer, intent (out) :: l,id
-    real(nr) :: tmp,tmpall
+    real(k8) :: tmp,tmpall
 
     id=-1
     varr(:)=sqrt((xyz(:,1)-xpos)**2+(xyz(:,2)-ypos)**2+(xyz(:,3)-zpos)**2)
@@ -689,7 +735,7 @@ contains
   lp=lpos(myid)
      lq=(num-1)*ltomb
      do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-        write(8,pos=nr*(lp+lq+lio(j,k))+1) varr(l:l+lxi)
+        write(8,pos=k8*(lp+lq+lio(j,k))+1) varr(l:l+lxi)
      end do; end do
  end subroutine postwrite
 
@@ -743,7 +789,7 @@ end subroutine flst
  subroutine p3daverage
     implicit none
     integer :: totVar
-    real(nr),dimension(:),allocatable :: delt
+    real(k8),dimension(:),allocatable :: delt
 
     if (myid==0) then
        write(*,*) ndata
