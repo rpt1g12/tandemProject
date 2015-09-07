@@ -23,7 +23,10 @@
     mpro=npro-1; icom=MPI_COMM_WORLD; info=MPI_INFO_NULL
 
     allocate(lxim(0:mpro),letm(0:mpro),lzem(0:mpro),lpos(0:mpro),vmpi(0:mpro))
-    allocate(ista(MPI_STATUS_SIZE,12))
+
+	ll=max(npro,12); allocate(ista(MPI_STATUS_SIZE,ll),ireq(ll))
+
+	inquire(iolength=ll) pi; nrec=ll/2
 
 !===== SETUP SEQUENCE
 call setup
@@ -35,7 +38,7 @@ end select
 
 selectcase(output)
    case(1);call flst
-   case(0); !call postDat; allocate(times(0:ndata))
+   case(0); call postDat; allocate(times(0:ndata))
 end select
 
 tecplot=.false.; ispost=.true.
@@ -87,7 +90,7 @@ end if
 
 !===COMPUTE FORCE COEFFICIENT
 if (fcoef==1) then
-do n = 0, ndata+1
+do n = 0, ndata
 call clpost(ele=1,nvar=n)
 if (myid==tblck) then
      ra0=aoa*pi/180;ra1=cos(ra0);ra2=sin(ra0)
@@ -98,7 +101,7 @@ end if
 
 !===find location
 if (floc==1) then
-call findll(0.5_nr,-0.05_nr,0.0_nr,l,m)
+call findll(0.5_k8,-0.05_k8,0.0_k8,l,m)
 if (myid==m) then
    write(*,"(f6.2,1x,f6.2,1x,f6.2,1x,i3,i10)") xyz(l,1),xyz(l,2),xyz(l,3),m,l
     open(7,file='data/signal.dat')
@@ -124,7 +127,7 @@ end if
 
 !==COMPUTE WALL DISTANCES
 if (fwplus==1) then
-call getwplus(nvar=ndata+1)
+call getwplus(nvar=ndata)
 if (myid==tblck) then
  if(.not.allocated(wvarr)) allocate(wvarr(0:lcwall))
  wvarr=wplus(:,1)
@@ -138,7 +141,7 @@ end if
 
 !==COMUPTE Q-CRITERION
 if (fqcrit==1) then
-do n = ndata+1, ndata+1
+do n = 0, ndata
    call qcriterion(n)
    selectcase(output)
    case(0)
@@ -152,7 +155,7 @@ end if
 !==WRITE WSS
 if (fwss==1) then
 if (output==1) then
-do n = ndata+1, ndata+1
+do n = 0, ndata
    call gettw(n)
    do i = 1, 3
       qo(:,i)=0
@@ -170,7 +173,7 @@ end if
 !==COMPUTE Cf 
 if (fcf==1) then
 if (output==1) then
-do n = ndata+1, ndata+1
+do n = 0, ndata
    call gettw(n)
    qo(:,:)=0
    if (wflag) then
@@ -186,14 +189,14 @@ do n = ndata+1, ndata+1
          cinput='Cf'; call wavg(dir=2,wall=.true.,fname=cinput)
       end if
    end if
-  cinput='Cf'; call wffile(cinput,ndata+1,1)
+  cinput='Cf'; call wffile(cinput,n,1)
 end do
 end if
 end if
 
 !==COMPUTE Cp
 if (fcp==1) then
-   do n = ndata+1, ndata+1
+   do n = 0, ndata
       call fillqo(n)
       ra0=two/(amachoo**2)
       qo(:,1)=(p(:)-poo)*ra0
@@ -203,7 +206,7 @@ end if
 
 !==COMPUTE VORTICITY
 if (fcurl==1) then
-   do n = ndata+1, ndata+1
+   do n = 0, ndata
       call getCurl(n)
       qo(:,1:3)=ss(:,1:3)
       cinput='omega'; call wffile(cinput,n,3)
@@ -212,7 +215,7 @@ end if
 
 !==COMPUTE VORTICITY TURN
 if (fcurl==2) then
-   do n = ndata+1, ndata+1
+   do n = 0, ndata
       call getCurlTurn(n)
       qo(:,1:2)=ss(:,1:2)
       cinput='turn'; call wffile(cinput,n,2)
