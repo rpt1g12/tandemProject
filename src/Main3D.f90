@@ -938,31 +938,7 @@
    !===== GENERATING RESTART DATA FILE
    
     if(nrestart==1) then
-      if (myid==0) then
-         write(*,*) 'Writting restart file..'
-      end if
-    if(myid==mo(mb)) then
-       open(9,file=crestart); close(9,status='delete')
-    end if
-       call MPI_BARRIER(icom,ierr)
-       open(9,file=crestart,access='stream',shared); lh=0
-    if(myid==mo(mb)) then
-       write(9,pos=k8*lh+1) n; lh=lh+1
-       write(9,pos=k8*lh+1) ndt; lh=lh+1
-       write(9,pos=k8*lh+1) dt; lh=lh+1
-       write(9,pos=k8*lh+1) dts; lh=lh+1
-       write(9,pos=k8*lh+1) dte; lh=lh+1
-       write(9,pos=k8*lh+1) timo; lh=lh+1
-    else
-       lh=lh+6
-    end if
-       lp=lpos(myid)+lh
-    do m=1,5; lq=(m-1)*ltomb
-    do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-       write(9,pos=k8*(lp+lq+lio(j,k))+1) qa(l:l+lxi,m)
-    end do; end do
-    end do
-       close(9)
+       call wRestart(ndati,n,ndt,dt,dts,dte,timo)
     end if
  end if
 
