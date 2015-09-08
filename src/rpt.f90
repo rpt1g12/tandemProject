@@ -55,11 +55,11 @@ contains
  character(8), intent (in) :: ctime
  integer(k4) :: n
 
-       if (myid==0) then
-         open(9,file='out/solT'//ctime//'.q'); close(9,status='delete')
-       end if
-       CALL MPI_BARRIER(icom,ierr)
-       open (unit=9, file='out/solT'//ctime//'.q', access='stream',shared)
+       !if (myid==0) then
+       !  open(9,file='out/solT'//trim(adjustl(ctime))//'.q'); close(9,status='delete')
+       !end if
+       !CALL MPI_BARRIER(icom,ierr)
+       open (unit=9, file='out/solT'//trim(adjustl(ctime))//'.q', access='stream',shared)
        lh=0
        if (myid==0) then
         write(9,pos=4*lh+1) mbk+1; lh=lh+1 ! Number of zones
@@ -750,6 +750,45 @@ nfile=5
    end select
          
 end subroutine p3dread
+
+!====================================================================================
+!===== GENERATE RESTART DATA FILE
+!====================================================================================
+subroutine wRestart()
+
+integer(k4) :: nfile=10
+
+      if (myid==0) then
+         write(*,*) 'Writting restart file..'
+      end if
+    if (ndati==0) then
+    if(myid==mo(mb)) then
+       open(nfile,file=crestart); close(nfile,status='delete')
+    end if
+       call MPI_BARRIER(icom,ierr)
+       open(nfile,file=crestart,access='stream',shared);
+    end if; lh=0
+    if(myid==mo(mb)) then
+       write(nfile,pos=k8*lh+1) n; lh=lh+1
+       write(nfile,pos=k8*lh+1) ndt; lh=lh+1
+       write(nfile,pos=k8*lh+1) dt; lh=lh+1
+       write(nfile,pos=k8*lh+1) dts; lh=lh+1
+       write(nfile,pos=k8*lh+1) dte; lh=lh+1
+       write(nfile,pos=k8*lh+1) timo; lh=lh+1
+    else
+       lh=lh+6
+    end if
+       lp=lpos(myid)+lh
+    do m=1,5; lq=(m-1)*ltomb
+    do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+       write(nfile,pos=k8*(lp+lq+lio(j,k))+1) qa(l:l+lxi,m)
+    end do; end do
+    end do
+    if (ndati==ndata) then
+       close(nfile)
+    end if
+   
+end subroutine wRestart
 
 !====================================================================================
 ! ====CROSS PRODUCT OF TWO VECTORS 
