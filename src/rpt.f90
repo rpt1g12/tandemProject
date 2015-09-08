@@ -55,11 +55,11 @@ contains
  character(8), intent (in) :: ctime
  integer(k4) :: n
 
-       if (myid==0) then
-         open(9,file='out/solT'//ctime//'.q'); close(9,status='delete')
-       end if
-       CALL MPI_BARRIER(icom,ierr)
-       open (unit=9, file='out/solT'//ctime//'.q', access='stream',shared)
+       !if (myid==0) then
+       !  open(9,file='out/solT'//trim(adjustl(ctime))//'.q'); close(9,status='delete')
+       !end if
+       !CALL MPI_BARRIER(icom,ierr)
+       open (unit=9, file='out/solT'//trim(adjustl(ctime))//'.q', access='stream',shared)
        lh=0
        if (myid==0) then
         write(9,pos=4*lh+1) mbk+1; lh=lh+1 ! Number of zones
@@ -754,11 +754,9 @@ end subroutine p3dread
 !====================================================================================
 !===== GENERATE RESTART DATA FILE
 !====================================================================================
-subroutine wRestart(ndati,n,ndt,dt,dts,dte,timo)
-implicit none
-integer(k4), intent(in) :: ndati,n,ndt
-real(k8), intent(in) :: dt,dts,dte,timo
-integer(k4) :: nfile=7
+subroutine wRestart()
+
+integer(k4) :: nfile=10
 
       if (myid==0) then
          write(*,*) 'Writting restart file..'
@@ -768,8 +766,8 @@ integer(k4) :: nfile=7
        open(nfile,file=crestart); close(nfile,status='delete')
     end if
        call MPI_BARRIER(icom,ierr)
-       open(nfile,file=crestart,access='stream',shared); lh=0
-    end if
+       open(nfile,file=crestart,access='stream',shared);
+    end if; lh=0
     if(myid==mo(mb)) then
        write(nfile,pos=k8*lh+1) n; lh=lh+1
        write(nfile,pos=k8*lh+1) ndt; lh=lh+1

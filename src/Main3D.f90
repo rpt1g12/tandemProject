@@ -938,7 +938,7 @@
    !===== GENERATING RESTART DATA FILE
    
     if(nrestart==1) then
-       call wRestart(ndati,n,ndt,dt,dts,dte,timo)
+       call wRestart()
     end if
  end if
 
