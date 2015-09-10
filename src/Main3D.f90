@@ -30,7 +30,7 @@
 !===== INPUT PARAMETERS
 
     open(9,file='inputo.dat',shared)
-    read(9,*) cinput,mbk
+    read(9,*) cinput,mbk,bkx,bky,bkz
     read(9,*) cinput,nts,nto,iwrec
     read(9,*) cinput,nscrn,nsgnl
     read(9,*) cinput,ndata

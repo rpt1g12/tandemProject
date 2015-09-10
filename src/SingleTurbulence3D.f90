@@ -32,19 +32,19 @@
 
  subroutine inputext
 
+ integer(k4), dimension(:) :: ilximb(0:bkx-1),iletmb(0:bky-1),ilzemb(0:bkz-1)
+ integer(k4), dimension(:) :: npcx(0:bkx-1),npcy(0:bky-1),npcz(0:bkz-1)
+
     open(9,file='inputp.dat',shared)
     ! rpt-two extra blocks added
-    read(9,*) cinput,lxi0,lxi1,lxi2
-    read(9,*) cinput,let0,let1
-    read(9,*) cinput,lze0
+    read(9,*) cinput,ilximb(0:bkx-1)
+    read(9,*) cinput,iletmb(0:bky-1)
+    read(9,*) cinput,ilzemb(0:bkz-1)
     read(9,*) cinput,nbody,nthick
     read(9,*) cinput,ngridv
-    read(9,*) cinput,npc(0:5,1)
-    read(9,*) cinput,npc(6:11,1)
-    read(9,*) cinput,npc(0:5,2)
-    read(9,*) cinput,npc(6:11,2)
-    read(9,*) cinput,npc(0:5,3)
-    read(9,*) cinput,npc(6:11,3)
+    read(9,*) cinput,npcx(0:bkx-1)
+    read(9,*) cinput,npcy(0:bky-1)
+    read(9,*) cinput,npcz(0:bkz-1)
     read(9,*) cinput,nito,nits,litr
     read(9,*) cinput,smgrid,domlen
     read(9,*) cinput,ximod,etamod
@@ -73,12 +73,24 @@
 
     tsam=max(tmax-2*pi/max(ck1*uoo(1)+ck2*uoo(2)+ck3*uoo(3),sml),tsam)
 
-    lximb(0:5)=(/lxi0,lxi1,lxi2,lxi0,lxi1,lxi2/)
-    lximb(6:11)=(/lxi0,lxi1,lxi2,lxi0,lxi1,lxi2/)
-    letmb(0:5)=(/let0,let0,let0,let1,let1,let1/)
-    letmb(6:11)=(/let1,let1,let1,let0,let0,let0/)
-    lzemb(0:5)=(/lze0,lze0,lze0,lze0,lze0,lze0/)
-    lzemb(6:11)=(/lze0,lze0,lze0,lze0,lze0,lze0/)
+    do k = 0, bkz-1
+       do j = 0, bky-1
+          do i = 0, bkx-1; l=k*(bkx*bky)+j*bkx+i
+             lximb(l)=ilximb(i)
+             letmb(l)=iletmb(j)
+             lzemb(l)=ilzemb(k)
+             
+             npc(l,1)=npcx(i)
+             npc(l,2)=npcy(j)
+             npc(l,3)=npcz(k)
+          end do
+       end do
+    end do
+
+    ! Dependent on the grid topology!!
+    lxi0=lximb(0);lxi1=lximb(1);lxi2=lximb(2)
+    let0=letmb(0);let1=letmb(bkx)
+    lze0=lzemb(0)
 
     allocate(mxc(nits),ran(nits,3),sit(nits,3),ait(nits,3),xit(nits),yit(nits),zit(nits))
     allocate(iit(0:lze0),idsgnl(0:lze0),lsgnl(0:lze0))

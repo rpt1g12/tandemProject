@@ -1,14 +1,11 @@
-lxi0-to-4	100	100	100
-let0		100     50
-lze0		50
+lxi0-to-bkx	100	100	100
+let0-to-bky	100     50	50	100
+lze0-to-bkz	15
 nbody-nthick	2	2
 ngridv		1
-npbxi0-to-5	2	2	2	2	2	2
-npbxi6-to-11	2	2	2	2	2	2
-npbet0-to-5     2	2	2	1	1	1
-npbet6-to-11	2	2	2	1	1	1
-npbze0-to-5     2	2	2	2	2	2     
-npbze6-to-11	2	2	2	2	2	2	
+npcx		1	1	1
+npcy		1	1	1	1
+npcz		1
 nito-nits-litr	0	1	10
 smgrid-domlen	0.0075e0	10.0e0
 ximod-etamod	0.3e0		0.05e0

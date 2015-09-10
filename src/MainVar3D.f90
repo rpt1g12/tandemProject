@@ -189,6 +189,8 @@
  real(k8) :: talphas,talphar,aoa
  real(k8) :: smago1,smago2
  integer(k4)  :: output,ogrid,osol,oblock
+
+ integer(k4) :: bkx,bky,bkz
 !=====
 
  end module mainvar3d
