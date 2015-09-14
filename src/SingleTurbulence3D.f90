@@ -32,14 +32,14 @@
 
  subroutine inputext
 
- integer(k4), dimension(:) :: ilximb(0:bkx-1),iletmb(0:bky-1),ilzemb(0:bkz-1)
+ !integer(k4), dimension(:) :: lxibk(0:bkx-1),letbk(0:bky-1),lzebk(0:bkz-1)
  integer(k4), dimension(:) :: npcx(0:bkx-1),npcy(0:bky-1),npcz(0:bkz-1)
 
-    open(9,file='inputp.dat',shared)
+    open(9,file='inputp.dat')
     ! rpt-two extra blocks added
-    read(9,*) cinput,ilximb(0:bkx-1)
-    read(9,*) cinput,iletmb(0:bky-1)
-    read(9,*) cinput,ilzemb(0:bkz-1)
+    read(9,*) cinput,lxibk(0:bkx-1)
+    read(9,*) cinput,letbk(0:bky-1)
+    read(9,*) cinput,lzebk(0:bkz-1)
     read(9,*) cinput,nbody,nthick
     read(9,*) cinput,ngridv
     read(9,*) cinput,npcx(0:bkx-1)
@@ -76,9 +76,9 @@
     do k = 0, bkz-1
        do j = 0, bky-1
           do i = 0, bkx-1; l=k*(bkx*bky)+j*bkx+i
-             lximb(l)=ilximb(i)
-             letmb(l)=iletmb(j)
-             lzemb(l)=ilzemb(k)
+             lximb(l)=lxibk(i)
+             letmb(l)=letbk(j)
+             lzemb(l)=lzebk(k)
              
              npc(l,1)=npcx(i)
              npc(l,2)=npcy(j)
@@ -87,15 +87,11 @@
        end do
     end do
 
-    ! Dependent on the grid topology!!
-    lxi0=lximb(0);lxi1=lximb(1);lxi2=lximb(2)
-    let0=letmb(0);let1=letmb(bkx)
-    lze0=lzemb(0)
 
     allocate(mxc(nits),ran(nits,3),sit(nits,3),ait(nits,3),xit(nits),yit(nits),zit(nits))
-    allocate(iit(0:lze0),idsgnl(0:lze0),lsgnl(0:lze0))
+    allocate(iit(0:lzebk(0)),idsgnl(0:lzebk(0)),lsgnl(0:lzebk(0)))
 
-    open(9,file='randnum.dat',shared)
+    open(9,file='randnum.dat')
  do m=1,3
     read(9,*) ran(:,m); read(9,*) ait(:,m)
  end do
@@ -240,7 +236,7 @@
  do ll=0,ltz; l=de(ll,5); lctz(ll)=l
     vit(ll,:)=ss(l,:)
  end do
-    fctr=slit/(ntz*uoo(1)); tt(:)=fctr*(/0:ntz/); vito(:,:,:)=0
+    fctr=slit/(ntz*uoo(1)); tt(:)=fctr*(/(i,i=0,ntz)/); vito(:,:,:)=0
  if(nito==0) then
  do nn=1,nits
     ve(:)=(-9+mxc(nn))*sit(nn,:)*sit(nn,:); ra1=-36-60*mxc(nn); ra2=2*mxc(nn)/3.0_k8
@@ -277,20 +273,20 @@
  end if
 
  if(myid==mo(9)) then
-    fctr=one/lze0
- do l=0,lze0
+    fctr=one/lzebk(0)
+ do l=0,lzebk(0)
     ra1=-domlen; ra2=0; ra3=(-half+l*fctr)*span
     iit(l)=minloc((vit(:,1)-ra1)**2+(vit(:,2)-ra2)**2+(vit(:,3)-ra3)**2,1)-1
  end do
     open(9,file='inflowsignal.dat',status='replace',access='direct',form='formatted',recl=16)
- do ii=0,ntz; lp=(1+3*lze0)*ii
+ do ii=0,ntz; lp=(1+3*lzebk(0))*ii
     write(9,'(es15.7)',rec=lp+1) tt(ii)
- do l=0,lze0-2; i=iit(l)
+ do l=0,lzebk(0)-2; i=iit(l)
     write(9,'(es15.7)',rec=lp+3*l+2) vito(i,ii,1)
     write(9,'(es15.7)',rec=lp+3*l+3) vito(i,ii,2)
     write(9,'(es15.7)',rec=lp+3*l+4) vito(i,ii,3)
  end do
-    l=lze0-1; i=iit(l)
+    l=lzebk(0)-1; i=iit(l)
     write(9,'(es15.7)',rec=lp+3*l+2) vito(i,ii,1)
     write(9,'(es15.7)',rec=lp+3*l+3) vito(i,ii,2)
     write(9,'(es15.7,a)',rec=lp+3*l+4) vito(i,ii,3),achar(10)
@@ -304,8 +300,8 @@
 
  subroutine initialo
 
-    itag=1; fctr=one/lze0
- do l=0,lze0
+    itag=1; fctr=one/lzebk(0)
+ do l=0,lzebk(0)
  if(l==0) then
     ra1=0; ra2=domlen-szth2; ra3=0
  else
@@ -461,21 +457,21 @@
 
  subroutine signalgo
 
-    lp=(2+3*lze0)*nsigi
+    lp=(2+3*lzebk(0))*nsigi
 
     m=0; l=lsgnl(m)
  if(myid==idsgnl(m)) then
     write(1,'(es15.7)',rec=lp+1) timo
     write(1,'(es15.7)',rec=lp+2) gam*p(l)-1
  end if
- do m=1,lze0-1; l=lsgnl(m)
+ do m=1,lzebk(0)-1; l=lsgnl(m)
  if(myid==idsgnl(m)) then; ve(:)=qa(l,2:4)/qa(l,1)
     write(1,'(es15.7)',rec=lp+3*m) ve(1)
     write(1,'(es15.7)',rec=lp+3*m+1) ve(2)
     write(1,'(es15.7)',rec=lp+3*m+2) ve(3)
  end if
  end do
-    m=lze0; l=lsgnl(m)
+    m=lzebk(0); l=lsgnl(m)
  if(myid==idsgnl(m)) then; ve(:)=qa(l,2:4)/qa(l,1)
     write(1,'(es15.7)',rec=lp+3*m) ve(1)
     write(1,'(es15.7)',rec=lp+3*m+1) ve(2)
