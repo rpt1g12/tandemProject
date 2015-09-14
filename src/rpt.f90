@@ -20,7 +20,7 @@ contains
         open(9,file='out/grid.xyz'); close(9,status='delete')
       end if
       CALL MPI_BARRIER(icom,ierr)
-      open (unit=9, file='out/grid.xyz', access='stream',shared)
+      open (unit=9, file='out/grid.xyz', access='stream')
       lh=0
       if (myid==0) then
        write(9,pos=4*lh+1) mbk+1; lh=lh+1 ! Number of zones
@@ -59,7 +59,7 @@ contains
        !  open(9,file='out/solT'//trim(adjustl(ctime))//'.q'); close(9,status='delete')
        !end if
        !CALL MPI_BARRIER(icom,ierr)
-       open (unit=9, file='out/solT'//trim(adjustl(ctime))//'.q', access='stream',shared)
+       open (unit=9, file='out/solT'//trim(adjustl(ctime))//'.q', access='stream')
        lh=0
        if (myid==0) then
         write(9,pos=4*lh+1) mbk+1; lh=lh+1 ! Number of zones
@@ -137,9 +137,9 @@ contains
   end if
      call MPI_BARRIER(icom,ierr)
      if (ispost) then
-     open(9,file=ctecout,access='stream',shared)
+     open(9,file=ctecout,access='stream')
      else
-     open(9,file=coutput,access='stream',shared)
+     open(9,file=coutput,access='stream')
      end if
      lh=0
   if(myid==mo(mb)) then
@@ -669,7 +669,7 @@ nfile=5
 
    selectcase(gsflag)
    case(1)
-     open (unit=nfile, file='out/grid.xyz', access='stream',shared)
+     open (unit=nfile, file='out/grid.xyz', access='stream')
      lh=0
       read(nfile,pos=4*lh+1) mbk; mbk=mbk-1; lh=lh+1 ! Number of zones
       do mm = 0, mbk
@@ -696,9 +696,9 @@ nfile=5
        end if
    case(0)
       if (nout>ndata) then
-         open (unit=nfile, file='out/solA.qa', access='stream',shared)
+         open (unit=nfile, file='out/solA.qa', access='stream')
       else
-         open (unit=nfile, file=ofiles(nout), access='stream',shared)
+         open (unit=nfile, file=ofiles(nout), access='stream')
       end if
       lh=0
       read(nfile,pos=4*lh+1) mbk; mbk=mbk-1; lh=lh+1 ! Number of zones
@@ -766,7 +766,7 @@ integer(k4) :: nfile=10
        open(nfile,file=crestart); close(nfile,status='delete')
     end if
        call MPI_BARRIER(icom,ierr)
-       open(nfile,file=crestart,access='stream',shared);
+       open(nfile,file=crestart,access='stream');
     end if; lh=0
     if(myid==mo(mb)) then
        write(nfile,pos=k8*lh+1) n; lh=lh+1

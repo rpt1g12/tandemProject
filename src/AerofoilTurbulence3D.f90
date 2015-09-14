@@ -28,7 +28,7 @@
 
  subroutine inputext
 
-    open(9,file='inputp.dat',shared)
+    open(9,file='inputp.dat')
     read(9,*) cinput,lxi0,lxi1,lxi2
     read(9,*) cinput,let0
     read(9,*) cinput,lze0
@@ -67,7 +67,7 @@
     allocate(mxc(nits),ran(nits,3),sit(nits,3),ait(nits,3),xit(nits),yit(nits),zit(nits))
     allocate(iit(0:lze0),idsgnl(0:lze0),lsgnl(0:lze0))
 
-    open(9,file='randnum.dat',shared)
+    open(9,file='randnum.dat')
  do m=1,3
     read(9,*) ran(:,m); read(9,*) ait(:,m)
  end do

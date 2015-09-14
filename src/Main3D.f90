@@ -29,7 +29,7 @@
 
 !===== INPUT PARAMETERS
 
-    open(9,file='inputo.dat',shared)
+    open(9,file='inputo.dat')
     read(9,*) cinput,mbk,bkx,bky,bkz
     read(9,*) cinput,nts,nto,iwrec
     read(9,*) cinput,nscrn,nsgnl
@@ -72,6 +72,7 @@
     allocate(times(0:ndata),cfilet(-1:ndata),ctecplt(-1:ndata),varm(0:1,0:mpro),varmin(ll),varmax(ll))
     allocate(lximb(0:mbk),letmb(0:mbk),lzemb(0:mbk),lhmb(0:mbk),mo(0:mbk),npc(0:mbk,3))
 	allocate(czonet(0:mbk),cthead(0:mbk))
+    allocate(lxibk(0:bkx-1),letbk(0:bky-1),lzebk(0:bkz-1))
 
     call inputext
 
@@ -280,7 +281,7 @@
     call makegrid
     call MPI_BARRIER(icom,ierr)
 
-    open(9,file=cgrid,access='stream',form='unformatted',shared)
+    open(9,file=cgrid,access='stream',form='unformatted')
     lp=lpos(myid)
  do nn=1,3; lq=(nn-1)*ltomb
  do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
@@ -471,7 +472,7 @@
     n=0; ndt=0; dt=0; dts=0; dte=0; timo=0
     call initialo
  else
-    open(9,file=crestart,access='stream',form='unformatted',shared); lh=0
+    open(9,file=crestart,access='stream',form='unformatted'); lh=0
     read(9,pos=k8*lh+1) n; lh=lh+1
     read(9,pos=k8*lh+1) ndt; lh=lh+1
     read(9,pos=k8*lh+1) dt; lh=lh+1
@@ -501,7 +502,7 @@
     open(1,file='signal.dat'); close(1,status='delete')
  end if
     call MPI_BARRIER(icom,ierr)
-    open(1,file='signal.dat',access='direct',form='formatted',recl=16,shared)
+    open(1,file='signal.dat',access='direct',form='formatted',recl=16)
 
      if (myid==0) then
      write(*,"(3x,'n',8x,'time',9x,'Cl',9x,'Cd',5x)")  

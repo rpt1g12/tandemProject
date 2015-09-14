@@ -317,7 +317,7 @@
  if(mb==0) then
     write(nf,pos=4*lh+1) '#!TDV112'; lh=lh+2
     write(nf,pos=4*lh+1) 1; lh=lh+1 ! Header Section
-    write(nf,pos=4*lh+1) int4(min(n+2,2)); lh=lh+1 ! File Type (0 = Full / 1 = Grid / 2 = Solution)
+    write(nf,pos=4*lh+1) int(min(n+2,2),k4); lh=lh+1 ! File Type (0 = Full / 1 = Grid / 2 = Solution)
     cinput=cfilet(n); call strio(nf,lh,cinput) ! File Title
     write(nf,pos=4*lh+1) int4(mq); lh=lh+1 ! Number of Variables
  if(n==-1) then

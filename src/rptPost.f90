@@ -21,7 +21,7 @@ contains
  subroutine setup
 !===== INPUT PARAMETERS
 
-    open(9,file='inputo.dat',shared)
+    open(9,file='inputo.dat')
     read(9,*) cinput,mbk
     read(9,*) cinput,nts
     read(9,*) cinput,nscrn,nsgnl
@@ -46,7 +46,7 @@ contains
     close(9)
 
 !===== INPUT PARAMETERS POSTPROCESS
-    open(9,file='ipost.dat',shared)
+    open(9,file='ipost.dat')
     read(9,*) cinput,favg,fwavg
     read(9,*) cinput,fcoef,fcf,fcp
     read(9,*) cinput,floc
@@ -266,7 +266,7 @@ contains
  ! open(0,file=cdata,access='direct',recl=lh)
   if (output==0) then
      !===== INPUT RECORDING PARAMETERS
-      open(9,file='data/post.dat',shared)
+      open(9,file='data/post.dat')
       read(9,*) cinput,ngridv
       read(9,*) cinput,ndata
       read(9,*) cinput,ngrec
@@ -275,8 +275,8 @@ contains
       close(9)
         totVar=5
          
-      open(8,file=cpostdat,access='stream',shared)
-      open(9,file=coutput,access='stream',shared)
+      open(8,file=cpostdat,access='stream')
+      open(9,file=coutput,access='stream')
       nread=0
   end if
  end subroutine setup
@@ -378,7 +378,7 @@ contains
     ! SELECT THE VARIABLE STRIDE
       totVar=5
     ! READ OUTPUT TIMES
-    open(3,file='data/timeouts.dat',shared)
+    open(3,file='data/timeouts.dat')
     do nn = 0, ndata
        read(3,'(es15.7)') times(nn)
     end do
@@ -754,7 +754,7 @@ subroutine flst()
       call system('ls out/*.q -1 > out/filelist')
    end if
    CALL MPI_BARRIER(icom,ierr)
-   open(90,file='out/filelist',shared)
+   open(90,file='out/filelist')
    lmt=-2
    do while (stat.ge.0)
       read(90,*,IOSTAT=stat) 
@@ -765,7 +765,7 @@ subroutine flst()
 
    allocate(ofiles(0:lmt),times(0:ndata))
 
-   open(90,file='out/filelist',shared)
+   open(90,file='out/filelist')
    do i = 0, lmt
       read(90,"(18a)") ofile
       ofiles(i)=ofile
@@ -775,7 +775,7 @@ subroutine flst()
    close(90)
    
    !do i = 0, lmt
-   !   open(91,file=ofiles(i),access='stream',shared)
+   !   open(91,file=ofiles(i),access='stream')
    !       lh=1+(mbk+1)*3+3
    !       read(91,pos=4*lh+1) res; times(i)=res
    !   close(91)
@@ -822,7 +822,7 @@ end subroutine flst
          open(9,file='out/solA.qa'); close(9,status='delete')
        end if
        CALL MPI_BARRIER(icom,ierr)
-       open (unit=9, file='out/solA.qa', access='stream',shared)
+       open (unit=9, file='out/solA.qa', access='stream')
        lh=0
        if (myid==0) then
         write(9,pos=4*lh+1) mbk+1; lh=lh+1 ! Number of zones
@@ -886,7 +886,7 @@ end subroutine flst
      open(9,file='out/'//trim(fname)//cout//'.f'); close(9,status='delete')
    end if
    CALL MPI_BARRIER(icom,ierr)
-   open (unit=9, file='out/'//trim(fname)//cout//'.f', access='stream',shared)
+   open (unit=9, file='out/'//trim(fname)//cout//'.f', access='stream')
    lh=0
    if (myid==0) then
     write(9,pos=4*lh+1) mbk+1; lh=lh+1 ! Number of zones

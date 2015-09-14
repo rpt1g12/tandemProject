@@ -488,7 +488,7 @@ end if
     *(0.298222773e0*sqrt(xc)-0.127125232e0*xc- 0.357907906e0*xc**2+&
     0.291984971e0*xc**3-0.105174606e0*xc**4)
     if (n==2) then
-       y=y*-1.0e0
+       y=-1.0e0*y
     end if
  end function naca
  

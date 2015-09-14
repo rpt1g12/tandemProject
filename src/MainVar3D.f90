@@ -191,7 +191,15 @@
  integer(k4)  :: output,ogrid,osol,oblock
 
  integer(k4) :: bkx,bky,bkz
+ integer(k4), dimension(:),allocatable:: lxibk,letbk,lzebk
 !=====
+contains
+function int4(x) result(res)
+integer :: x
+integer(k4) :: res
+res=int(x,k4)
+end function int4
+
 
  end module mainvar3d
 
