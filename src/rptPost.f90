@@ -11,8 +11,6 @@ use problemcase
 use mpi
 use rpt
 
-integer :: favg,fwavg,fcoef,fcf,fcp,floc,fwplus,fqcrit,fwss,fcurl
-
 contains
 
 !====================================================================================
@@ -38,38 +36,19 @@ contains
     read(9,*) cinput,tmax,timf,tsam
     read(9,*) cinput,fltk,fltkbc
     read(9,*) cinput,dto
-    read(9,*) cinput,forcing,amfor
-    read(9,*) cinput,tgustd,tguste
-    read(9,*) cinput,aoa,talphas,talphar
-    read(9,*) cinput,LES,smago1,smago2
-    read(9,*) cinput,output,ogrid,osol,oblock
-    close(9)
-
-!===== INPUT PARAMETERS POSTPROCESS
-    open(9,file='ipost.dat',shared)
-    read(9,*) cinput,favg,fwavg
-    read(9,*) cinput,fcoef,fcf,fcp
-    read(9,*) cinput,floc
-    read(9,*) cinput,fwplus
-    read(9,*) cinput,fqcrit,fwss
-    read(9,*) cinput,fcurl
     close(9)
 
     cinput=cinput; fltk=pi*fltk; fltkbc=pi*fltkbc
     rhooo=1; poo=1/gam; aoo=sqrt(gam*poo/rhooo); amachoo=sqrt(amach1**2+amach2**2+amach3**2)
-    srefoo=111.0_k8/tempoo; srefp1dre=(srefoo+1)/reoo; sqrtrema=sqrt(reoo*amachoo); sqrtremai=1/sqrtrema
+    srefoo=111.0_nr/tempoo; srefp1dre=(srefoo+1)/reoo; sqrtrema=sqrt(reoo*amachoo); sqrtremai=1/sqrtrema
     uoo(1)=amach1*aoo; uoo(2)=amach2*aoo; uoo(3)=amach3*aoo
     ! rpt-Initialising the record count 
     nwrec=0
 
-	abc(:,0)=(/a01,a02,a03,a04,a05,a06/)
-	abc(:,1)=(/a10,a12,a13,a14,a15,a16/)
-	abc(:,2)=(/a20,a21,a23,a24,a25,a26/)
-
+    allocate(times(0:ndata))
     allocate(lximb(0:mbk),letmb(0:mbk),lzemb(0:mbk),lhmb(0:mbk),mo(0:mbk),npc(0:mbk,3))
 
     call inputext
-    npc(:,:)=1
 !===== DOMAIN DECOMPOSITION & BOUNDARY INFORMATION
 
     mo(0)=0
@@ -93,7 +72,8 @@ contains
     no(4)=myid/10000; no(3)=mod(myid,10000)/1000;
     no(2)=mod(myid,1000)/100; no(1)=mod(myid,100)/10; no(0)=mod(myid,10)
     cno=achar(no+48); cnnode=cno(4)//cno(3)//cno(2)//cno(1)//cno(0)
-    cdata='data/data'//cnnode//'.dat'; cturb='misc/turb'//cnnode//'.dat'
+    cdata='misc/data'//cnnode//'.dat';
+    cturb='misc/turb'//cnnode//'.dat'
 
     call domdcomp
 
@@ -136,21 +116,12 @@ contains
 
 !===== SUBDOMAIN SIZES & WRITING START POSITIONS IN OUTPUT FILE
 
- if(myid==0) then
-    lxim(0)=lxi; letm(0)=let; lzem(0)=lze
- do mp=1,mpro
-	itag=1; call MPI_RECV(lxim(mp),1,MPI_INTEGER4,mp,itag,icom,ista,ierr)
-	itag=2; call MPI_RECV(letm(mp),1,MPI_INTEGER4,mp,itag,icom,ista,ierr)
-	itag=3; call MPI_RECV(lzem(mp),1,MPI_INTEGER4,mp,itag,icom,ista,ierr)
+    lxim(myid)=lxi; letm(myid)=let; lzem(myid)=lze
+ do mp=0,mpro
+    call MPI_BCAST(lxim(mp),1,MPI_INTEGER,mp,icom,ierr)
+    call MPI_BCAST(letm(mp),1,MPI_INTEGER,mp,icom,ierr)
+    call MPI_BCAST(lzem(mp),1,MPI_INTEGER,mp,icom,ierr)
  end do
- else; itag=myid
-	itag=1; call MPI_SEND(lxi,1,MPI_INTEGER4,0,itag,icom,ierr)
-	itag=2; call MPI_SEND(let,1,MPI_INTEGER4,0,itag,icom,ierr)
-	itag=3; call MPI_SEND(lze,1,MPI_INTEGER4,0,itag,icom,ierr)
- end if
-	call MPI_BCAST(lxim(:),npro,MPI_INTEGER4,0,icom,ierr)
-	call MPI_BCAST(letm(:),npro,MPI_INTEGER4,0,icom,ierr)
-	call MPI_BCAST(lzem(:),npro,MPI_INTEGER4,0,icom,ierr)
 
     ltomb=(lxio+1)*(leto+1)*(lzeo+1)
 
@@ -260,25 +231,22 @@ contains
  end do
  end do
 
+ !===== INPUT RECORDING PARAMETERS
+  open(9,file='data/post.dat',shared)
+  read(9,*) cinput,ngridv
+  read(9,*) cinput,ndata
+  read(9,*) cinput,nrec
+  read(9,*) cinput,nwrec
+  read(9,*) cinput,lsta
+  close(9)
+    totVar=5
 
  !===== OPEN UNITS FOR POSTPROCESSING
  ! inquire(iolength=lh) varr
  ! open(0,file=cdata,access='direct',recl=lh)
-  if (output==0) then
-     !===== INPUT RECORDING PARAMETERS
-      open(9,file='data/post.dat',shared)
-      read(9,*) cinput,ngridv
-      read(9,*) cinput,ndata
-      read(9,*) cinput,ngrec
-      read(9,*) cinput,nwrec
-      read(9,*) cinput,lsta
-      close(9)
-        totVar=5
-         
-      open(8,file=cpostdat,access='stream',shared)
-      open(9,file=coutput,access='stream',shared)
-      nread=0
-  end if
+  open(8,file=cpostdat,access='stream',shared)
+  open(9,file=coutput,access='stream',shared)
+  nread=0
  end subroutine setup
 
 !====================================================================================
@@ -287,22 +255,48 @@ contains
  subroutine getMetrics
  !===== COMPUTE INVERSE METRICS
      rr(:,1)=ss(:,1)
-     m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+     m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
      qo(:,1)=rr(:,1); qo(:,2)=rr(:,2); qo(:,3)=rr(:,3)
  
      rr(:,1)=ss(:,2)
-     m=2; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+     m=2; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
      qa(:,1)=rr(:,1); qa(:,2)=rr(:,2); qa(:,3)=rr(:,3)
  
      rr(:,1)=ss(:,3)
-     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
      de(:,1)=rr(:,1); de(:,2)=rr(:,2); de(:,3)=rr(:,3)
  
      allocate(xyz(0:lmx,3))
      do i = 1, 3
         xyz(:,i)=ss(:,i)
      end do
- !===== COMPUTE METRICS
+ !===== COMPUTE METRICS IF NOT AVAILABLE YET
+     if (ngridv==1) then
+        do nn = 1, 3
+           if (tecplot) then
+           nread=nread+1; call tpostread(nread,lsta)
+           else
+           nread=nread+1; call postread(nread)
+           end if
+           xim(:,nn)=varr(:)
+        end do
+        do nn = 1, 3
+           if (tecplot) then
+           nread=nread+1; call tpostread(nread,lsta)
+           else
+           nread=nread+1; call postread(nread)
+           end if
+           etm(:,nn)=varr(:)
+        end do
+        do nn = 1, 3
+           if (tecplot) then
+           nread=nread+1; call tpostread(nread,lsta)
+           else
+           nread=nread+1; call postread(nread)
+           end if
+           zem(:,nn)=varr(:)
+        end do
+     else
      xim(:,1)=qa(:,2)*de(:,3)-de(:,2)*qa(:,3)
      xim(:,2)=de(:,2)*qo(:,3)-qo(:,2)*de(:,3)
      xim(:,3)=qo(:,2)*qa(:,3)-qa(:,2)*qo(:,3)
@@ -312,6 +306,7 @@ contains
      zem(:,1)=qa(:,1)*de(:,2)-de(:,1)*qa(:,2)
      zem(:,2)=de(:,1)*qo(:,2)-qo(:,1)*de(:,2)
      zem(:,3)=qo(:,1)*qa(:,2)-qa(:,1)*qo(:,2)
+     end if
     
  !===== COMPUTE JACOBIAN
      yaco(:)=3/(qo(:,1)*xim(:,1)+qo(:,2)*etm(:,1)+qo(:,3)*zem(:,1)&
@@ -332,40 +327,6 @@ contains
  end do
  end do
  end do; end do
-
-!===== EXTRA COEFFICIENTS FOR GCBC/GCIC
-
-    cbca(:,:)=0; cbca(1,1:2)=albed(1:2,0,0); cbca(2,1:3)=albed(0:2,1,0); cbca(3,1:3)=albed(-1:1,2,0)
- if(mbci>=4) then
-    cbca(3,4)=albed(2,2,0)
- do i=4,mbci
-    cbca(i,i-3:i)=(/beta,alpha,one,alpha/); if(i<mbci) then; cbca(i,i+1)=beta; end if
- end do
- end if
-    rbci(:)=0; rbci(1:3)=(/one,albed(-1,1,0),albed(-2,2,0)/)
-    call mtrxi(cbca,cbcs,1,mbci); sbci(:)=-matmul(cbcs(:,:),rbci(:))
-	fctr=pi/(mbci+1)
- do i=1,mbci
-	sbci(i)=half*sbci(i)*(1+cos(i*fctr))
- end do
-    ll=-1; rr(:,1)=0
- do nn=1,3; do ip=0,1; np=nbc(ip,nn); i=ip*ijk(1,nn); iq=1-2*ip
- if((np-10)*(np-20)*(np-25)*(np-30)==0) then
- do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
- do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
-    ll=ll+1; res=1/yaco(l); rr(l,1)=rr(l,1)+1; rr(ll,2)=res; rr(ll,3)=l+sml
- do ii=1,mbci; l=indx3(i+iq*ii,j,k,nn)
-    ll=ll+1; rr(l,1)=rr(l,1)+1; rr(ll,2)=res*sbci(ii); rr(ll,3)=l+sml
- end do
- end do
- end do
- end if
- end do; end do
-    lp=ll; allocate(sbcc(0:lp))
- do ll=0,lp; l=rr(ll,3)
-    sbcc(ll)=rr(ll,2)/rr(l,1)
- end do
-
  end subroutine getMetrics
 
 !====================================================================================
@@ -374,7 +335,7 @@ contains
  subroutine average
     implicit none
     integer :: totVar
-    real(k8),dimension(:),allocatable :: delt
+    real(nr),dimension(:),allocatable :: delt
     ! SELECT THE VARIABLE STRIDE
       totVar=5
     ! READ OUTPUT TIMES
@@ -398,9 +359,9 @@ contains
        write(*,"(f5.1,'% Averaged')") real(ndata*(m-1)+n)*100.0e0/real(ndata*totVar)
     end if
        if (tecplot) then
-       call tpostread((n*totVar+ngrec+m),lsta)
+       call tpostread((n*totVar+nrec+m),lsta)
        else
-       call postread((n*totVar+ngrec+m))
+       call postread((n*totVar+nrec+m))
        end if
        rr(:,1)=rr(:,1)+delt(n)*varr(:)
     end do
@@ -409,13 +370,79 @@ contains
  end subroutine average
 
 !====================================================================================
+!=====SPACE AVERAGING OF VARR(:)
+!====================================================================================
+ subroutine spcavg(plane,dir,pos)
+    implicit none
+    integer, intent(in) :: plane,dir,pos
+    integer :: odir,idir,loop,axis
+    real(nr), dimension(:,:), allocatable :: avg,delt
+    integer, dimension(:,:), allocatable :: lavg
+    character, dimension(1) :: dirstr
+    ! DEFINE THE SIZE OF THE ARRAY AND THE AXIS TO OUTPUT
+    select case(plane)
+    case(1)
+     select case(dir)
+     case(2); odir=ijk(3,1); idir=ijk(2,1); loop=1; axis=3; dirstr='z'
+     case(3); odir=ijk(2,1); idir=ijk(3,1); loop=2; axis=2; dirstr='y'
+     end select                                  
+    case(2)                                     
+     select case(dir)                          
+     case(3); odir=ijk(3,2); idir=ijk(2,2); loop=1; axis=1; dirstr='x'
+     case(1); odir=ijk(2,2); idir=ijk(3,2); loop=2; axis=3; dirstr='z'
+     end select                               
+    case(3)                                  
+     select case(dir)                       
+     case(2); odir=ijk(2,3); idir=ijk(3,3); loop=2; axis=1; dirstr='x'
+     case(1); odir=ijk(3,3); idir=ijk(2,3); loop=1; axis=2; dirstr='y'
+     end select
+    end select
+    ! ALLOCATE ARRAYS CONTAINING THE COEFFICIENTS, AVERAGE AND AVG INDICES
+    allocate(lavg(0:idir,0:odir))
+    allocate(avg(0:odir,2),delt(0:idir,0:odir))
+    ! OPEN FILE TO OUTPUT RESUT
+    open(7,file='out/avg.dat')
+    write(7,"(1a,' var')") dirstr
+    ! GET THE INDICES OF THE POINTS TO AVERAGE IN ORDER
+    select case(loop)
+    case(1);
+    do k = 0, odir
+       do j = 0, idir 
+          lavg(j,k)=indx3(pos,j,k,plane)
+       end do
+    end do
+    case(2);
+    do k = 0, odir
+       do j = 0, idir
+          lavg(j,k)=indx3(pos,j,k,plane)
+       end do
+    end do
+    end select
+    ! COMPUTE COEFFICIENTS AND AVERAGE
+    do k = 0, odir
+     ns=lavg(0,k); ne=lavg(idir,k)
+     fctr=half/abs((xyz(ne,dir)-xyz(ns,dir)))
+     delt(0,k)=fctr*abs((xyz(lavg(1,k),dir)-xyz(ns,dir)))
+     delt(idir,k)=fctr*abs((xyz(ne,dir)-xyz(lavg(idir-1,k),dir)))
+     avg(k,2)=delt(0,k)*varr(ns)+delt(idir,k)*varr(ne)
+     avg(k,1)=xyz(ns,axis)
+        do j = 1, idir-1; l=lavg(j,k)
+          delt(j,k)=fctr*abs((xyz(lavg(j+1,k),dir)-xyz(lavg(j-1,k),dir)))
+          avg(k,2)=avg(k,2)+delt(j,k)*varr(l)
+        end do
+     write(7,"(f10.5,' ',f10.5)") avg(k,1),avg(k,2)
+    end do
+    close(7)
+ end subroutine spcavg
+
+!====================================================================================
 !=====COMPUTE Y+,X+ AND Z+
 !====================================================================================
  subroutine getwplus(nvar)
  implicit none
  integer, intent(in) :: nvar
  integer :: l,lp1,lm1,lw
- real(k8), dimension(0:lcwall) :: utau
+ real(nr), dimension(0:lcwall) :: utau
  if (wflag) then
     if(.not.allocated(wplus)) allocate(wplus(0:lcwall,3))
     call gettw(nvar)
@@ -461,54 +488,36 @@ contains
  subroutine getatWall
     implicit none
     integer :: n,l
-    if (wflag) then
     if(.not.allocated(wvarr)) allocate(wvarr(0:lcwall))
     do n = 0, lcwall; l=lwall(n)
        wvarr(n)=varr(l)
     end do
-    end if
  end subroutine getatWall
-
-!====================================================================================
-!=====GET THE VALUES OF WVARR FROM WALL AND SAVE THEM IN VARR
-!====================================================================================
- subroutine getfromWall
-    implicit none
-    integer :: n,l
-
-    varr(:)=0
-    if (wflag) then
-    do n = 0, lcwall; l=lwall(n)
-       varr(l)=wvarr(n)
-    end do
-    end if
- end subroutine getfromWall
 
 !====================================================================================
 !=====AVERAGE IN SPACE OVER WALL SURFACE
 !====================================================================================
- subroutine wavg(dir,wall,fname)
+ subroutine wavg(dir,wall)
     implicit none
     integer, intent(in) :: dir
     logical, intent(in) :: wall
-    character(16), intent(in) :: fname
     integer :: idir,odir,ia,oa,l,ls,le,lp1,lm1,lw,lws,lwe
-    real(k8), dimension(:), allocatable :: delt
-    real(k8), dimension(:,:), allocatable :: avg
-    character, dimension(1) :: str,str2
+    real(nr), dimension(:), allocatable :: delt
+    real(nr), dimension(:,:), allocatable :: avg
+    character, dimension(1) :: str
     if (wflag) then
     if (.not.wall) then
     call getatWall
     end if
     select case(dir)
-    case(1); idir=lxi; odir=lze; ia=1; oa=3; str='z'; str2='X'
-    case(2); idir=lze; odir=lxi; ia=3; oa=1; str='x'; str2='Z'
+    case(1); idir=lxi; odir=lze; ia=1; oa=3; str='z'
+    case(2); idir=lze; odir=lxi; ia=3; oa=1; str='x'
     end select
     allocate(delt(0:idir))
     allocate(avg(0:odir,2))
     ! OPEN FILE TO OUTPUT RESUT
-    open(7,file='out/'//str2//'AVG'//trim(fname)//'.csv')
-    write(7,"(1a,1x,16a)") str,trim(fname)
+    open(7,file='out/avg.dat')
+    write(7,"(1a,' var')") str
     do j = 0, odir
        lws=indx2(0,j,dir);lwe=indx2(idir,j,dir)
        ls=lwall(lws);le=lwall(lwe)
@@ -523,7 +532,7 @@ contains
           delt(i)=fctr*abs(xyz(lm1,ia)-xyz(lp1,ia))
           avg(j,2)=avg(j,2)+delt(i)*wvarr(lw)
        end do
-     write(7,"(f10.5,1x,f10.5)") avg(j,1),avg(j,2)
+     write(7,"(f10.5,' ',f10.5)") avg(j,1),avg(j,2)
     end do
     close(7)
     end if
@@ -536,32 +545,30 @@ contains
     implicit none
     integer, intent(in) :: nvar
 
-    selectcase(output)
-    case(0)
     call fillqo(nvar)
-    case(1)
-    call p3dread(0,nvar)
-    p(:)=qo(:,5)
-    end select
     if (nviscous==1) then
+     de(:,1)=1/qo(:,1)
      de(:,2)=qo(:,2)
      de(:,3)=qo(:,3)
      de(:,4)=qo(:,4)
+     de(:,5)=gam*p(:)*de(:,1)
+     ss(:,1)=srefp1dre*de(:,5)**1.5_nr/(de(:,5)+srefoo)
+     de(:,1)=ss(:,1)
  
      rr(:,1)=de(:,2)
-     m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+     m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
      txx(:)=yaco(:)*(xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3))
      hzz(:)=yaco(:)*(xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3))
      tzx(:)=yaco(:)*(xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3))
  
      rr(:,1)=de(:,3)
-     m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+     m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
      txy(:)=yaco(:)*(xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3))
      tyy(:)=yaco(:)*(xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3))
      hxx(:)=yaco(:)*(xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3))
  
      rr(:,1)=de(:,4)
-     m=4; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+     m=4; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
      hyy(:)=yaco(:)*(xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3))
      tyz(:)=yaco(:)*(xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3))
      tzz(:)=yaco(:)*(xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3))
@@ -575,98 +582,13 @@ contains
  end subroutine qcriterion
 
 !====================================================================================
-!===== SUBROUTINE FOR CALCULATING VORTICITY
-!====================================================================================
- subroutine getCurl(nvar)
-
-    implicit none
-    integer, intent(in) :: nvar
-    selectcase(output)
-    case(0)
-    call fillqo(nvar)
-    case(1)
-    call p3dread(0,nvar)
-    p(:)=qo(:,5)
-    end select
-
-    de(:,1:3)=0
-
-    rr(:,1)=qo(:,2)
-    m=1; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
-    de(:,2)=de(:,2)+rr(:,1)*xim(:,3)+rr(:,2)*etm(:,3)+rr(:,3)*zem(:,3)
-    de(:,3)=de(:,3)-rr(:,1)*xim(:,2)-rr(:,2)*etm(:,2)-rr(:,3)*zem(:,2)
-
-    rr(:,1)=qo(:,3)
-    m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
-    de(:,3)=de(:,3)+rr(:,1)*xim(:,1)+rr(:,2)*etm(:,1)+rr(:,3)*zem(:,1)
-    de(:,1)=de(:,1)-rr(:,1)*xim(:,3)-rr(:,2)*etm(:,3)-rr(:,3)*zem(:,3)
-
-    rr(:,1)=qo(:,4)
-    m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
-    de(:,1)=de(:,1)+rr(:,1)*xim(:,2)+rr(:,2)*etm(:,2)+rr(:,3)*zem(:,2)
-    de(:,2)=de(:,2)-rr(:,1)*xim(:,1)-rr(:,2)*etm(:,1)-rr(:,3)*zem(:,1)
-
-    de(:,1)=de(:,1)*yaco(:); de(:,2)=de(:,2)*yaco(:); de(:,3)=de(:,3)*yaco(:)
-    ra0=aoa*pi/180;ra1=cos(ra0);ra2=sin(ra0)
-    ss(:,1)=de(:,1)!*ra1+de(:,2)*ra2
-    ss(:,2)=de(:,2)!*ra1-de(:,1)*ra2
-    ss(:,3)=de(:,3)
-
- end subroutine getCurl
-
-!====================================================================================
-!===== SUBROUTINE FOR CALCULATING VORTICITY TURNING
-!====================================================================================
- subroutine getCurlTurn(nvar)
-
-    implicit none
-    integer, intent(in) :: nvar
-    selectcase(output)
-    case(0)
-    call fillqo(nvar)
-    case(1)
-    call p3dread(0,nvar)
-    p(:)=qo(:,5)
-    end select
-
-    de(:,1:3)=0
-
-    qa(:,:)=0
-    rr(:,1)=qo(:,2)
-    m=1; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
-    de(:,2)=de(:,2)+rr(:,1)*xim(:,3)+rr(:,2)*etm(:,3)+rr(:,3)*zem(:,3)
-    de(:,3)=de(:,3)-rr(:,1)*xim(:,2)-rr(:,2)*etm(:,2)-rr(:,3)*zem(:,2)
-    qa(:,2)=de(:,3)
-    qa(:,3)=-de(:,2)
-
-    rr(:,1)=qo(:,3)
-    m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
-    de(:,3)=de(:,3)+rr(:,1)*xim(:,1)+rr(:,2)*etm(:,1)+rr(:,3)*zem(:,1)
-    de(:,1)=de(:,1)-rr(:,1)*xim(:,3)-rr(:,2)*etm(:,3)-rr(:,3)*zem(:,3)
-
-    rr(:,1)=qo(:,4)
-    m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
-    de(:,1)=de(:,1)+rr(:,1)*xim(:,2)+rr(:,2)*etm(:,2)+rr(:,3)*zem(:,2)
-    de(:,2)=de(:,2)-rr(:,1)*xim(:,1)-rr(:,2)*etm(:,1)-rr(:,3)*zem(:,1)
-
-    qa(:,2)=qa(:,2)*yaco(:)
-    qa(:,3)=qa(:,3)*yaco(:)
-
-    de(:,1)=de(:,1)*yaco(:); de(:,2)=de(:,2)*yaco(:); de(:,3)=de(:,3)*yaco(:)
-    ss(:,1)=de(:,2)*qa(:,2)
-    ss(:,2)=de(:,3)*qa(:,3)
-
-
- end subroutine getCurlTurn
-
-!====================================================================================
 !=====FIND INDEX FROM X,Y, AND Z COORDINATES
 !====================================================================================
  subroutine findll(xpos,ypos,zpos,l,id) 
     implicit none
-    real(k8), intent(in) :: xpos,ypos,zpos
+    real(nr), intent(in) :: xpos,ypos,zpos
     integer, intent (out) :: l,id
-    real(k8) :: tmp,tmpall
+    real(nr) :: tmp,tmpall
 
     id=-1
     varr(:)=sqrt((xyz(:,1)-xpos)**2+(xyz(:,2)-ypos)**2+(xyz(:,3)-zpos)**2)
@@ -686,10 +608,8 @@ contains
     implicit none
     integer, intent(in) :: nvar
 
-    selectcase(output)
-    case(0)
     ! READ VARIABLES
-    nread=ngrec+(totVar*nvar)
+    nread=nrec+(totVar*nvar)
     do nn = 1, 5
      if (tecplot) then
      nread=nread+1; call tpostread(nread,lsta)
@@ -698,224 +618,9 @@ contains
      end if
      qo(:,nn)=varr(:)
     end do
-    case(1)
-    call p3dread(0,nvar)
-    end select
     p(:)=qo(:,5)
     
  end subroutine fillqo
-
-!====================================================================================
-! ====RECORD DATA FOR POST-PROCESSING READING FROM TECPLOT FILES
-!====================================================================================
- subroutine postDat
-  implicit none
-  integer :: nn
-  if (myid==0) then
-     write(*,*) 'creating data files...'
-  end if
-  call MPI_BARRIER(icom,ierr)
-  do nn=1,nwrec
-     call tpostread(nn,lsta)
-     call postwrite(nn)
-  if (myid==0) then
-     write(*,"(f5.1,'% written')") nn*100.e0/real(nwrec)
-  end if
-  end do
-  call MPI_BARRIER(icom,ierr)
- end subroutine postDat
-
-!====================================================================================
-! ====WRITE DATA FOR POST-PROCESSING
-!====================================================================================
- subroutine postwrite(num)
- implicit none
- integer, intent (in) :: num
-  call MPI_BARRIER(icom,ierr)
-  lp=lpos(myid)
-     lq=(num-1)*ltomb
-     do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-        write(8,pos=k8*(lp+lq+lio(j,k))+1) varr(l:l+lxi)
-     end do; end do
- end subroutine postwrite
-
-!====================================================================================
-!=====WRITE LIST OF SOLUTION FILES
-!====================================================================================
-subroutine flst()
-   implicit none
-   character(18) :: ofile
-   character(10)  :: ctime
-   integer :: lmt,stat,i
-   real(4) :: res
-
-   if (myid==0) then
-      call system('rm out/filelist')
-      call system('ls out/*.q -1 > out/filelist')
-   end if
-   CALL MPI_BARRIER(icom,ierr)
-   open(90,file='out/filelist',shared)
-   lmt=-2
-   do while (stat.ge.0)
-      read(90,*,IOSTAT=stat) 
-      lmt=lmt+1
-   end do
-   close(90)
-   ndata=lmt
-
-   allocate(ofiles(0:lmt),times(0:ndata))
-
-   open(90,file='out/filelist',shared)
-   do i = 0, lmt
-      read(90,"(18a)") ofile
-      ofiles(i)=ofile
-      ctime=(ofile(9:16)//'e0')
-      read(ctime,*) times(i)
-   end do
-   close(90)
-   
-   !do i = 0, lmt
-   !   open(91,file=ofiles(i),access='stream',shared)
-   !       lh=1+(mbk+1)*3+3
-   !       read(91,pos=4*lh+1) res; times(i)=res
-   !   close(91)
-   !end do
-
-end subroutine flst
-
-!====================================================================================
-!=====AVERAGE RESULTS IN TIME PLOT3D
-!====================================================================================
- subroutine p3daverage
-    implicit none
-    integer :: totVar
-    real(k8),dimension(:),allocatable :: delt
-
-    if (myid==0) then
-       write(*,*) ndata
-    end if
-    ! CONSTRUCT THE COEFFICIENTS ARRAY
-       ns=0; ne=ndata; allocate(delt(ns:ne))
-       fctr=half/(times(ne)-times(ns))
-       delt(ns)=fctr*(times(ns+1)-times(ns)); 
-       delt(ne)=fctr*(times(ne)-times(ne-1))
-    do n=ns+1,ne-1
-       delt(n)=fctr*(times(n+1)-times(n-1))
-    end do
-       qa(:,:)=0
-    do n=0,ndata
-    if (myid==0) then
-       write(*,"(f5.1,'% Averaged')") real(n)*100.0e0/real(ndata)
-    end if
-       call p3dread(gsflag=0,nout=n)
-       qa(:,:)=qa(:,:)+delt(n)*qo(:,:)
-    end do
- end subroutine p3daverage
-
-!====================================================================================
-!=====WRITE AVERAGE RESULTS IN TIME PLOT3D
-!====================================================================================
- subroutine p3dwaverage()
- integer :: n
-
-       if (myid==0) then
-         open(9,file='out/solA.qa'); close(9,status='delete')
-       end if
-       CALL MPI_BARRIER(icom,ierr)
-       open (unit=9, file='out/solA.qa', access='stream',shared)
-       lh=0
-       if (myid==0) then
-        write(9,pos=4*lh+1) mbk+1; lh=lh+1 ! Number of zones
-        do mm = 0, mbk
-           write(9,pos=4*lh+1) int4(lximb(mm)+1); lh=lh+1 ! IMax
-           write(9,pos=4*lh+1) int4(letmb(mm)+1); lh=lh+1 ! JMax
-           write(9,pos=4*lh+1) int4(lzemb(mm)+1); lh=lh+1 ! KMax
-        end do
-        lhmb(mb)=lh
-        do mm = 0, mbk-1
-           lhmb(mm+1)=lhmb(mm)+4+5*(lximb(mm)+1)*(letmb(mm)+1)*(lzemb(mm)+1)
-        end do
-       end if
-        call MPI_BCAST(lhmb,mbk+1,MPI_INTEGER,0,icom,ierr)
-        if (myid==mo(mb)) then
-           lh=lhmb(mb)
-           write(9,pos=4*lh+1) real(amachoo,kind=4); lh=lh+1 ! Mach Number
-           write(9,pos=4*lh+1) real(aoa,kind=4); lh=lh+1  
-           write(9,pos=4*lh+1) real(reoo,kind=4); lh=lh+1 ! Reynolds Number
-           write(9,pos=4*lh+1) real(times(ndata),kind=4); lh=lh+1 ! Time
-        end if
-        lp=lpos(myid)+lhmb(mb)+4
-        ns=1; ne=5
-        do n=ns,ne; lq=(n-ns)*ltomb
-           selectcase(n)
-           case(1,5); varr(:)=qa(:,n)
-           case(2,3,4); varr(:)=qa(:,n)!*qa(:,1)
-           end select
-        do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-          write(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
-        end do; end do
-        end do
-        close(9)
-        CALL MPI_BARRIER(icom,ierr)
-        if (myid==0) then
-           write(*,"('Averaged Solution written!')") 
-        end if
- end subroutine p3dwaverage
-
-!====================================================================================
-!=====WRITE FUNCTION FILE PLOT3D
-!====================================================================================
- subroutine wffile(fname,nout,ndim)
- integer, intent(in) :: nout,ndim
- character(16), intent(in) :: fname
- character(3) :: cout
- integer :: n,l,i
- 
-   write(cout,"(i3)") nout
-   do i = 0, 2
-   l=scan(cout,' ')
-   if (l==0) exit
-   cout(l:l)='0'
-   end do
-
-   if (nout==(ndata+1)) then
-      cout='AVG'
-   end if
-
-   if (myid==0) then
-     open(9,file='out/'//trim(fname)//cout//'.f'); close(9,status='delete')
-   end if
-   CALL MPI_BARRIER(icom,ierr)
-   open (unit=9, file='out/'//trim(fname)//cout//'.f', access='stream',shared)
-   lh=0
-   if (myid==0) then
-    write(9,pos=4*lh+1) mbk+1; lh=lh+1 ! Number of zones
-    do mm = 0, mbk
-       write(9,pos=4*lh+1) int4(lximb(mm)+1); lh=lh+1 ! IMax
-       write(9,pos=4*lh+1) int4(letmb(mm)+1); lh=lh+1 ! JMax
-       write(9,pos=4*lh+1) int4(lzemb(mm)+1); lh=lh+1 ! KMax
-       write(9,pos=4*lh+1) int4(ndim); lh=lh+1 ! #dimensions
-    end do
-    lhmb(mb)=lh
-    do mm = 0, mbk-1
-       lhmb(mm+1)=lhmb(mm)+ndim*(lximb(mm)+1)*(letmb(mm)+1)*(lzemb(mm)+1)
-    end do
-   end if
-   call MPI_BCAST(lhmb,mbk+1,MPI_INTEGER,0,icom,ierr)
-   lp=lpos(myid)+lhmb(mb)
-   ns=1; ne=ndim
-   do n=ns,ne; lq=(n-ns)*ltomb
-   varr(:)=qo(:,n)
-   do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-     write(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
-   end do; end do
-   end do
-   close(9)
-   CALL MPI_BARRIER(icom,ierr)
-   if (myid==0) then
-      write(*,"(a,' funtion written!')") trim(fname)//cout
-   end if
- end subroutine wffile
 !*****
 
 end module rptpost

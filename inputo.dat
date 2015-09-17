@@ -1,6 +1,6 @@
 mbk		11
-nts-nto-iwrec	0		0		000
-nscrn-nsgnl	1		100
+nts		1
+nscrn-nsgnl	1		1
 ndata		5
 nkrk		4
 nviscous	1
@@ -11,11 +11,6 @@ reoo-tempoo	3.0e5		273.0e0
 amach1-2-3	0.4e0		0.0e0		0.0e0
 wtemp		1.0e0
 cfl		0.95e0
-tmax-timf-tsam	0.01e0  	5.0e0		0.000e0
-fltk-bc		0.85e0		0.9e0
+tmax-timf-tsam	25.00e0 	5.0e0		12.5e0
+fltk-bc		0.85e0		0.85e0
 dto		-0.01725e0
-forcing-amfor%	0	0.8e0
-tgustd-tguste	5.0e0 	5.0e0
-aoa-aoas-aoae	20.0e0 	35.5e0	0.0e0
-LES-smago1-2	0	0.16e0	0.0066e0
-output		1	1	1	1
