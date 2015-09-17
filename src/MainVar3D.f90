@@ -19,6 +19,7 @@
  real(nr),parameter :: two=2,quarter=0.25_nr
  real(nr),parameter :: gam=1.4_nr,gamm1=gam-1,ham=1/gam,hamm1=1/gamm1
  real(nr),parameter :: prndtl=0.71_nr,gamm1prndtli=1/(gamm1*prndtl)
+ real(nr),parameter :: tprndtl=0.99_nr,tgamm1prndtli=1/(gamm1*tprndtl)
 
  real(nr),parameter :: alpha=0.5862704032801503_nr
  real(nr),parameter :: beta=0.09549533555017055_nr
@@ -153,18 +154,20 @@
 
  integer :: nrec,nwrec,nread,totVar
 
-!===== VARIABLES FOR RECORDING BY RPT
+!===== VARIABLES FOR FORCING BY RPT
 
  real(nr)  ::  xfor,yfor,rfor,amfor,tsfor,tefor
  integer   ::  lfor
  integer ,allocatable,dimension(:)  ::  lcfor
  real(nr),allocatable,dimension(:,:)  ::  xafor,yafor,bfor
+
+!===== VARIABLES FOR WALL OPERATIONS BY RPT
  integer :: lcwall
  integer, dimension(:), allocatable ::lwall
  real(nr), dimension(:), allocatable ::area
  real(nr), dimension(:,:), allocatable ::wnor,wtan,tw
- real(nr), dimension(:,:), allocatable :: xyz
  logical :: wflag
+ real(nr), dimension(:,:), allocatable,target :: xyz
 
 !===== POST-PROCESSING VARIABLES BY RPT
 
@@ -172,8 +175,17 @@
  logical :: tecplot,ispost
  real(nr), dimension(:,:), allocatable :: wplus
  real(nr), dimension(:), allocatable :: wvarr
+ character(18),dimension(:),allocatable :: ofiles 
 
  real(nr), dimension(2,2) :: cl
+
+!===== ADITIONAL INPUTO VARIABLES BY RPT
+ integer  :: nto,iwrec
+ integer  :: forcing,LES
+ real(nr) :: tgustd,tguste
+ real(nr) :: talphas,talphar,aoa
+ real(nr) :: smago1,smago2
+ integer  :: output,ogrid,osol,oblock
 !=====
 
  end module mainvar3d

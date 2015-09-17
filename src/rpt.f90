@@ -11,6 +11,172 @@ use mpi
 contains
 
 !====================================================================================
+!===== POST-PROCESSING & GENERATING PLOT3D DATA FILES
+!====================================================================================
+ subroutine plot3d(gflag,sflag,bflag)
+
+ integer, intent(in) :: gflag,sflag,bflag
+ integer :: n
+ character(8) :: ctime
+ 
+ write(ctime,"(f8.4)") timo
+    
+
+ if (bflag==1) then
+    if (gflag==1) then
+      if (myid==0) then
+        open(9,file='out/grid.xyz'); close(9,status='delete')
+      end if
+      CALL MPI_BARRIER(icom,ierr)
+      open (unit=9, file='out/grid.xyz', access='stream',shared)
+      lh=0
+      if (myid==0) then
+       write(9,pos=4*lh+1) mbk+1; lh=lh+1 ! Number of zones
+       do mm = 0, mbk
+          write(9,pos=4*lh+1) int4(lximb(mm)+1); lh=lh+1 ! IMax
+          write(9,pos=4*lh+1) int4(letmb(mm)+1); lh=lh+1 ! JMax
+          write(9,pos=4*lh+1) int4(lzemb(mm)+1); lh=lh+1 ! KMax
+       end do
+       lhmb(mb)=lh
+       do mm = 0, mbk-1
+          lhmb(mm+1)=lhmb(mm)+3*(lximb(mm)+1)*(letmb(mm)+1)*(lzemb(mm)+1)
+       end do
+      end if
+       call MPI_BCAST(lhmb,mbk+1,MPI_INTEGER,0,icom,ierr)
+       lp=lpos(myid)+lhmb(mb)
+       ns=1; ne=3
+       do n=ns,ne; lq=(n-1)*ltomb
+          varr(:)=ss(:,n)
+       do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+          write(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
+       end do; end do
+       end do
+       close(9)
+      CALL MPI_BARRIER(icom,ierr)
+        if (myid==0) then
+        write(*,*) 'Grid written!'
+        end if
+    end if
+
+    if (sflag==1) then
+       if (myid==0) then
+         open(9,file='out/solT'//ctime//'.q'); close(9,status='delete')
+       end if
+       CALL MPI_BARRIER(icom,ierr)
+       open (unit=9, file='out/solT'//ctime//'.q', access='stream',shared)
+       lh=0
+       if (myid==0) then
+        write(9,pos=4*lh+1) mbk+1; lh=lh+1 ! Number of zones
+        do mm = 0, mbk
+           write(9,pos=4*lh+1) int4(lximb(mm)+1); lh=lh+1 ! IMax
+           write(9,pos=4*lh+1) int4(letmb(mm)+1); lh=lh+1 ! JMax
+           write(9,pos=4*lh+1) int4(lzemb(mm)+1); lh=lh+1 ! KMax
+        end do
+        lhmb(mb)=lh
+        do mm = 0, mbk-1
+           lhmb(mm+1)=lhmb(mm)+4+5*(lximb(mm)+1)*(letmb(mm)+1)*(lzemb(mm)+1)
+        end do
+       end if
+        call MPI_BCAST(lhmb,mbk+1,MPI_INTEGER,0,icom,ierr)
+        if (myid==mo(mb)) then
+           lh=lhmb(mb)
+           write(9,pos=4*lh+1) real(amachoo,kind=4); lh=lh+1 ! Mach Number
+           write(9,pos=4*lh+1) real(aoa,kind=4); lh=lh+1  ! AoA
+           write(9,pos=4*lh+1) real(reoo,kind=4); lh=lh+1 ! Reynolds Number
+           write(9,pos=4*lh+1) real(timo,kind=4); lh=lh+1 ! Time
+        end if
+        lp=lpos(myid)+lhmb(mb)+4
+        ns=1; ne=5
+        
+        do n=ns,ne; lq=(n-ns)*ltomb
+           selectcase(n)
+           case(1); varr(:)=qa(:,n)
+           case(2,3,4); !de(:,n)=qa(:,1)*umf(n-1)
+           varr(:)=((qa(:,n)/qa(:,1))+umf(n-1))
+           case(5); varr(:)=p(:)
+           end select
+        do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+          write(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
+        end do; end do
+        end do
+        close(9)
+        if (myid==0) then
+           write(*,"('Solution written! T= ',8a)") ctime 
+        end if
+    end if
+ else
+    if (gflag==1) then
+       if (myid==mo(mb)) then
+         open(9,file='out/'//czone//'.xyz'); close(9,status='delete')
+       end if
+       CALL MPI_BARRIER(icom,ierr)
+       open (unit=9, file='out/'//czone//'.xyz', access='stream',shared)
+       lh=0
+       if (myid==mo(mb)) then
+        write(9,pos=4*lh+1) 1; lh=lh+1 ! Number of zones
+        write(9,pos=4*lh+1) int4(lximb(mb)+1); lh=lh+1 ! IMax
+        write(9,pos=4*lh+1) int4(letmb(mb)+1); lh=lh+1 ! JMax
+        write(9,pos=4*lh+1) int4(lzemb(mb)+1); lh=lh+1 ! KMax
+        lhmb(mb)=lh
+       end if
+       do mm=0,mbk
+          call MPI_BCAST(lhmb(mm),1,MPI_INTEGER,mo(mm),icom,ierr)
+       end do
+       lp=lpos(myid)+lhmb(mb)
+       ns=1; ne=3
+       do n=ns,ne; lq=(n-1)*ltomb
+          varr(:)=ss(:,n)
+          do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+             write(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
+          end do; end do
+       end do
+       close(9)
+       if (myid==mo(mb)) then
+          write(*,"('Grid written for block ',i2)") mb 
+       end if
+    end if
+    if (sflag==1) then
+       if (myid==mo(mb)) then
+         open(9,file='out/sol'//czone//'T'//ctime//'.q'); close(9,status='delete')
+       end if
+       CALL MPI_BARRIER(icom,ierr)
+       open (unit=9, file='out/sol'//czone//'T'//ctime//'.q', access='stream',shared)
+       lh=0
+       if (myid==mo(mb)) then
+        write(9,pos=4*lh+1) 1; lh=lh+1 ! Number of zones
+        write(9,pos=4*lh+1) int4(lximb(mb)+1); lh=lh+1 ! IMax
+        write(9,pos=4*lh+1) int4(letmb(mb)+1); lh=lh+1 ! JMax
+        write(9,pos=4*lh+1) int4(lzemb(mb)+1); lh=lh+1 ! KMax
+        write(9,pos=4*lh+1) real(amachoo,kind=4); lh=lh+1 ! Mach Number
+        write(9,pos=4*lh+1) real(aoa,kind=4); lh=lh+1  
+        write(9,pos=4*lh+1) real(reoo,kind=4); lh=lh+1 ! Reynolds Number
+        write(9,pos=4*lh+1) real(timo,kind=4); lh=lh+1 ! Time
+        lhmb(mb)=lh
+       end if
+       do mm=0,mbk
+          call MPI_BCAST(lhmb(mm),1,MPI_INTEGER,mo(mm),icom,ierr)
+       end do
+       lp=lpos(myid)+lhmb(mb)
+       ns=1; ne=5
+       do n=ns,ne; lq=(n-ns)*ltomb
+           selectcase(n)
+           case(1,5); varr(:)=qa(:,n)
+           case(2,3,4); varr(:)=qa(:,n)+qa(:,1)*umf(n-1)
+           end select
+          do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+             write(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
+          end do; end do
+       end do
+       close(9)
+       if (myid==0) then
+          write(*,"('Solution written! T= ',8a)") ctime 
+       end if
+    end if
+ end if
+          
+ end subroutine plot3d
+
+!====================================================================================
 !===== POST-PROCESSING & GENERATING TECPLOT DATA FILE
 !====================================================================================
  subroutine post(average)
@@ -117,9 +283,13 @@ contains
      varmin(n)=minval(varr(:)); varmax(n)=maxval(varr(:))
   end do
      if (ispost) then
-     close(8)
+        close(8)
      else
-     close(0,status='delete')
+        if (nto==0) then
+        close(0,status='delete')
+        else
+        close(0)
+        end if
      end if
   do n=ns,ne
      res=varmin(n); call MPI_ALLREDUCE(res,fctr,1,MPI_REAL8,MPI_MIN,icom,ierr); varmin(n)=fctr
@@ -153,20 +323,21 @@ contains
  end do
  lfor=ll
  if (lfor.ne.-1) then
-    allocate(lcfor(0:lfor),xafor(0:lfor,3),yafor(0:lfor,3),bfor(0:lfor,3))
+    allocate(lcfor(0:lfor),xafor(0:lfor,3),bfor(0:lfor,3))
  do ll = 0, lfor; l=de(ll,5); lcfor(ll)=l
     bfor(ll,1)=cos(ra1*ss(l,3))
     bfor(ll,2)=cos(3*ra1*ss(l,3))
     bfor(ll,3)=cos(4*ra1*ss(l,3))
-    ra2=rr(l,1)
-    ra3=(qo(l,2)-qo(l,1))
-    xafor(ll,1)=half*exp(-ra0*ra2)*bfor(ll,1)*ra3
-    xafor(ll,2)=half*exp(-ra0*ra2)*bfor(ll,2)*ra3
-    xafor(ll,3)=half*exp(-ra0*ra2)*bfor(ll,3)*ra3
-    ra3=(qa(l,2)-qa(l,1))
-    yafor(ll,1)=half*exp(-ra0*ra2)*bfor(ll,1)*ra3
-    yafor(ll,2)=half*exp(-ra0*ra2)*bfor(ll,2)*ra3
-    yafor(ll,3)=half*exp(-ra0*ra2)*bfor(ll,3)*ra3
+    ra1=half*exp(-ra0*rr(l,1))/yaco(l)
+    !rpt- Xeta-Xxi
+    !ra3=(qo(l,2)-qo(l,1))
+    !ra1=half*exp(-ra0*rr(l,1))*(qo(l,2)-qo(l,1))
+    !rpt- Yeta-Yxi
+    !ra3=(qa(l,2)-qa(l,1))
+    !ra2=half*exp(-ra0*rr(l,1))*(qa(l,2)-qa(l,1))
+    xafor(ll,1)=ra1*bfor(ll,1)
+    xafor(ll,2)=ra1*bfor(ll,2)
+    xafor(ll,3)=ra1*bfor(ll,3)
  end do
  end if
  end subroutine forceup
@@ -181,8 +352,8 @@ contains
    ra2=amfor*cos(ra0*53.6_nr*amachoo)/3
    ra3=amfor*cos(ra0*53.6_nr*amachoo)/3
    do ll = 0, lfor; l=lcfor(ll)
-     de(l,2)=de(l,2)+ra1*xafor(ll,1)+ra2*xafor(ll,2)+ra3*xafor(ll,3)
-     de(l,3)=de(l,3)+ra1*yafor(ll,1)+ra2*yafor(ll,2)+ra3*yafor(ll,3)
+     de(l,2)=de(l,2)+qa(l,1)*(ra1*xafor(ll,1)+ra2*xafor(ll,2)+ra3*xafor(ll,3))
+     de(l,3)=de(l,3)-qa(l,1)*(ra1*xafor(ll,1)+ra2*xafor(ll,2)+ra3*xafor(ll,3))
    end do
  end if
  end subroutine forcego
@@ -296,17 +467,18 @@ contains
 !====================================================================================
 !=====COMPUTE LIFT COEFFICIENT OVER AEROFOILS
 !====================================================================================
- subroutine clpost(ele,dir,nvar)
+ subroutine clpost(ele,nvar)
  
  use problemcase, only: span,delt1,delt2
  implicit none
     
-    integer, intent(in) :: ele,nvar,dir
-    integer :: bblock,tblock,m,ll
+    integer, intent(in) :: ele,nvar
+    integer :: bblock,tblock,m,ll,dir
     real(nr) :: dynp,clp,clv,tcl
     logical :: flag
  
     clp=0;clv=0;flag=.false.;tcl=0;
+
  
     ! Define aerofoil blocks
     select case(mbk)
@@ -336,46 +508,109 @@ contains
     flag=.true.
     end if
  
-    if (wflag.and.flag) then
-    ! Compute Dynamic pressure
-    dynp=two/(amachoo*amachoo*span)
-    if (ispost) then
-       call gettw(nvar)
-       do ll = 0, lcwall; l=lwall(ll)
-         clp=clp+(p(l)*wnor(ll,dir)*area(ll))
-         if (nviscous==1) then
-         clv=clv+tw(ll,dir)*area(ll)
-         end if
-       end do
-    else
-       if(.not.allocated(tw)) allocate(tw(0:lcwall,3))
-       do ll = 0, lcwall; l=lwall(ll)
-         if (nviscous==1) then
-         tw(ll,1)=(txx(l)*wnor(ll,1)+txy(l)*wnor(ll,2)+tzx(l)*wnor(ll,3))/reoo
-         tw(ll,2)=(txy(l)*wnor(ll,1)+tyy(l)*wnor(ll,2)+tyz(l)*wnor(ll,3))/reoo
-         tw(ll,3)=(tzx(l)*wnor(ll,1)+tyz(l)*wnor(ll,2)+tzz(l)*wnor(ll,3))/reoo
-         clv=clv+tw(ll,dir)*area(ll)
-         end if
-         clp=clp+(p(l)*wnor(ll,dir)*area(ll))
-       end do
-    end if
-    tcl=(clp+clv)*dynp
-    if (myid==mp) then
-       do m = 1, (npc(mb,1)*npc(mb,3)-1)
-       CALL MPI_RECV(clp,1,MPI_REAL8,MPI_ANY_SOURCE,10,MPI_COMM_WORLD,ista,ierr)
-       tcl=tcl+clp
-       end do
-    else
-       CALL MPI_SEND(tcl,1,MPI_REAL8,mp,10,MPI_COMM_WORLD,ierr)
-    end if
-    end if
- 
+    do dir = 1, 2
+    clp=0;clv=0;tcl=0;
+       if (flag) then
+          ! Compute Dynamic pressure
+          dynp=two/(amachoo*amachoo*span)
+          if (dir==1) then
+             if (ispost) then
+                call gettw(nvar)
+             else
+                call gettwrun
+             end if
+          end if
+          if (wflag) then
+             do ll = 0, lcwall; l=lwall(ll)
+               clp=clp+(p(l)*wnor(ll,dir)*area(ll))
+               if (nviscous==1) then
+               clv=clv+tw(ll,dir)*area(ll)
+               end if
+             end do
+             tcl=(clp+clv)*dynp
+             if (myid==mp) then
+                do m = 1, (npc(mb,1)*npc(mb,3)-1)
+                CALL MPI_RECV(clp,1,MPI_REAL8,MPI_ANY_SOURCE,10,MPI_COMM_WORLD,ista,ierr)
+                tcl=tcl+clp
+                end do
+             else
+                CALL MPI_SEND(tcl,1,MPI_REAL8,mp,10,MPI_COMM_WORLD,ierr)
+             end if
+          end if
+       end if
     CALL MPI_ALLREDUCE(tcl,cl(ele,dir),1,MPI_REAL8,MPI_SUM,icom,ierr)
+    end do
  
  end subroutine clpost
 
 !====================================================================================
-!=====COMPUTE WALL SHEAR STRESS
+!=====COMPUTE WALL SHEAR STRESS AT RUNTIME
+!====================================================================================
+ subroutine gettwrun
+ use subroutines3d, only: mpigo,deriv
+ implicit none
+ integer :: nn,ll
+
+
+   if (nviscous==1) then
+     de(:,1)=1/qa(:,1)
+     de(:,2)=qa(:,2)*de(:,1)
+     de(:,3)=qa(:,3)*de(:,1)
+     de(:,4)=qa(:,4)*de(:,1)
+     de(:,5)=gam*p(:)*de(:,1)
+     ss(:,1)=srefp1dre*de(:,5)**1.5_nr/(de(:,5)+srefoo)
+     de(:,1)=ss(:,1)
+ 
+     rr(:,1)=de(:,2)
+     m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     txx(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
+     hzz(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
+     tzx(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
+
+     rr(:,1)=de(:,3)
+     m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     txy(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
+     tyy(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
+     hxx(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
+
+     rr(:,1)=de(:,4)
+     m=4; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     hyy(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
+     tyz(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
+     tzz(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
+
+     rr(:,1)=de(:,5)
+     m=5; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     ss(:,1)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
+     ss(:,2)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
+     ss(:,3)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
+
+     fctr=2.0_nr/3
+     rr(:,1)=-de(:,1)*yaco(:)
+     rr(:,2)=gamm1prndtli*rr(:,1)
+     de(:,5)=fctr*(txx(:)+tyy(:)+tzz(:))
+
+     txx(:)=rr(:,1)*(2*txx(:)-de(:,5))
+     tyy(:)=rr(:,1)*(2*tyy(:)-de(:,5))
+     tzz(:)=rr(:,1)*(2*tzz(:)-de(:,5))
+     txy(:)=rr(:,1)*(txy(:)+hzz(:))
+     tyz(:)=rr(:,1)*(tyz(:)+hxx(:))
+     tzx(:)=rr(:,1)*(tzx(:)+hyy(:))
+ 
+      if (wflag) then
+      if(.not.allocated(tw)) allocate(tw(0:lcwall,3))
+      do ll = 0, lcwall; l=lwall(ll)
+        tw(ll,1)=qa(l,1)*(txx(l)*wnor(ll,1)+txy(l)*wnor(ll,2)+tzx(l)*wnor(ll,3))!/reoo
+        tw(ll,2)=qa(l,1)*(txy(l)*wnor(ll,1)+tyy(l)*wnor(ll,2)+tyz(l)*wnor(ll,3))!/reoo
+        tw(ll,3)=qa(l,1)*(tzx(l)*wnor(ll,1)+tyz(l)*wnor(ll,2)+tzz(l)*wnor(ll,3))!/reoo
+      end do
+      end if
+   end if
+    
+ end subroutine gettwrun
+
+!====================================================================================
+!=====COMPUTE WALL SHEAR STRESS FROM WRITTEN DATA
 !====================================================================================
  subroutine gettw(nvar)
  use subroutines3d, only: mpigo,deriv
@@ -385,24 +620,28 @@ contains
 
     if (wflag) then
     ! READ VARIABLES
-    nread=nrec+(totVar*nvar)
-    do nn = 1, 5
-     if (tecplot) then
-     nread=nread+1; call tpostread(nread,lsta)
-     else
-     nread=nread+1; call postread(nread)
-     end if
-     qo(:,nn)=varr(:)
-    end do
-    p(:)=qo(:,5)
+       selectcase(output)
+       case(0)
+       nread=nrec+(totVar*nvar)
+       do nn = 1, 5
+        if (tecplot) then
+        nread=nread+1; call tpostread(nread,lsta)
+        else
+        nread=nread+1; call postread(nread)
+        end if
+        qo(:,nn)=varr(:)
+       end do
+       case(1)
+          call p3dread(gsflag=0,nout=nvar)
+       end select
+       p(:)=qo(:,5)
     if (nviscous==1) then
-     de(:,1)=1/qo(:,1)
-     de(:,2)=qo(:,2)
-     de(:,3)=qo(:,3)
-     de(:,4)=qo(:,4)
-     de(:,5)=gam*p(:)*de(:,1)
-     ss(:,1)=srefp1dre*de(:,5)**1.5_nr/(de(:,5)+srefoo)
-     de(:,1)=ss(:,1)
+       de(:,1)=1/qo(:,1)
+       de(:,2)=qo(:,2)
+       de(:,3)=qo(:,3)
+       de(:,4)=qo(:,4)
+       de(:,5)=gam*p(:)*de(:,1)
+       de(:,1)=srefp1dre*de(:,5)**1.5_nr/(de(:,5)+srefoo)
  
      rr(:,1)=de(:,2)
      m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
@@ -423,21 +662,21 @@ contains
      tzz(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
  
      fctr=2.0_nr/3
-     rr(:,1)=de(:,1)*yaco(:)
+     rr(:,1)=-de(:,1)*yaco(:)
      de(:,5)=fctr*(txx(:)+tyy(:)+tzz(:))
  
-     txx(:)=yaco(:)*(2*txx(:)-de(:,5))
-     tyy(:)=yaco(:)*(2*tyy(:)-de(:,5))
-     tzz(:)=yaco(:)*(2*tzz(:)-de(:,5))
-     txy(:)=yaco(:)*(txy(:)+hzz(:))
-     tyz(:)=yaco(:)*(tyz(:)+hxx(:))
-     tzx(:)=yaco(:)*(tzx(:)+hyy(:))
+     txx(:)=rr(:,1)*(2*txx(:)-de(:,5))
+     tyy(:)=rr(:,1)*(2*tyy(:)-de(:,5))
+     tzz(:)=rr(:,1)*(2*tzz(:)-de(:,5))
+     txy(:)=rr(:,1)*(txy(:)+hzz(:))
+     tyz(:)=rr(:,1)*(tyz(:)+hxx(:))
+     tzx(:)=rr(:,1)*(tzx(:)+hyy(:))
  
        if(.not.allocated(tw)) allocate(tw(0:lcwall,3))
        do ll = 0, lcwall; l=lwall(ll)
-         tw(ll,1)=(txx(l)*wnor(ll,1)+txy(l)*wnor(ll,2)+tzx(l)*wnor(ll,3))/reoo
-         tw(ll,2)=(txy(l)*wnor(ll,1)+tyy(l)*wnor(ll,2)+tyz(l)*wnor(ll,3))/reoo
-         tw(ll,3)=(tzx(l)*wnor(ll,1)+tyz(l)*wnor(ll,2)+tzz(l)*wnor(ll,3))/reoo
+         tw(ll,1)=qo(l,1)*(txx(l)*wnor(ll,1)+txy(l)*wnor(ll,2)+tzx(l)*wnor(ll,3))!/reoo
+         tw(ll,2)=qo(l,1)*(txy(l)*wnor(ll,1)+tyy(l)*wnor(ll,2)+tyz(l)*wnor(ll,3))!/reoo
+         tw(ll,3)=qo(l,1)*(tzx(l)*wnor(ll,1)+tyz(l)*wnor(ll,2)+tzz(l)*wnor(ll,3))!/reoo
        end do
     end if
     end if
@@ -472,38 +711,100 @@ contains
  end subroutine postread
 
 !====================================================================================
-! ====WRITE DATA FOR POST-PROCESSING
+!=====READ RESULTS PLOT3D
 !====================================================================================
- subroutine postwrite(num)
- implicit none
- integer, intent (in) :: num
-  call MPI_BARRIER(icom,ierr)
-  lp=lpos(myid)
-     lq=(num-1)*ltomb
-     do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-        write(8,pos=nr*(lp+lq+lio(j,k))+1) varr(l:l+lxi)
-     end do; end do
- end subroutine postwrite
+subroutine p3dread(gsflag,nout)
 
-!====================================================================================
-! ====RECORD DATA FOR POST-PROCESSING READING FROM TECPLOT FILES
-!====================================================================================
- subroutine postDat
-  implicit none
-  integer :: nn
-  if (myid==0) then
-     write(*,*) 'creating data files...'
-  end if
-  call MPI_BARRIER(icom,ierr)
-  do nn=1,nwrec
-     call tpostread(nn,lsta)
-     call postwrite(nn)
-  if (myid==0) then
-     write(*,"(f5.1,'% written')") nn*100.e0/real(nwrec)
-  end if
-  end do
-  call MPI_BARRIER(icom,ierr)
- end subroutine postDat
+integer, intent(in) :: gsflag,nout
+integer :: n,nfile
+real(4) :: res
+character(8) :: ctime
+
+nfile=5
+
+   selectcase(gsflag)
+   case(1)
+     open (unit=nfile, file='out/grid.xyz', access='stream',shared)
+     lh=0
+      read(nfile,pos=4*lh+1) mbk; mbk=mbk-1; lh=lh+1 ! Number of zones
+      do mm = 0, mbk
+         read(nfile,pos=4*lh+1) lximb(mm);lximb(mm)=lximb(mm)-1; lh=lh+1 ! IMax
+         read(nfile,pos=4*lh+1) letmb(mm);letmb(mm)=letmb(mm)-1; lh=lh+1 ! JMax
+         read(nfile,pos=4*lh+1) lzemb(mm);lzemb(mm)=lzemb(mm)-1; lh=lh+1 ! KMax
+      end do
+      lhmb(0)=lh
+      do mm = 0, mbk-1
+         lhmb(mm+1)=lhmb(mm)+3*(lximb(mm)+1)*(letmb(mm)+1)*(lzemb(mm)+1)
+      end do
+      lp=lpos(myid)+lhmb(mb)
+      ns=1; ne=3
+      do n=ns,ne; lq=(n-1)*ltomb
+      do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+         read(nfile,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
+      end do; end do
+      ss(:,n)=varr(:)
+      end do
+      close(nfile)
+     CALL MPI_BARRIER(icom,ierr)
+       if (myid==0) then
+       write(*,*) 'Grid read!'
+       end if
+   case(0)
+      if (nout>ndata) then
+         open (unit=nfile, file='out/solA.qa', access='stream',shared)
+      else
+         open (unit=nfile, file=ofiles(nout), access='stream',shared)
+      end if
+      lh=0
+      read(nfile,pos=4*lh+1) mbk; mbk=mbk-1; lh=lh+1 ! Number of zones
+      do mm = 0, mbk
+         read(nfile,pos=4*lh+1) lximb(mm);lximb(mm)=lximb(mm)-1; lh=lh+1 ! IMax
+         read(nfile,pos=4*lh+1) letmb(mm);letmb(mm)=letmb(mm)-1; lh=lh+1 ! JMax
+         read(nfile,pos=4*lh+1) lzemb(mm);lzemb(mm)=lzemb(mm)-1; lh=lh+1 ! KMax
+      end do
+      lhmb(0)=lh
+       do mm = 0, mbk-1
+          lhmb(mm+1)=lhmb(mm)+4+5*(lximb(mm)+1)*(letmb(mm)+1)*(lzemb(mm)+1)
+       end do
+          lh=lhmb(mb)
+          read(nfile,pos=4*lh+1) res; !amachoo=res; lh=lh+1 ! Mach Number
+          read(nfile,pos=4*lh+1) res; !aoa=res; lh=lh+1  
+          read(nfile,pos=4*lh+1) res; !reoo=res; lh=lh+1 ! Reynolds Number
+          read(nfile,pos=4*lh+1) res; !timo=res; lh=lh+1 ! Time
+       lp=lpos(myid)+lhmb(mb)+4
+       ns=1; ne=5
+       do n=ns,ne; lq=(n-ns)*ltomb
+       do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+         read(nfile,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
+       end do; end do
+       if (nout>ndata) then
+       selectcase(n)
+          case(1); qo(:,n)=varr(:)
+          case(2,3,4); qo(:,n)=varr(:)
+          case(5); qo(:,n)=varr(:)
+       end select
+       else
+       selectcase(n)
+          case(1); qo(:,n)=varr(:)
+          ! If the data was written in conservatives variables change this
+          case(2,3,4); qo(:,n)=varr(:)!/qo(:,1)
+          case(5); qo(:,n)=varr(:)!&
+          !gamm1*(varr(:)-half*qo(:,1)*(qo(:,2)*qo(:,2)+qo(:,3)*qo(:,3)+qo(:,4)*qo(:,4)))
+       end select
+       end if
+       end do
+       close(nfile)
+       write(ctime,"(f8.4)") times(min(nout,ndata))
+       if (myid==0) then
+          if (nout>ndata) then
+          write(*,"('Averaged Solution read! T= ',8a)") ctime 
+          else
+          write(*,"('Solution read! T= ',8a)") ctime 
+          end if
+       end if
+   end select
+         
+end subroutine p3dread
 
 !====================================================================================
 ! ====CROSS PRODUCT OF TWO VECTORS 

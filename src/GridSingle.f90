@@ -49,6 +49,7 @@ module gridgen
  real(nr) :: oxp,oyp
  real(nr) :: tmps,tmpe,tmpc
  real(nr) :: sha,shb,shc
+ integer :: smod
  logical :: flag
 
     lxit=lxi0+lxi1+lxi2+2; lett=2*(let0+let1)+3
@@ -65,8 +66,10 @@ module gridgen
     shs=smgrid; she=shs
     shs1=ximod*smgrid; she1=shs1
     shs2=etamod*smgrid;
-    tmp=(shs2+10*shs2)*half
-    lbl=max(tmp*let1/(sin(pi4)),0.10*c1/(sin(pi4)))
+    smod=5
+    tmp=(shs2+smod*shs2)*half
+    !lbl=max(tmp*let1/(sin(pi4)),0.10*c1/(sin(pi4)))
+    lbl=max(tmp*80/(sin(pi4)),0.10*c1/(sin(pi4)))
 
     allocate(xx(0:lxit,0:lett),yy(0:lxit,0:lett),zz(0:lxit,0:lett),zs(0:lze0))
     allocate(xp(0:lxit,0:5),yp(0:lxit,0:5))
@@ -184,7 +187,7 @@ if(myid==mo(mb)) then
           do i=lxis+1,lxis+ll
              xp(i,n)=xp(i-1,n)+half*shs1; err=1
              do while(abs(err)>sml)
-                yp(i,n)=naca(xp(i,n),tmp,n)!ylagi(i,n,m)
+                yp(i,n)=naca(xp(i,n),tmp,21.0_nr,n)!ylagi(i,n,m)
                 err=sqrt((xp(i,n)-xp(i-1,n))**2+(yp(i,n)-yp(i-1,n))**2)/shs1-1;
                 xp(i,n)=xp(i,n)-half**5*err*shs1
              end do
@@ -194,7 +197,7 @@ if(myid==mo(mb)) then
           ip=lxis+ll;im=lxib-ll 
           call gridf(xp(:,n),pxi,xo,tmp,sho,she1,lxit,im,ip)
           do i=lxis+ll+1,lxie-1
-             yp(i,n)=naca(xp(i,n),tmp,n)!ylagi(i,n,m)
+             yp(i,n)=naca(xp(i,n),tmp,21.0_nr,n)!ylagi(i,n,m)
           end do
           yp(lxie,n)=zero
           ! ROTATE AND MOVE AEROFOILS
@@ -318,7 +321,7 @@ if(myid==mo(mb)) then
       !-BLOCK1
       !-c-d
       ip=lets1; im=let1;
-      tmpa=yc(n);sha=10*shs2;tmpb=yd(n);shb=shs2*sin(pi4-alph)
+      tmpa=yc(n);sha=smod*shs2;tmpb=yd(n);shb=shs2*sin(pi4-alph)
       call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lxit,im,ip)
       she2=qet(ip)
       !-BLOCK0
@@ -334,7 +337,7 @@ if(myid==mo(mb)) then
       !-BLOCK2
       !-d-e
       ip=lets2; im=let1;
-      tmpa=yd(n);sha=shs2*sin(pi4+alph);tmpb=ye(n);shb=10*shs2
+      tmpa=yd(n);sha=shs2*sin(pi4+alph);tmpb=ye(n);shb=smod*shs2
       call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lxit,im,ip)
       she2=qet(ip+im)
       !-BLOCK3
@@ -472,14 +475,13 @@ end if
  end function ylagi
 
 !===== NACA FUNCTION
- function naca(x,c,n) result(y)
-    real(nr),intent(in) :: x,c
+ function naca(x,c,t0,n) result(y)
+    real(nr),intent(in) :: x,c,t0
     integer, intent(in) :: n
     real(nr) :: y
     real(nr) :: t,k,xc
 
-    t = 21;
-    t=t*0.01e0
+    t=t0*0.01e0
     k=0.991148635e0
     xc=x/c
     y =(t*c*k/0.2e0) &

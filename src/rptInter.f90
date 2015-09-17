@@ -15,12 +15,6 @@ implicit none
  integer :: lxii,leti,lzei
  integer :: lxiio,letio,lzeio
  integer :: l2,color,ncom
- real(nr),dimension(3) :: xs,start,xin,hxi,hxn
- real(nr),dimension(3,3) :: jaco
- real(nr) :: err1,thisxi,thiset,thisze,xn,yn,zn,tol
- real(nr) :: xxin,xetn,xzen
- real(nr) :: yxin,yetn,yzen
- real(nr) :: zxin,zetn,zzen
 
 real(nr),dimension(:),allocatable :: xxi,xet,xze
 real(nr),dimension(:),allocatable :: yxi,yet,yze
@@ -32,6 +26,9 @@ real(nr),dimension(:),allocatable :: fzexi,fzeet,fzeetxi
 real(nr),dimension(:),allocatable :: lvarr,lvarr2
 real(nr) :: dti,dtsi,dtei,timoi,wtsi,wtei
 integer :: ndti,ni
+
+real(nr), dimension(0:1,1:3) :: bounds
+real(nr), dimension(1:5) :: outside
 contains
 
 !====================================================================================
@@ -397,6 +394,34 @@ contains
  end subroutine readRestart
 
 !====================================================================================
+!=====READ GRID
+!====================================================================================
+ subroutine readGrid
+
+         open(9,file='data/grid'//cnzone,access='stream',shared); lh=0
+         lp=lpos(myid)
+      do m=1,3; lq=(m-1)*ltomb
+      do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+         read(9,pos=nr*(lp+lq+lio(j,k))+1) xyz2(l:l+lxi,m)
+      end do; end do
+      end do
+         close(9)
+ end subroutine readGrid
+!====================================================================================
+!=====WRITE GRID
+!====================================================================================
+ subroutine writeGrid
+
+         open(9,file='data/grid'//cnzone,access='stream',shared); lh=0
+         lp=lpos(myid)
+      do m=1,3; lq=(m-1)*ltomb
+      do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+         write(9,pos=nr*(lp+lq+lio(j,k))+1) xyz2(l:l+lxi,m)
+      end do; end do
+      end do
+         close(9)
+ end subroutine writeGrid
+!====================================================================================
 !=====WRITE RESTART FILE
 !====================================================================================
  subroutine writeRestart
@@ -463,89 +488,178 @@ contains
  implicit none
  integer, intent(in) :: n
  real(nr), intent(in) :: tol
- if (myid==0) then
-    write(*,"('Interpolation procedure in progress...')") 
+ integer :: i,j,k
+ real(nr),dimension(12) :: r
+ real(nr) :: res
+ integer :: m
+ integer :: xi0,xi1,et0,et1,ze0,ze1
+ integer :: l000,l010,l100,l110,l001,l011,l101,l111
+ real(nr) :: x000,x010,x100,x110,x001,x011,x101,x111
+ real(nr) :: xn00,xn10,xn0,xn01,xn11,xn1
+ real(nr),dimension(3) :: xs,start,xin,hxi,hxn
+ real(nr),dimension(3,3) :: jaco
+ real(nr) :: err1,thisxi,thiset,thisze,xn,yn,zn
+ real(nr) :: xxin,xetn,xzen
+ real(nr) :: yxin,yetn,yzen
+ real(nr) :: zxin,zetn,zzen
+ if ((myid==0).and.(n==1)) then
+    write(*,"('Interpolation procedure in progress')")
  end if
 
 do k = 0, lzei
    do j = 0, leti
-      if (myid==mo(mb)) then
-         wtsi=MPI_WTIME();
-      end if
       do i = 0, lxii;l2=indx4(i,j,k,1)
-         if (n==1) then
-            if (k==0) then
-            xs(:)=(/xyz2(l2,1),xyz2(l2,2),xyz2(l2,3)/)
-               if (i==0) then
-                  start(1)=(nint(real(lxio*i/lxiio,nr)))
-               else
-                  l=indx4(i-1,j,k,1)
-                  start(1)=(ixis(l,1))
-               end if
-               start(1)=max(start(1),0.0_nr);
-               start(1)=min(start(1),real(lxio,nr))
-               if (j==0) then
-                  start(2)=(nint(real(leto*j/letio,nr)))
-               else
-                  l=indx4(i,j-1,k,1)
-                  start(2)=(ixis(l,2))
-               end if
-               start(2)=max(start(2),0.0_nr);
-               start(2)=min(start(2),real(leto,nr))
-               if (k==0) then
-                  start(3)=(nint(real(lzeo*k/lzeio,nr)))
-               else
-                  l=indx4(i,j,k-1,1)
-                  start(3)=(ixis(l,3))
-               end if
-               start(3)=max(start(3),0.0_nr);
-               start(3)=min(start(3),real(lzeo,nr))
-            xin(:)=(/start(1),start(2),start(3)/)
-            hxi(:)=(/0,0,0/)
-            err1=1
-            do while(err1>tol)
-            xin=xin+hxi
-            xin(:)=max(xin(:),(/0.0_nr,0.0_nr,0.0_nr/));
-            xin(:)=min(xin(:),(/real(lxio,nr),real(leto,nr),real(lzeo,nr)/))
-            thisxi=xin(1);thiset=xin(2);thisze=xin(3)
-            lvarr=xyz(:,1);xn=trilinr(thisxi,thiset,thisze)
-            lvarr=xyz(:,2);yn=trilinr(thisxi,thiset,thisze)
-            lvarr=xyz(:,3);zn=trilinr(thisxi,thiset,thisze)
-            hxn=xs(:)-(/xn,yn,zn/)
-            lvarr=xxi;xxin=trilinr(thisxi,thiset,thisze)
-            lvarr=xet;xetn=trilinr(thisxi,thiset,thisze)
-            lvarr=xze;xzen=trilinr(thisxi,thiset,thisze)
-            lvarr=yxi;yxin=trilinr(thisxi,thiset,thisze)
-            lvarr=yet;yetn=trilinr(thisxi,thiset,thisze)
-            lvarr=yze;yzen=trilinr(thisxi,thiset,thisze)
-            lvarr=zxi;zxin=trilinr(thisxi,thiset,thisze)
-            lvarr=zet;zetn=trilinr(thisxi,thiset,thisze)
-            lvarr=zze;zzen=trilinr(thisxi,thiset,thisze)
-            jaco(1,:)=(/xxin,yxin,zxin/)
-            jaco(2,:)=(/xetn,yetn,zetn/)
-            jaco(3,:)=(/xzen,yzen,zzen/)
-            hxi(1)=sum(jaco(1,:)*hxn(:))
-            hxi(2)=sum(jaco(2,:)*hxn(:))
-            hxi(3)=sum(jaco(3,:)*hxn(:))
-            err1=sqrt(hxn(1)**2+hxn(2)**2+hxn(3)**2)
-            end do
-            else
-            l=indx4(i,j,k-1,1)
-            thisxi=(ixis(l,1))
-            thiset=(ixis(l,2))
-            thisze=(ixis(l,3))
-            ixis(l2,:)=(/thisxi,thiset,thisze/)
-            end if
-         ixis(l2,:)=(/thisxi,thiset,thisze/)
-         end if
+         xs(:)=(/xyz2(l2,1),xyz2(l2,2),xyz2(l2,3)/)
+         if (xs(1)<bounds(0,1)) then
+             qb(l2,n)=outside(n)
+         elseif (xs(1)>bounds(1,1)) then
+             qb(l2,n)=outside(n)
+         elseif (xs(2)<bounds(0,2)) then
+             qb(l2,n)=outside(n)
+         elseif (xs(2)>bounds(1,2)) then
+             qb(l2,n)=outside(n)
+         !elseif (xs(3)<bounds(0,3)) then
+         !    qb(l2,n)=outside(n)
+         !elseif (xs(3)>bounds(1,3)) then
+         !    qb(l2,n)=outside(n)
+         else
+           if (n==1) then
+                 if (i==0) then
+                    start(1)=0
+                 else
+                    l=indx4(i-1,j,k,1)
+                    start(1)=(ixis(l,1))
+                    if (myid==0) then
+                       write(*,*) start(1) 
+                    end if
+                 end if
+                 start(1)=max(start(1),0.0_nr);
+                 start(1)=min(start(1),real(lxio,nr))
+                 if (j==0) then
+                    start(2)=(nint(real(leto*j/letio,nr)))
+                 else
+                    l=indx4(i,j-1,k,1)
+                    start(2)=(ixis(l,2))
+                 end if
+                 start(2)=max(start(2),0.0_nr);
+                 start(2)=min(start(2),real(leto,nr))
+                 if (k==0) then
+                    start(3)=(nint(real(lzeo*k/lzeio,nr)))
+                 else
+                    l=indx4(i,j,k-1,1)
+                    start(3)=(ixis(l,3))
+                 end if
+                 start(3)=max(start(3),0.0_nr);
+                 start(3)=min(start(3),real(lzeo,nr))
+              xin(:)=(/start(1),start(2),start(3)/)
+              hxi(:)=(/0,0,0/)
+              err1=1
+              do while(err1>tol)
+              xin=xin+hxi
+              xin(:)=max(xin(:),(/0.0_nr,0.0_nr,0.0_nr/));
+              xin(:)=min(xin(:),(/real(lxio,nr),real(leto,nr),real(lzeo,nr)/))
+              thisxi=xin(1);thiset=xin(2);thisze=xin(3)
+              if (mod(thisxi,1.0_nr)==0) then
+                 if (thisxi==lxio) then
+                    xi0=thisxi-1;xi1=thisxi;
+                    else
+                    xi0=thisxi;xi1=thisxi+1
+                 end if
+                 else
+                 xi0=floor(thisxi);xi1=ceiling(thisxi)
+              end if
+              if (mod(thiset,1.0_nr)==0) then
+                 if (thiset==leto) then
+                    et0=thiset-1;et1=thiset;
+                    else
+                    et0=thiset;et1=thiset+1
+                 end if
+                 else
+                 et0=floor(thiset);et1=ceiling(thiset)
+              end if
+              if (mod(thisze,1.0_nr)==0) then
+                 if (thisze==lzeo) then
+                    ze0=thisze-1;ze1=thisze;
+                    else
+                    ze0=thisze;ze1=thisze+1
+                 end if
+                 else
+                 ze0=floor(thisze);ze1=ceiling(thisze)
+              end if
+              l000=indx5(xi0,et0,ze0,1);
+              l010=indx5(xi0,et1,ze0,1);
+              l100=indx5(xi1,et0,ze0,1);
+              l110=indx5(xi1,et1,ze0,1);
+              l001=indx5(xi0,et0,ze1,1);
+              l101=indx5(xi1,et0,ze1,1);
+              l011=indx5(xi0,et1,ze1,1);
+              l111=indx5(xi1,et1,ze1,1);
+              do m = 1, 12
+                 selectcase(m)
+                 case(1,2,3)
+                 x000=xyz(l000,m);x010=xyz(l010,m);x100=xyz(l100,m);x110=xyz(l110,m);
+                 x001=xyz(l001,m);x101=xyz(l101,m);x011=xyz(l011,m);x111=xyz(l111,m)
+                 case(4)
+                 x000=xxi(l000);x010=xxi(l010);x100=xxi(l100);x110=xxi(l110);
+                 x001=xxi(l001);x101=xxi(l101);x011=xxi(l011);x111=xxi(l111)
+                 case(5)
+                 x000=xet(l000);x010=xet(l010);x100=xet(l100);x110=xet(l110);
+                 x001=xet(l001);x101=xet(l101);x011=xet(l011);x111=xet(l111)
+                 case(6)
+                 x000=xze(l000);x010=xze(l010);x100=xze(l100);x110=xze(l110);
+                 x001=xze(l001);x101=xze(l101);x011=xze(l011);x111=xze(l111)
+                 case(7)
+                 x000=yxi(l000);x010=yxi(l010);x100=yxi(l100);x110=yxi(l110);
+                 x001=yxi(l001);x101=yxi(l101);x011=yxi(l011);x111=yxi(l111)
+                 case(8)
+                 x000=yet(l000);x010=yet(l010);x100=yet(l100);x110=yet(l110);
+                 x001=yet(l001);x101=yet(l101);x011=yet(l011);x111=yet(l111)
+                 case(9)
+                 x000=yze(l000);x010=yze(l010);x100=yze(l100);x110=yze(l110);
+                 x001=yze(l001);x101=yze(l101);x011=yze(l011);x111=yze(l111)
+                 case(10)
+                 x000=zxi(l000);x010=zxi(l010);x100=zxi(l100);x110=zxi(l110);
+                 x001=zxi(l001);x101=zxi(l101);x011=zxi(l011);x111=zxi(l111)
+                 case(11)
+                 x000=zet(l000);x010=zet(l010);x100=zet(l100);x110=zet(l110);
+                 x001=zet(l001);x101=zet(l101);x011=zet(l011);x111=zet(l111)
+                 case(12)
+                 x000=zze(l000);x010=zze(l010);x100=zze(l100);x110=zze(l110);
+                 x001=zze(l001);x101=zze(l101);x011=zze(l011);x111=zze(l111)
+                 end select
+                 xn00=(xi1-thisxi)*x000+(thisxi-xi0)*x100;
+                 xn10=(xi1-thisxi)*x010+(thisxi-xi0)*x110;
+                 xn0=(et1-thiset)*xn00+(thiset-et0)*xn10;
+                 xn01=(xi1-thisxi)*x001+(thisxi-xi0)*x101;
+                 xn11=(xi1-thisxi)*x011+(thisxi-xi0)*x111;
+                 xn1=(et1-thiset)*xn01+(thiset-et0)*xn11;
+                 res=(ze1-thisze)*xn0+(thisze-ze0)*xn1;
+                 select case (m)
+                 case(1);xn=res;case(2);yn=res;case(3);zn=res;
+                 case(4);xxin=res;case(5);xetn=res;case(6);xzen=res;
+                 case(7);yxin=res;case(8);yetn=res;case(9);yzen=res;
+                 case(10);zxin=res;case(11);zetn=res;case(12);zzen=res;
+                 end select
+              end do
+              hxn=xs(:)-(/xn,yn,zn/)
+              jaco(1,:)=(/xxin,yxin,zxin/)
+              jaco(2,:)=(/xetn,yetn,zetn/)
+              jaco(3,:)=(/xzen,yzen,zzen/)
+              hxi(1)=sum(jaco(1,:)*hxn(:))
+              hxi(2)=sum(jaco(2,:)*hxn(:))
+              hxi(3)=sum(jaco(3,:)*hxn(:))
+              err1=sqrt(hxn(1)**2+hxn(2)**2+hxn(3)**2)
+              end do
+           ixis(l2,:)=(/thisxi,thiset,thisze/)
+           end if
          qb(l2,n)=htrilinr(ixis(l2,1),ixis(l2,2),ixis(l2,3))
+         end if
       end do
-   if (myid==mo(mb)) then
-   wtei=MPI_WTIME(); 
-   write(*,'("Interpolation at j=",i4," took:",f8.3," in block ",i2)') j,(wtei-wtsi),mb
-   end if
    end do
 end do
+ if ((myid==mo(mb)).and.(n==5)) then
+    write(*,"('Block ',i2,' done!')") mb
+ end if
  end subroutine interpolate
 
 !====================================================================================
@@ -609,62 +723,8 @@ end do
 
  end function indx4
 
-!===== FUNCTION FOR TRILINEAR INTERPOLATION
- function trilinr(xi,et,ze) result(xn)
- implicit none
- real(nr) :: xn
- real(nr), intent(in) :: xi,et,ze
- integer :: xi0,xi1,et0,et1,ze0,ze1
- integer :: l000,l010,l100,l110,l001,l011,l101,l111
- real(nr) :: x000,x010,x100,x110,x001,x011,x101,x111
- real(nr) :: xn00,xn10,xn0,xn01,xn11,xn1
-
- if (mod(xi,1.0_nr)==0) then
-    if (xi==lxio) then
-       xi0=xi-1;xi1=xi;
-       else
-       xi0=xi;xi1=xi+1
-    end if
-    else
-    xi0=floor(xi);xi1=ceiling(xi)
- end if
- if (mod(et,1.0_nr)==0) then
-    if (et==leto) then
-       et0=et-1;et1=et;
-       else
-       et0=et;et1=et+1
-    end if
-    else
-    et0=floor(et);et1=ceiling(et)
- end if
- if (mod(ze,1.0_nr)==0) then
-    if (ze==lzeo) then
-       ze0=ze-1;ze1=ze;
-       else
-       ze0=ze;ze1=ze+1
-    end if
-    else
-    ze0=floor(ze);ze1=ceiling(ze)
- end if
- l000=indx5(xi0,et0,ze0,1);x000=lvarr(l000)
- l010=indx5(xi0,et1,ze0,1);x010=lvarr(l010)
- l100=indx5(xi1,et0,ze0,1);x100=lvarr(l100)
- l110=indx5(xi1,et1,ze0,1);x110=lvarr(l110)
- l001=indx5(xi0,et0,ze1,1);x001=lvarr(l001)
- l101=indx5(xi1,et0,ze1,1);x101=lvarr(l101)
- l011=indx5(xi0,et1,ze1,1);x011=lvarr(l011)
- l111=indx5(xi1,et1,ze1,1);x111=lvarr(l111)
- xn00=(xi1-xi)*x000+(xi-xi0)*x100;
- xn10=(xi1-xi)*x010+(xi-xi0)*x110;
- xn0=(et1-et)*xn00+(et-et0)*xn10;
- xn01=(xi1-xi)*x001+(xi-xi0)*x101;
- xn11=(xi1-xi)*x011+(xi-xi0)*x111;
- xn1=(et1-et)*xn01+(et-et0)*xn11;
- xn=(ze1-ze)*xn0+(ze-ze0)*xn1;
-
- end function trilinr
  
-!===== FUNCTION FOR HERMITEAN INTERPOLATION
+!===== FUNCTION FOR 3D HERMITEAN INTERPOLATION
  function htrilinr(xi,et,ze) result(fs)
  implicit none
  real(nr) :: fs

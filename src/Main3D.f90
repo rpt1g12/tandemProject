@@ -28,7 +28,7 @@
 
     open(9,file='inputo.dat',shared)
     read(9,*) cinput,mbk
-    read(9,*) cinput,nts
+    read(9,*) cinput,nts,nto,iwrec
     read(9,*) cinput,nscrn,nsgnl
     read(9,*) cinput,ndata
     read(9,*) cinput,nkrk
@@ -43,6 +43,11 @@
     read(9,*) cinput,tmax,timf,tsam
     read(9,*) cinput,fltk,fltkbc
     read(9,*) cinput,dto
+    read(9,*) cinput,forcing,amfor
+    read(9,*) cinput,tgustd,tguste
+    read(9,*) cinput,aoa,talphas,talphar
+    read(9,*) cinput,LES,smago1,smago2
+    read(9,*) cinput,output,ogrid,osol,oblock
     close(9)
 
     cinput=cinput; fltk=pi*fltk; fltkbc=pi*fltkbc
@@ -54,7 +59,7 @@
     ! rpt-Do not use postprocessing subroutines
     ispost=.false.
     ! rpt-Position of signal sampling
-    xpos=0.4_nr;ypos=0.01_nr;zpos=0.005_nr
+    xpos=-1.0_nr;ypos=0.01_nr;zpos=0.005_nr
 
     allocate(times(0:ndata))
     allocate(lximb(0:mbk),letmb(0:mbk),lzemb(0:mbk),lhmb(0:mbk),mo(0:mbk),npc(0:mbk,3))
@@ -62,11 +67,11 @@
     call inputext
 
     ! rpt-Forcing parameters
-    xfor=cos(delt1)-0.5_nr-1.0_nr+(0.1_nr);
-    yfor=-sin(delt1)+(0.129_nr);
-    rfor=5.0e-3
-    amfor=1e-3*amachoo
-    tsfor=15.0e0;tefor=35.000e0
+    xfor=-(0.5_nr+3*cos(aoa*pi/180_nr))!cos(delt1)-0.5_nr-1.0_nr+(0.1_nr);
+    yfor=-3*sin(aoa*pi/180_nr)!-sin(delt1)+(0.129_nr);
+    rfor=5.0e-1
+    amfor=amfor*amachoo/100.0e0
+    tsfor=151.751e0;tefor=200.000e0
 !===== DOMAIN DECOMPOSITION & BOUNDARY INFORMATION
 
     mo(0)=0
@@ -171,7 +176,10 @@
 
 !===== ALLOCATION OF MAIN ARRAYS
 
-    allocate(qo(0:lmx,5),qa(0:lmx,5),qb(0:lmx,5),de(0:lmx,5))
+    !allocate(qo(0:lmx,5),qa(0:lmx,5),qb(0:lmx,5),de(0:lmx,5))
+    !qb(:,:)=0
+    ! RPT-take out qb
+    allocate(qo(0:lmx,5),qa(0:lmx,5),de(0:lmx,5))
     allocate(xim(0:lmx,3),etm(0:lmx,3),zem(0:lmx,3),rr(0:lmx,3),ss(0:lmx,3))
     allocate(p(0:lmx),yaco(0:lmx),varr(0:lmx))
 
@@ -330,6 +338,7 @@
     call wallArea
     call walldir
 
+
  do nn=1,3; do ip=0,1; i=ip*ijk(1,nn)
  do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
  do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
@@ -344,30 +353,44 @@
 
 !===== SETTING UP OUTPUT FILE & STORING GRID DATA
 
-    inquire(iolength=lp) varr
-    open(0,file=cdata,access='direct',recl=lp)
- do nn=1,3
- ! rpt-Increasigng the record count
- nwrec=nwrec+1
-    varr(:)=ss(:,nn); write(0,rec=nwrec) varr(:)
- end do
- ! rpt-If ngrid is 1 then store the grid metrics and increase the record count
- if (ngridv==1) then
- do nn=1,3
- nwrec=nwrec+1
-    varr(:)=xim(:,nn); write(0,rec=nwrec) varr(:)
- end do
- do nn=1,3
- nwrec=nwrec+1
-    varr(:)=etm(:,nn); write(0,rec=nwrec) varr(:)
- end do
- do nn=1,3
- nwrec=nwrec+1
-    varr(:)=zem(:,nn); write(0,rec=nwrec) varr(:)
- end do
- end if
+ selectcase(output)
+ case(0)
+       inquire(iolength=lp) varr
+       open(0,file=cdata,access='direct',recl=lp)
+    if ((1-nto)*nts*nto==0) then
+       do nn=1,3
+       ! rpt-Increasigng the record count
+       nwrec=nwrec+1
+          varr(:)=ss(:,nn); write(0,rec=nwrec) varr(:)
+       end do
+       ! rpt-If ngrid is 1 then store the grid metrics and increase the record count
+       if (ngridv==1) then
+          do nn=1,3
+          nwrec=nwrec+1
+             varr(:)=xim(:,nn); write(0,rec=nwrec) varr(:)
+          end do
+          do nn=1,3
+          nwrec=nwrec+1
+             varr(:)=etm(:,nn); write(0,rec=nwrec) varr(:)
+          end do
+          nwrec=nwrec+1
+             varr(:)=-1/yaco(:); write(0,rec=nwrec) varr(:)
+          do nn=2,3
+          nwrec=nwrec+1
+             varr(:)=zem(:,nn); write(0,rec=nwrec) varr(:)
+          end do
+       end if
+    nrec=nwrec
+    else
+    nrec=3+9*ngridv
+    if (nto==2) then
+       nwrec=iwrec
+    end if
+    end if
+ case(1)
+   call plot3d(gflag=ogrid,sflag=0,bflag=oblock)
+ end select
 
- nrec=nwrec
 
 !===== SETTING UP SPONGE ZONE PARAMETERS
 
@@ -375,7 +398,9 @@
 
 !===== SETTING UP FORCING PARAMETERS
 
-    !call forceup
+    if (forcing==1) then
+    call forceup
+    end if
 
 !===== INITIAL CONDITIONS
 
@@ -401,11 +426,7 @@
  end do
     close(9)
  end if
-    qb(:,:)=0
-
-!============================================
-!===== BEGINNING OF TIME MARCHING IN SOLUTION
-!============================================
+    !qb(:,:)=0
 
     wts=MPI_WTIME()
 
@@ -413,20 +434,35 @@
     open(1,file='signal.dat'); close(1,status='delete')
  end if
     call MPI_BARRIER(icom,ierr)
+    wte=MPI_WTIME()
     open(1,file='signal.dat',access='direct',form='formatted',recl=16,shared)
 
+     if (myid==0) then
+     write(*,"(3x,'n',8x,'time',9x,'Cl',9x,'Cd',5x)")  
+     write(*,"('============================================')")
+     end if
     ndati=-1; nsigi=-1; dtsum=0
+    if ((nto==2).and.(output==0)) then
+       ndati=0
+    end if
+!============================================
+!===== BEGINNING OF TIME MARCHING IN SOLUTION
+!============================================
  do while(timo-tmax<0.and.(dt/=0.or.n<=2))
 
+  if (mod(n,nscrn)==0) then
   if (n.ge.2) then
-    call clpost(1,2,ndati) 
+    call clpost(1,ndati) 
   else
     cl=0
   end if
+  end if
 
   if(myid==0.and.mod(n,nscrn)==0) then
-     write(*,"(' n =',i8,'   time =',f12.5,' Cl1 = ',f10.5,', Cl2 = ',f10.5)") &
-     n,timo,cl(1,2),cl(1,1)
+     !Change ra0 to the angle of attack needed!!!
+     ra0=aoa*pi/180;ra1=cos(ra0);ra2=sin(ra0)
+     write(*,"(i8,f12.5,f12.7,f12.7)") &
+     n,timo,cl(1,2)*ra1-cl(1,1)*ra2,cl(1,2)*ra2+cl(1,1)*ra1
   end if
 
 ! ----- FILTERING
@@ -458,8 +494,9 @@
      de(:,4)=qa(:,4)*de(:,1)
 
      p(:)=gamm1*(qa(:,5)-half*(qa(:,2)*de(:,2)+qa(:,3)*de(:,3)+qa(:,4)*de(:,4)))
-     de(:,5)=gam*p(:)*de(:,1)
-     ss(:,1)=srefp1dre*de(:,5)**1.5_nr/(de(:,5)+srefoo)
+     de(:,5)=gam*p(:)*de(:,1) ! rpt-This is temperature
+     ss(:,1)=srefp1dre*de(:,5)**1.5_nr/(de(:,5)+srefoo) ! rpt-This is
+                                                        !     Sutherland's law
 
 ! ----- DETERMINATION OF TIME STEP SIZE & OUTPUT TIME
 
@@ -526,14 +563,41 @@
      fctr=2.0_nr/3
      rr(:,1)=de(:,1)*yaco(:)
      rr(:,2)=gamm1prndtli*rr(:,1)
-     de(:,5)=fctr*(txx(:)+tyy(:)+tzz(:))
+     !qb(:,3)=de(:,1)
 
-     txx(:)=rr(:,1)*(2*txx(:)-de(:,5))
-     tyy(:)=rr(:,1)*(2*tyy(:)-de(:,5))
-     tzz(:)=rr(:,1)*(2*tzz(:)-de(:,5))
-     txy(:)=rr(:,1)*(txy(:)+hzz(:))
-     tyz(:)=rr(:,1)*(tyz(:)+hxx(:))
-     tzx(:)=rr(:,1)*(tzx(:)+hyy(:))
+     selectcase(LES)
+     case(1)
+        de(:,1)=(txx(:)*txx(:)+tyy(:)*tyy(:)+tzz(:)*tzz(:)+& !rpt- SijSij
+                 (hzz(:)+txy(:))*(hzz(:)+txy(:))+&
+                 (hyy(:)+tzx(:))*(hyy(:)+tzx(:))+&
+                 (hxx(:)+tyz(:))*(hxx(:)+tyz(:)))
+        varr(:)=(-1/yaco(:))**1.5 ! rpt- Volume
+        rr(:,3)=qa(:,1)*smago1**2*varr(:)*sqrt(2*(de(:,1))) ! rpt-nuSGS
+        !qb(:,2)=rr(:,3)
+        !qb(:,4)=qb(:,2)/qb(:,3)
+        rr(:,1)=rr(:,1)+rr(:,3)*yaco(:)
+        rr(:,2)=rr(:,2)+tgamm1prndtli*rr(:,3)*yaco(:)   
+        rr(:,3)=fctr*(qa(:,1)*smago2*varr(:)*de(:,1)) ! rpt-2/3*ro*kSGS
+        de(:,5)=fctr*(txx(:)+tyy(:)+tzz(:))
+
+
+        txx(:)=rr(:,1)*(2*txx(:)-de(:,5))-rr(:,3)
+        tyy(:)=rr(:,1)*(2*tyy(:)-de(:,5))-rr(:,3)
+        tzz(:)=rr(:,1)*(2*tzz(:)-de(:,5))-rr(:,3)
+        txy(:)=rr(:,1)*(txy(:)+hzz(:))
+        tyz(:)=rr(:,1)*(tyz(:)+hxx(:))
+        tzx(:)=rr(:,1)*(tzx(:)+hyy(:))
+     case(0)
+        de(:,5)=fctr*(txx(:)+tyy(:)+tzz(:))
+
+        txx(:)=rr(:,1)*(2*txx(:)-de(:,5))
+        tyy(:)=rr(:,1)*(2*tyy(:)-de(:,5))
+        tzz(:)=rr(:,1)*(2*tzz(:)-de(:,5))
+        txy(:)=rr(:,1)*(txy(:)+hzz(:))
+        tyz(:)=rr(:,1)*(tyz(:)+hxx(:))
+        tzx(:)=rr(:,1)*(tzx(:)+hyy(:))
+     end select
+
      hxx(:)=rr(:,2)*ss(:,1)+de(:,2)*txx(:)+de(:,3)*txy(:)+de(:,4)*tzx(:)
      hyy(:)=rr(:,2)*ss(:,2)+de(:,2)*txy(:)+de(:,3)*tyy(:)+de(:,4)*tyz(:)
      hzz(:)=rr(:,2)*ss(:,3)+de(:,2)*tzx(:)+de(:,3)*tyz(:)+de(:,4)*tzz(:)
@@ -605,7 +669,9 @@
 
 ! ----- IMPLEMENTATION OF FORCING
 
-     !call forcego
+     if (forcing==1) then
+     call forcego
+     end if
 
 ! ----- PREPARATION FOR GCBC & GCIC
 
@@ -780,17 +846,24 @@
    if(myid==0) then
       write(*,"('===> saving output ',i3,' at time =',f12.8)") ndati,timo
    end if
+   selectcase(output)
+   case(1)
+      call plot3d(gflag=0,sflag=osol,bflag=oblock)
+   case(0)
+      !==========SAVING INSTANTANEUS DENSITY, VELOCITY AND PRESSURE
+      nwrec=nwrec+1
+         varr(:)=qa(:,1); write(0,rec=nwrec) varr(:)
+      do m = 2, 4
+      nwrec=nwrec+1
+        varr(:)=((qa(:,m)/qa(:,1))+umf(m-1)); write(0,rec=nwrec) varr(:)
+      end do
+      nwrec=nwrec+1
+      varr(:)=p(:); write(0,rec=nwrec) varr(:)
+      if(myid==0) then
+         write(*,"('===>nwrec= ',i8)") nwrec
+      end if
+   end select
 
-   !==========SAVING INSTANTANEUS DENSITY, VELOCITY AND PRESSURE
-   nwrec=nwrec+1
-      varr(:)=qa(:,1); write(0,rec=nwrec) varr(:)
-   do m = 2, 4
-   nwrec=nwrec+1
-      varr(:)=((qa(:,m)/qa(:,1))+umf(m-1)); write(0,rec=nwrec) varr(:)
-   end do
-   rr(:,1)=p(:); nwrec=nwrec+1
-   varr(:)=rr(:,1); write(0,rec=nwrec) varr(:)
-   !======================================
 
    !===== GENERATING RESTART DATA FILE
    
@@ -823,15 +896,17 @@
    end if
  end if
 
- if(timo-tsam>=0.and.mod(n,nsgnl)==0) then
-    nsigi=nsigi+1; call signalgo
- end if
+ !if(timo-tsam>=0.and.mod(n,nsgnl)==0) then
+ !   nsigi=nsigi+1; call signalgo
+ !end if
 
  if (myid==idsignal) then
+ if (timo.le.25.5_nr) then
     ra0=qa(lsignal,2)/qa(lsignal,1)+umf(1)
     ra1=qa(lsignal,3)/qa(lsignal,1)+umf(2)
     ra2=qa(lsignal,4)/qa(lsignal,1)+umf(3)
-    write(6,"(f10.5,1x,f10.5,1x,f10.5,1x,f10.5)") ra0,ra1,ra2,timo
+    write(6,"(es15.7,1x,es15.7,1x,es15.7,1x,es15.7)") ra0,ra1,ra2,timo
+ end if
  end if
 
 !==========================
@@ -846,9 +921,13 @@
     wte=MPI_WTIME(); res=wte-wts
     call MPI_ALLREDUCE(res,wtime,1,MPI_REAL8,MPI_SUM,icom,ierr)
  if(myid==0) then
-    !open(9,file='data/timeouts.dat')
-    !write(9,'(es15.7)') times(:)
-    !close(9)
+    if (nto==2) then
+       open(9,file='data/timeouts.dat',position='append')
+    else
+       open(9,file='data/timeouts.dat')
+    end if
+    write(9,'(es15.7)') times(:)
+    close(9)
 
     open(9,file='walltime.dat',position='append')
     write(9,'(2es15.7)') real(npro,nr),wtime/npro
@@ -863,20 +942,29 @@
  else
     if(myid==0) then
        write(*,'("Simulation time was ",f6.2," hours")') wtime/(3600_nr*npro)
-       write(*,*) "Writing Output files..."
     end if
-    call post(average=.false.)
+   if (output==0) then
+    if (nto==2) then
+       ndata=ndati+(iwrec-nrec)/5-1
+       if (myid==0) then
+          write(*,*) ndata
+       end if
+    end if
+      if (output==0) then
+      call post(average=.false.)
+      end if
+   end if
  end if
 
-!if (myid==0) then
-!   open(9,file='data/post.dat')
-!   write(9,*) 'ngridv ',ngridv
-!   write(9,*) 'ndata  ',ndata
-!   write(9,*) 'nrec   ',nrec
-!   write(9,*) 'nwrec  ',nwrec
-!   write(9,*) 'lhmb   ',lhmb(mb)
-!   close(9)
-!end if
+if (myid==0) then
+   open(9,file='data/post.dat')
+   write(9,*) 'ngridv ',ngridv
+   write(9,*) 'ndata  ',ndata
+   write(9,*) 'nrec   ',nrec
+   write(9,*) 'nwrec  ',nwrec
+   write(9,*) 'lhmb   ',lhmb(mb)
+   close(9)
+end if
 
 !===== END OF JOB
 

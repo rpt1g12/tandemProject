@@ -192,6 +192,10 @@
  subroutine movef(dtko,dtk)
 
  real(nr),intent(in) :: dtko,dtk
+ real(nr) :: alphamax
+
+ !talphas=25.5_nr;talphar=5.0_nr
+ alphamax=aoa*pi/180_nr
 
  if(nsmf==0) then
     ra0=pi/timf; ra1=ra0*min(timo,timf); ra2=ra0*min(timo+dtko,timf)
@@ -205,6 +209,34 @@
     dfdt=ra0*cos(ra2)
     progmf=half*ra0*(fctr+dtk*dfdt)
     dudtmf(:)=progmf*uoo(:)
+
+    if (timo+dtk>talphas) then
+       ra3=timo-talphas
+       ra0=half*pi/talphar; ra1=ra0*min(ra3,talphar); ra2=ra0*min(ra3+dtk,talphar)   
+
+       fctr=cos(alphamax*sin(ra1)**2);
+       dfdt=-sin(alphamax*sin(ra2)**2)*alphamax*ra0*sin(2*ra2);
+       progmf=(fctr+dtk*dfdt);
+       umf(1)=progmf*amachoo;
+        
+       fctr=-sin(alphamax*sin(ra1)**2)*alphamax*ra0*sin(2*ra1);
+       dfdt=-cos(alphamax*sin(ra2)**2)*alphamax**2*ra0**2*sin(2*ra2)**2 &
+            -sin(alphamax*sin(ra2)**2)*2*alphamax*ra0**2*cos(2*ra2);
+       progmf=(fctr+dtk*dfdt);
+       dudtmf(1)=progmf*amachoo;
+       
+       fctr=sin(alphamax*sin(ra1)**2);
+       dfdt=cos(alphamax*sin(ra2)**2)*alphamax*ra0*sin(2*ra2);
+       progmf=(fctr+dtk*dfdt);
+       umf(2)=progmf*amachoo;
+        
+       fctr=cos(alphamax*sin(ra1)**2)*alphamax*ra0*sin(2*ra1);
+       dfdt=-sin(alphamax*sin(ra2)**2)*alphamax**2*ra0**2*sin(2*ra2)**2 &
+            +cos(alphamax*sin(ra2)**2)*2*alphamax*ra0**2*cos(2*ra2);
+       progmf=(fctr+dtk*dfdt);
+       dudtmf(2)=progmf*amachoo;
+       umf(3)=0;dudtmf(3)=0
+    end if
  else
     umf(:)=uoo(:); dudtmf(:)=0
  end if
