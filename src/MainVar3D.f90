@@ -166,8 +166,8 @@
  integer, dimension(:), allocatable ::lwall
  real(nr), dimension(:), allocatable ::area
  real(nr), dimension(:,:), allocatable ::wnor,wtan,tw
+ real(nr), dimension(:,:), allocatable :: xyz
  logical :: wflag
- real(nr), dimension(:,:), allocatable,target :: xyz
 
 !===== POST-PROCESSING VARIABLES BY RPT
 

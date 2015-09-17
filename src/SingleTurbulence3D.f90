@@ -206,7 +206,7 @@
     ! rpt-this is sigma(x,y,z)
     de(l,1)=ra0*(1+cos(pi*(1-rr(l,1))*(1-rr(l,2))*(1-rr(l,3)))) 
     ! rpt-this is lambda(x)
-    de(l,2)=ra1*(1-tanh(ss(l,1)))+3/szco
+    de(l,2)=ra1*(1-tanh(ss(l,1)))+1
  if(de(l,1)-sml>0) then
     ll=ll+1; de(ll,5)=l+sml ! rpt-this gives the l's containing sponge points,why sum sml??
  end if
@@ -217,7 +217,6 @@
  do ll=0,lsz; l=de(ll,5); lcsz(ll)=l
     ! rpt-asz=sigma(x,y,z) and bsc=sigma(x,y,z)*lambda(x)
     asz(ll)=de(l,1)/yaco(l); bsz(ll)=asz(ll)*de(l,2)
-    !qb(l,1)=asz(ll)*yaco(l);qb(l,2)=bsz(ll)*yaco(l)
  end do
  end if
 
@@ -368,14 +367,8 @@
  do ll=0,lsz; l=lcsz(ll)
     rr(l,:)=0; ss(l,1)=gamm1*asz(ll)*yaco(l)
  end do
- if (timo+dtk>tgustd) then
-    ra0=timo-tgustd+dtk; ra1=min(ra0*half*pi/tguste,half*pi)
-    fctr=cos(ra1)**2
- else
-    fctr=1
- end if
  do ll=0,ltz; l=lctz(ll)
-    rr(l,:)=vit(ll,:)*fctr
+    rr(l,:)=vit(ll,:)
  end do
 !    fctr=half*gamm1
  do ll=0,lsz; l=lcsz(ll)
