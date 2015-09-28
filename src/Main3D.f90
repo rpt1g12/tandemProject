@@ -330,31 +330,16 @@
     zem(:,2)=de(:,1)*qo(:,2)-qo(:,1)*de(:,2)
     zem(:,3)=qo(:,1)*qa(:,2)-qa(:,1)*qo(:,2)
 
-!    rr(:,3)=qa(:,2)*ss(:,3); rr(:,2)=qa(:,3)*ss(:,3)
-!    m=1; call mpigo(ntdrv,nrall,n45go,m); call deriv(3,3,m); call deriv(2,2,m); xim(:,m)=rr(:,3)-rr(:,2)
-!    rr(:,3)=de(:,2)*ss(:,1); rr(:,2)=de(:,3)*ss(:,1)
-!    m=2; call mpigo(ntdrv,nrall,n45go,m); call deriv(3,3,m); call deriv(2,2,m); xim(:,m)=rr(:,3)-rr(:,2)
-!    rr(:,3)=qo(:,2)*ss(:,2); rr(:,2)=qo(:,3)*ss(:,2)
-!    m=3; call mpigo(ntdrv,nrall,n45go,m); call deriv(3,3,m); call deriv(2,2,m); xim(:,m)=rr(:,3)-rr(:,2)
-!
-!    rr(:,1)=qa(:,3)*ss(:,3); rr(:,3)=qa(:,1)*ss(:,3)
-!    m=1; call mpigo(ntdrv,nrall,n45go,m); call deriv(1,1,m); call deriv(3,3,m); etm(:,m)=rr(:,1)-rr(:,3)
-!    rr(:,1)=de(:,3)*ss(:,1); rr(:,3)=de(:,1)*ss(:,1)
-!    m=2; call mpigo(ntdrv,nrall,n45go,m); call deriv(1,1,m); call deriv(3,3,m); etm(:,m)=rr(:,1)-rr(:,3)
-!    rr(:,1)=qo(:,3)*ss(:,2); rr(:,3)=qo(:,1)*ss(:,2)
-!    m=3; call mpigo(ntdrv,nrall,n45go,m); call deriv(1,1,m); call deriv(3,3,m); etm(:,m)=rr(:,1)-rr(:,3)
-!
-!    rr(:,2)=qa(:,1)*ss(:,3); rr(:,1)=qa(:,2)*ss(:,3)
-!    m=1; call mpigo(ntdrv,nrall,n45go,m); call deriv(2,2,m); call deriv(1,1,m); zem(:,m)=rr(:,2)-rr(:,1)
-!    rr(:,2)=de(:,1)*ss(:,1); rr(:,1)=de(:,2)*ss(:,1)
-!    m=2; call mpigo(ntdrv,nrall,n45go,m); call deriv(2,2,m); call deriv(1,1,m); zem(:,m)=rr(:,2)-rr(:,1)
-!    rr(:,2)=qo(:,1)*ss(:,2); rr(:,1)=qo(:,2)*ss(:,2)
-!    m=3; call mpigo(ntdrv,nrall,n45go,m); call deriv(2,2,m); call deriv(1,1,m); zem(:,m)=rr(:,2)-rr(:,1)
-
     yaco(:)=3/(qo(:,1)*xim(:,1)+qo(:,2)*etm(:,1)+qo(:,3)*zem(:,1)&
               +qa(:,1)*xim(:,2)+qa(:,2)*etm(:,2)+qa(:,3)*zem(:,2)&
               +de(:,1)*xim(:,3)+de(:,2)*etm(:,3)+de(:,3)*zem(:,3))
 
+
+    cinput='met'; 
+    qo(:,3)=qa(:,1);
+    qo(:,4)=qa(:,2);
+    qo(:,5)=(-1/yaco(:))
+    call wffile(cinput,n,5)
 
     call wallArea
     call walldir

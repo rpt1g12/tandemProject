@@ -202,7 +202,8 @@
 
     ll=-1; ra2=pi/(2*domlen); ra3=pi/szth1
  do l=0,lmx
-    rr(l,:)=nsz(0,:)*szr(0,:)*max(szp(0,:)-ss(l,:),zero)+nsz(1,:)*szr(1,:)*max(ss(l,:)-szp(1,:),zero)
+    rr(l,:)=nsz(0,:)*szr(0,:)*max(szp(0,:)-ss(l,:),zero)&
+           +nsz(1,:)*szr(1,:)*max(ss(l,:)-szp(1,:),zero)
     ! rpt-this is sigma(x,y,z)
     de(l,1)=szco*(1-0.125*(1+cos(pi*rr(l,1)))*(1+cos(pi*rr(l,2)))*(1+cos(pi*rr(l,3))))
     ! rpt-this is lambda(x)
@@ -215,11 +216,11 @@
     lsz=ll ! rpt-total number of points in sponge zone
  if(lsz/=-1) then
     allocate(lcsz(0:lsz),asz(0:lsz),bsz(0:lsz),csz(0:lsz))
- do ll=0,lsz; l=de(ll,5); lcsz(ll)=l
-    ! rpt-asz=sigma(x,y,z) and bsc=sigma(x,y,z)*lambda(x)
-    asz(ll)=de(l,1)*de(l,2)/yaco(l); bsz(ll)=hamm1*de(l,1)*(1-de(l,2))/yaco(l)
-    csz(ll)=de(l,3)
- end do
+    do ll=0,lsz; l=de(ll,5); lcsz(ll)=l
+       ! rpt-asz=sigma(x,y,z) and bsc=sigma(x,y,z)*lambda(x)
+       asz(ll)=de(l,1)*de(l,2)/yaco(l); bsz(ll)=hamm1*de(l,1)*(1-de(l,2))/yaco(l)
+       csz(ll)=de(l,3)
+    end do
  end if
 
     !===GUST===
@@ -232,44 +233,47 @@
  end do
     ltz=ll; ntz=litr*slit/tla
  if(ltz/=-1) then
-    allocate(lctz(0:ltz),tt(0:ntz),vit(0:ltz,3),vito(0:ltz,0:ntz,3)); lp=2*nrec*(ltz+1)*(ntz+1)
- do ll=0,ltz; l=de(ll,5); lctz(ll)=l
-    vit(ll,:)=ss(l,:)
- end do
-    fctr=slit/(ntz*uoo(1)); tt(:)=fctr*(/(i,i=0,ntz)/); vito(:,:,:)=0
- if(nito==0) then
- do nn=1,nits
-    ve(:)=(-9+mxc(nn))*sit(nn,:)*sit(nn,:); ra1=-36-60*mxc(nn); ra2=2*mxc(nn)/3.0_k8
- do i=0,1; do k=-1,1
-    dm(:)=(/xit(nn)-i*slit,yit(nn),zit(nn)-k*span/)
- do ii=0,ntz
-    rv(:)=dm(:)+tt(ii)*uoo(:)
-    de(0:ltz,1)=vit(:,1)-rv(1); de(0:ltz,2)=vit(:,2)-rv(2); de(0:ltz,3)=vit(:,3)-rv(3)
-    de(0:ltz,4)=de(0:ltz,1)*de(0:ltz,1)+de(0:ltz,2)*de(0:ltz,2)+de(0:ltz,3)*de(0:ltz,3)
-    de(0:ltz,5)=de(0:ltz,4)*de(0:ltz,4)
-    rr(0:ltz,1)=ve(1)*de(0:ltz,5); rr(0:ltz,2)=ve(2)*de(0:ltz,5); rr(0:ltz,3)=ve(3)*de(0:ltz,5)
-    de(0:ltz,5)=ra1*de(0:ltz,4)
-    rr(0:ltz,1)=ait(nn,1)*de(0:ltz,5)*exp(rr(0:ltz,1))*(1+ra2*rr(0:ltz,1))
-    rr(0:ltz,2)=ait(nn,2)*de(0:ltz,5)*exp(rr(0:ltz,2))*(1+ra2*rr(0:ltz,2))
-    rr(0:ltz,3)=ait(nn,3)*de(0:ltz,5)*exp(rr(0:ltz,3))*(1+ra2*rr(0:ltz,3))
-    vito(:,ii,1)=vito(:,ii,1)+rr(0:ltz,2)*de(0:ltz,3)-rr(0:ltz,3)*de(0:ltz,2)
-    vito(:,ii,2)=vito(:,ii,2)+rr(0:ltz,3)*de(0:ltz,1)-rr(0:ltz,1)*de(0:ltz,3)
-    vito(:,ii,3)=vito(:,ii,3)+rr(0:ltz,1)*de(0:ltz,2)-rr(0:ltz,2)*de(0:ltz,1)
- end do
- end do; end do
- if(myid==mo(9)) then; write(*,"('Vortex',i3,' Done')") nn; end if
- end do
-    open(9,file=cturb); close(9,status='delete')
-    open(9,file=cturb,access='direct',form='unformatted',recl=lp)
-    write(9,rec=1) vito(:,:,1); write(9,rec=2) vito(:,:,2); write(9,rec=3) vito(:,:,3)
-    close(9)
-    vito(:,:,:)=cfit*vito(:,:,:)
- else
-    open(9,file=cturb,access='direct',form='unformatted',recl=lp)
-    read(9,rec=1) vito(:,:,1); read(9,rec=2) vito(:,:,2); read(9,rec=3) vito(:,:,3)
-    close(9)
-    vito(:,:,:)=cfit*vito(:,:,:)
- end if
+    allocate(lctz(0:ltz),tt(0:ntz),vit(0:ltz,3),vito(0:ltz,0:ntz,3)); 
+    lp=2*nrec*(ltz+1)*(ntz+1)
+    do ll=0,ltz; l=de(ll,5); lctz(ll)=l
+       vit(ll,:)=ss(l,:)
+    end do
+       fctr=slit/(ntz*uoo(1)); tt(:)=fctr*(/(i,i=0,ntz)/); vito(:,:,:)=0
+    if(nito==0) then
+       do nn=1,nits
+          ve(:)=(-9+mxc(nn))*sit(nn,:)*sit(nn,:); ra1=-36-60*mxc(nn); ra2=2*mxc(nn)/3.0_k8
+       do i=0,1; do k=-1,1
+          dm(:)=(/xit(nn)-i*slit,yit(nn),zit(nn)-k*span/)
+       do ii=0,ntz
+          rv(:)=dm(:)+tt(ii)*uoo(:)
+          de(0:ltz,1)=vit(:,1)-rv(1); de(0:ltz,2)=vit(:,2)-rv(2); de(0:ltz,3)=vit(:,3)-rv(3)
+          de(0:ltz,4)=de(0:ltz,1)*de(0:ltz,1)+de(0:ltz,2)*de(0:ltz,2)+de(0:ltz,3)*de(0:ltz,3)
+          de(0:ltz,5)=de(0:ltz,4)*de(0:ltz,4)
+          rr(0:ltz,1)=ve(1)*de(0:ltz,5); 
+          rr(0:ltz,2)=ve(2)*de(0:ltz,5); 
+          rr(0:ltz,3)=ve(3)*de(0:ltz,5)
+          de(0:ltz,5)=ra1*de(0:ltz,4)
+          rr(0:ltz,1)=ait(nn,1)*de(0:ltz,5)*exp(rr(0:ltz,1))*(1+ra2*rr(0:ltz,1))
+          rr(0:ltz,2)=ait(nn,2)*de(0:ltz,5)*exp(rr(0:ltz,2))*(1+ra2*rr(0:ltz,2))
+          rr(0:ltz,3)=ait(nn,3)*de(0:ltz,5)*exp(rr(0:ltz,3))*(1+ra2*rr(0:ltz,3))
+          vito(:,ii,1)=vito(:,ii,1)+rr(0:ltz,2)*de(0:ltz,3)-rr(0:ltz,3)*de(0:ltz,2)
+          vito(:,ii,2)=vito(:,ii,2)+rr(0:ltz,3)*de(0:ltz,1)-rr(0:ltz,1)*de(0:ltz,3)
+          vito(:,ii,3)=vito(:,ii,3)+rr(0:ltz,1)*de(0:ltz,2)-rr(0:ltz,2)*de(0:ltz,1)
+       end do
+       end do; end do
+       if(myid==mo(9)) then; write(*,"('Vortex',i3,' Done')") nn; end if
+       end do
+       open(9,file=cturb); close(9,status='delete')
+       open(9,file=cturb,access='direct',form='unformatted',recl=lp)
+       write(9,rec=1) vito(:,:,1); write(9,rec=2) vito(:,:,2); write(9,rec=3) vito(:,:,3)
+       close(9)
+       vito(:,:,:)=cfit*vito(:,:,:)
+    else
+       open(9,file=cturb,access='direct',form='unformatted',recl=lp)
+       read(9,rec=1) vito(:,:,1); read(9,rec=2) vito(:,:,2); read(9,rec=3) vito(:,:,3)
+       close(9)
+       vito(:,:,:)=cfit*vito(:,:,:)
+    end if
  end if
 
  if(myid==mo(9)) then
@@ -406,20 +410,17 @@
     kp=mod((myid-mo(mb))/(npc(mb,1)*npc(mb,2)),npc(mb,3))
     ns=mo(is)+(kp+1)*npc(is,2)*npc(is,1)-1; ne=mo(ie)+kp*npc(ie,2)*npc(ie,1)
 
- do nn=0,5; 
-    select case(nn);
-    case(0);  mp=ns; njct=nn  ;itag=njct
-    case(1);  mp=ne; njct=nn  ;itag=njct
-    case(2);  mp=ns; njct=nn+1;itag=njct
-    case(3);  mp=ne; njct=nn+1;itag=njct
-    case(4);  mp=ns; njct=nn+2;itag=njct
-    case(5);  mp=ne; njct=nn+2;itag=njct
-    end select
-    
+ do nn=0,(bkx-1)*(bky-1)-1; 
+    if (mod(nn,2)==0) then
+       mp=ns
+    else 
+       mp=ne
+    end if
+    njct=nn+nn/(bkx-1); itag=njct
     do np=1,4
       select case(np)
       case(1); ip=1; jp=1; mm=njct; case(2); ip=0; jp=1;   mm=njct+1
-      case(3); ip=1; jp=0; mm=njct+3; case(4); ip=0; jp=0; mm=njct+4
+      case(3); ip=1; jp=0; mm=njct+bkx; case(4); ip=0; jp=0; mm=njct+bkx+1
       end select
       mjct(np)=mo(mm)+kp*npc(mm,2)*npc(mm,1)+jp*(npc(mm,2)-1)*npc(mm,1)+ip*(npc(mm,1)-1)
       if(myid==mjct(np)) then

@@ -1,4 +1,4 @@
-lxi0-to-bkx	100	50	100
+lxi0-to-bkx	80	50	80
 let0-to-bky	80      20	20	80
 lze0-to-bkz	15
 nbody-nthick	2	2
@@ -7,7 +7,7 @@ npcx		1	1	1
 npcy		1	1	1	1
 npcz		1
 nito-nits-litr	0	1	10
-smgrid-domlen	0.01e0		5.0e0
+smgrid-domlen	0.01e0 	5.0e0
 ximod-etamod	1.0e0		1.0e0
 span-wlew-wlea	0.22e0		0.11e0		0.0e0
 gap-chord1-2	1.0e0		1.0e0		1.0e0

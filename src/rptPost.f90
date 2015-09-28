@@ -862,60 +862,6 @@ end subroutine flst
         end if
  end subroutine p3dwaverage
 
-!====================================================================================
-!=====WRITE FUNCTION FILE PLOT3D
-!====================================================================================
- subroutine wffile(fname,nout,ndim)
- integer, intent(in) :: nout,ndim
- character(16), intent(in) :: fname
- character(3) :: cout
- integer :: n,l,i
- 
-   write(cout,"(i3)") nout
-   do i = 0, 2
-   l=scan(cout,' ')
-   if (l==0) exit
-   cout(l:l)='0'
-   end do
-
-   if (nout==(ndata+1)) then
-      cout='AVG'
-   end if
-
-   if (myid==0) then
-     open(9,file='out/'//trim(fname)//cout//'.f'); close(9,status='delete')
-   end if
-   CALL MPI_BARRIER(icom,ierr)
-   open (unit=9, file='out/'//trim(fname)//cout//'.f', access='stream')
-   lh=0
-   if (myid==0) then
-    write(9,pos=4*lh+1) mbk+1; lh=lh+1 ! Number of zones
-    do mm = 0, mbk
-       write(9,pos=4*lh+1) int4(lximb(mm)+1); lh=lh+1 ! IMax
-       write(9,pos=4*lh+1) int4(letmb(mm)+1); lh=lh+1 ! JMax
-       write(9,pos=4*lh+1) int4(lzemb(mm)+1); lh=lh+1 ! KMax
-       write(9,pos=4*lh+1) int4(ndim); lh=lh+1 ! #dimensions
-    end do
-    lhmb(mb)=lh
-    do mm = 0, mbk-1
-       lhmb(mm+1)=lhmb(mm)+ndim*(lximb(mm)+1)*(letmb(mm)+1)*(lzemb(mm)+1)
-    end do
-   end if
-   call MPI_BCAST(lhmb,mbk+1,MPI_INTEGER,0,icom,ierr)
-   lp=lpos(myid)+lhmb(mb)
-   ns=1; ne=ndim
-   do n=ns,ne; lq=(n-ns)*ltomb
-   varr(:)=qo(:,n)
-   do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-     write(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
-   end do; end do
-   end do
-   close(9)
-   CALL MPI_BARRIER(icom,ierr)
-   if (myid==0) then
-      write(*,"(a,' funtion written!')") trim(fname)//cout
-   end if
- end subroutine wffile
 !*****
 
 end module rptpost
