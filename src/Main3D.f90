@@ -61,6 +61,11 @@
     ! rpt-Position of signal sampling
     !xpos=-1.0_k8;ypos=0.01_k8;zpos=0.005_k8
 
+	abc(:,0)=(/a01,a02,a03,a04,a05,a06/)
+	abc(:,1)=(/a10,a12,a13,a14,a15,a16/)
+	abc(:,2)=(/a20,a21,a23,a24,a25,a26/)
+
+
     allocate(times(0:ndata))
     allocate(lximb(0:mbk),letmb(0:mbk),lzemb(0:mbk),lhmb(0:mbk),mo(0:mbk),npc(0:mbk,3))
 

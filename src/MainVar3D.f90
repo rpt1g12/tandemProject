@@ -59,9 +59,6 @@
  real(k8),parameter :: a06=-0.01836710059356763_k8
 
  real(k8),parameter,dimension(3) :: fex=(/45,-9,1/)/(mfbi*30.0_k8)
- real(k8),parameter,dimension(0:5,0:2) :: abc=(/a01,a02,a03,a04,a05,a06,&
-                                                a10,a12,a13,a14,a15,a16,&
-                                                a20,a21,a23,a24,a25,a26/)
 
 !===== ALLOCATABLE MAIN ARRAYS
 
@@ -120,6 +117,7 @@
  real(k8),dimension(-2:2,0:2,0:1) :: albed,albef
  real(k8),dimension(mbci,mbci) :: cbca,cbcs
  real(k8),dimension(5,5) :: xt
+ real(k8),dimension(0:5,0:2) :: abc
  real(k8),dimension(0:1,0:1) :: pbcot
  real(k8),dimension(0:lmp) :: sap
  real(k8),dimension(mbci) :: rbci,sbci
