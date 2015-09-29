@@ -9,22 +9,22 @@
  use gridgen
  implicit none
 
- integer :: nbody,nthick,ngridv,nito,nits,litr,lsz,ltz,ntz
- integer,dimension(:),allocatable :: iit,idsgnl,lsgnl
- integer,dimension(4) :: mjct
- real(nr),dimension(:,:,:),allocatable :: vito
- real(nr),dimension(:,:),allocatable :: vit
- real(nr),dimension(:),allocatable :: tt
- real(nr),dimension(0:1,3) :: szr,szp
- real(nr),dimension(3,0:1) :: tam
- real(nr),dimension(0:1) :: tl0,tl1,tlw
- real(nr) :: smgrid,domlen,span,wlew,wlea,szth1,szth2,szxt,szco
+ integer(k4) :: nbody,nthick,ngridv,nito,nits,litr,lsz,ltz,ntz
+ integer(k4),dimension(:),allocatable :: iit,idsgnl,lsgnl
+ integer(k4),dimension(4) :: mjct
+ real(k8),dimension(:,:,:),allocatable :: vito
+ real(k8),dimension(:,:),allocatable :: vit
+ real(k8),dimension(:),allocatable :: tt
+ real(k8),dimension(0:1,3) :: szr,szp
+ real(k8),dimension(3,0:1) :: tam
+ real(k8),dimension(0:1) :: tl0,tl1,tlw
+ real(k8) :: smgrid,domlen,span,wlew,wlea,szth1,szth2,szxt,szco
  ! rpt-tandem variables
- real(nr) :: gap,c1,c2,delt1,delt2
+ real(k8) :: gap,c1,c2,delt1,delt2
  ! rpt-grid space modifiers for grid generation
- real(nr) :: ximod,etamod
- real(nr) :: tgusto,eps,ck1,ck2,ck3,amp1,amp2,amp3,vk1,vk2,slit,gaus,cfit,tla,tlb,cutlb
- real(nr) :: denxit
+ real(k8) :: ximod,etamod
+ real(k8) :: tgusto,eps,ck1,ck2,ck3,amp1,amp2,amp3,vk1,vk2,slit,gaus,cfit,tla,tlb,cutlb
+ real(k8) :: denxit
 
  contains
 
@@ -97,7 +97,7 @@
  do m=1,3; do nn=1,nits
     ran(nn,m)=tl0(mxc(nn))+(tl1(mxc(nn))-tl0(mxc(nn)))*ran(nn,m)**tlw(mxc(nn))
     sit(nn,m)=1/ran(nn,m)**2
-    ait(nn,m)=res*tam(m,mxc(nn))*(2*ait(nn,m)-1)*sit(nn,m)**1.5_nr
+    ait(nn,m)=res*tam(m,mxc(nn))*(2*ait(nn,m)-1)*sit(nn,m)**1.5_k8
  end do; end do
     denxit=slit/(2*sum(ran(:,1)))
     xit(1)=-domlen+half*(szth1+slit)-denxit*ran(1,1)
@@ -125,7 +125,7 @@
 
  subroutine domdcomp
 
- integer :: ip1,jp1,ip2,jp2
+ integer(k4) :: ip1,jp1,ip2,jp2
 
     !ip=30*nthick+35*(1-nthick); jp=35*(1-nbody)+nbody*(20+5*nviscous)
 
@@ -208,7 +208,7 @@
     ! rpt-this is lambda(x)
     de(l,2)=ra1*(1-tanh(ss(l,1)))+1
  if(de(l,1)-sml>0) then
-    ll=ll+1; de(ll,5)=l+sml ! rpt-this gives the l's containing sponge points,why sum sml??
+    ll=ll+1; de(ll,5)=l+sml ! rpt-this gives the l's containing sponge points
  end if
  end do
     lsz=ll ! rpt-total number of points in sponge zone
@@ -221,7 +221,7 @@
  end if
 
     !===GUST===
-    ll=-1; ra0=tlb*(2.5_nr-cutlb)
+    ll=-1; ra0=tlb*(2.5_k8-cutlb)
  do lh=0,lsz; l=lcsz(lh)
  ! rpt-mark points where the gust is going to happen
  if(ss(l,1)-szp(0,1)<0.and.abs(ss(l,2))-ra0<0) then
@@ -230,66 +230,66 @@
  end do
     ltz=ll; ntz=litr*slit/tla
  if(ltz/=-1) then
-    allocate(lctz(0:ltz),tt(0:ntz),vit(0:ltz,3),vito(0:ltz,0:ntz,3)); inquire(iolength=lp) vito
- do ll=0,ltz; l=de(ll,5); lctz(ll)=l
-    vit(ll,:)=ss(l,:)
- end do
-    fctr=slit/(ntz*uoo(1)); tt(:)=fctr*(/0:ntz/); vito(:,:,:)=0
- if(nito==0) then
- do nn=1,nits
-    ve(:)=(-9+mxc(nn))*sit(nn,:)*sit(nn,:); ra1=-36-60*mxc(nn); ra2=2*mxc(nn)/3.0_nr
- do i=0,1; do k=-1,1
-    dm(:)=(/xit(nn)-i*slit,yit(nn),zit(nn)-k*span/)
- do ii=0,ntz
-    rv(:)=dm(:)+tt(ii)*uoo(:)
-    de(0:ltz,1)=vit(:,1)-rv(1); de(0:ltz,2)=vit(:,2)-rv(2); de(0:ltz,3)=vit(:,3)-rv(3)
-    de(0:ltz,4)=de(0:ltz,1)*de(0:ltz,1)+de(0:ltz,2)*de(0:ltz,2)+de(0:ltz,3)*de(0:ltz,3)
-    de(0:ltz,5)=de(0:ltz,4)*de(0:ltz,4)
-    rr(0:ltz,1)=ve(1)*de(0:ltz,5); rr(0:ltz,2)=ve(2)*de(0:ltz,5); rr(0:ltz,3)=ve(3)*de(0:ltz,5)
-    de(0:ltz,5)=ra1*de(0:ltz,4)
-    rr(0:ltz,1)=ait(nn,1)*de(0:ltz,5)*exp(rr(0:ltz,1))*(1+ra2*rr(0:ltz,1))
-    rr(0:ltz,2)=ait(nn,2)*de(0:ltz,5)*exp(rr(0:ltz,2))*(1+ra2*rr(0:ltz,2))
-    rr(0:ltz,3)=ait(nn,3)*de(0:ltz,5)*exp(rr(0:ltz,3))*(1+ra2*rr(0:ltz,3))
-    vito(:,ii,1)=vito(:,ii,1)+rr(0:ltz,2)*de(0:ltz,3)-rr(0:ltz,3)*de(0:ltz,2)
-    vito(:,ii,2)=vito(:,ii,2)+rr(0:ltz,3)*de(0:ltz,1)-rr(0:ltz,1)*de(0:ltz,3)
-    vito(:,ii,3)=vito(:,ii,3)+rr(0:ltz,1)*de(0:ltz,2)-rr(0:ltz,2)*de(0:ltz,1)
- end do
- end do; end do
- if(myid==mo(9)) then; write(*,"('Vortex',i3,' Done')") nn; end if
- end do
-    open(9,file=cturb); close(9,status='delete')
-    open(9,file=cturb,access='direct',recl=lp/3)
-    write(9,rec=1) vito(:,:,1); write(9,rec=2) vito(:,:,2); write(9,rec=3) vito(:,:,3)
-    close(9)
-    vito(:,:,:)=cfit*vito(:,:,:)
- else
-    open(9,file=cturb,access='direct',recl=lp/3)
-    read(9,rec=1) vito(:,:,1); read(9,rec=2) vito(:,:,2); read(9,rec=3) vito(:,:,3)
-    close(9)
-    vito(:,:,:)=cfit*vito(:,:,:)
- end if
+     allocate(lctz(0:ltz),tt(0:ntz),vit(0:ltz,3),vito(0:ltz,0:ntz,3)); inquire(iolength=lp) vito
+  do ll=0,ltz; l=de(ll,5); lctz(ll)=l
+     vit(ll,:)=ss(l,:)
+  end do
+     fctr=slit/(ntz*uoo(1)); tt(:)=fctr*(/0:ntz/); vito(:,:,:)=0
+  if(nito==0) then
+   do nn=1,nits
+      ve(:)=(-9+mxc(nn))*sit(nn,:)*sit(nn,:); ra1=-36-60*mxc(nn); ra2=2*mxc(nn)/3.0_k8
+    do i=0,1; do k=-1,1
+       dm(:)=(/xit(nn)-i*slit,yit(nn),zit(nn)-k*span/)
+     do ii=0,ntz
+        rv(:)=dm(:)+tt(ii)*uoo(:)
+        de(0:ltz,1)=vit(:,1)-rv(1); de(0:ltz,2)=vit(:,2)-rv(2); de(0:ltz,3)=vit(:,3)-rv(3)
+        de(0:ltz,4)=de(0:ltz,1)*de(0:ltz,1)+de(0:ltz,2)*de(0:ltz,2)+de(0:ltz,3)*de(0:ltz,3)
+        de(0:ltz,5)=de(0:ltz,4)*de(0:ltz,4)
+        rr(0:ltz,1)=ve(1)*de(0:ltz,5); rr(0:ltz,2)=ve(2)*de(0:ltz,5); rr(0:ltz,3)=ve(3)*de(0:ltz,5)
+        de(0:ltz,5)=ra1*de(0:ltz,4)
+        rr(0:ltz,1)=ait(nn,1)*de(0:ltz,5)*exp(rr(0:ltz,1))*(1+ra2*rr(0:ltz,1))
+        rr(0:ltz,2)=ait(nn,2)*de(0:ltz,5)*exp(rr(0:ltz,2))*(1+ra2*rr(0:ltz,2))
+        rr(0:ltz,3)=ait(nn,3)*de(0:ltz,5)*exp(rr(0:ltz,3))*(1+ra2*rr(0:ltz,3))
+        vito(:,ii,1)=vito(:,ii,1)+rr(0:ltz,2)*de(0:ltz,3)-rr(0:ltz,3)*de(0:ltz,2)
+        vito(:,ii,2)=vito(:,ii,2)+rr(0:ltz,3)*de(0:ltz,1)-rr(0:ltz,1)*de(0:ltz,3)
+        vito(:,ii,3)=vito(:,ii,3)+rr(0:ltz,1)*de(0:ltz,2)-rr(0:ltz,2)*de(0:ltz,1)
+     end do
+    end do; end do
+    if(myid==mo(9)) then; write(*,"('Vortex',i3,' Done')") nn; end if
+   end do
+      open(9,file=cturb); close(9,status='delete')
+      open(9,file=cturb,access='direct',recl=lp/3)
+      write(9,rec=1) vito(:,:,1); write(9,rec=2) vito(:,:,2); write(9,rec=3) vito(:,:,3)
+      close(9)
+      vito(:,:,:)=cfit*vito(:,:,:)
+   else
+      open(9,file=cturb,access='direct',recl=lp/3)
+      read(9,rec=1) vito(:,:,1); read(9,rec=2) vito(:,:,2); read(9,rec=3) vito(:,:,3)
+      close(9)
+      vito(:,:,:)=cfit*vito(:,:,:)
+  end if
  end if
 
- if(myid==mo(9)) then
-    inquire(iolength=l) iit; ll=l-1; fctr=one/ll
- do l=0,ll-1
-    ra1=-domlen; ra2=0; ra3=(-half+l*fctr)*span
-    iit(l)=minloc((vit(:,1)-ra1)**2+(vit(:,2)-ra2)**2+(vit(:,3)-ra3)**2,1)-1
- end do
-    open(9,file='inflowsignal.dat',status='replace',access='direct',form='formatted',recl=16)
- do ii=0,ntz; lp=(1+3*ll)*ii
-    write(9,'(es15.7)',rec=lp+1) tt(ii)
- do l=0,ll-2; i=iit(l)
-    write(9,'(es15.7)',rec=lp+3*l+2) vito(i,ii,1)
-    write(9,'(es15.7)',rec=lp+3*l+3) vito(i,ii,2)
-    write(9,'(es15.7)',rec=lp+3*l+4) vito(i,ii,3)
- end do
-    l=ll-1; i=iit(l)
-    write(9,'(es15.7)',rec=lp+3*l+2) vito(i,ii,1)
-    write(9,'(es15.7)',rec=lp+3*l+3) vito(i,ii,2)
-    write(9,'(es15.7,a)',rec=lp+3*l+4) vito(i,ii,3),achar(10)
- end do
-    close(9)
+ if((myid==mo(9))) then
+     inquire(iolength=l) iit; ll=l-1; fctr=one/ll
+  do l=0,ll-1
+     ra1=-domlen; ra2=0; ra3=(-half+l*fctr)*span
+     iit(l)=minloc((vit(:,1)-ra1)**2+(vit(:,2)-ra2)**2+(vit(:,3)-ra3)**2,1)-1
+  end do
+     open(9,file='inflowsignal.dat',status='replace',access='direct',form='formatted',recl=16)
+  do ii=0,ntz; lp=(1+3*ll)*ii
+     write(9,'(es15.7)',rec=lp+1) tt(ii)
+  do l=0,ll-2; i=iit(l)
+     write(9,'(es15.7)',rec=lp+3*l+2) vito(i,ii,1)
+     write(9,'(es15.7)',rec=lp+3*l+3) vito(i,ii,2)
+     write(9,'(es15.7)',rec=lp+3*l+4) vito(i,ii,3)
+  end do
+     l=ll-1; i=iit(l)
+     write(9,'(es15.7)',rec=lp+3*l+2) vito(i,ii,1)
+     write(9,'(es15.7)',rec=lp+3*l+3) vito(i,ii,2)
+     write(9,'(es15.7,a)',rec=lp+3*l+4) vito(i,ii,3),achar(10)
+  end do
+     close(9)
  end if
 
  end subroutine spongeup
@@ -350,7 +350,7 @@
  if(ii-is==1) then; ilag(-2)=ie-1; tlag(-2)=tt(ilag(-2))-ra1; end if
  if(ie-ii==1) then; ilag(2)=is+1; tlag(2)=tt(ilag(2))+ra1; end if
  if(ie-ii==0) then; ilag(1:2)=(/is+1,is+2/); tlag(1:2)=tt(ilag(1:2))+ra1; end if
-    alag(:)=ra3-tlag(:); fctr=sin(pi*min(0.1_nr*ra0,half))**2
+    alag(:)=ra3-tlag(:); fctr=sin(pi*min(0.1_k8*ra0,half))**2
  do jj=-2,2
     blag(:)=tlag(jj)-tlag(:); ao=fctr; bo=1
  do ii=-2,2
@@ -384,7 +384,7 @@
 
  subroutine junction
 
- integer :: njct
+ integer(k4) :: njct
 
     is=mbk; ie=0; kk=5*(lze+1)-1
     kp=mod((myid-mo(mb))/(npc(mb,1)*npc(mb,2)),npc(mb,3))
@@ -427,7 +427,7 @@
        call MPI_RECV(drva1(0:kk,1,1),kk+1,MPI_REAL8,mjct(2),itag,icom,ista,ierr)
        call MPI_RECV(drva1(0:kk,2,0),kk+1,MPI_REAL8,mjct(3),itag,icom,ista,ierr)
        call MPI_RECV(drva1(0:kk,2,1),kk+1,MPI_REAL8,mjct(4),itag,icom,ista,ierr)
-       drva1(0:kk,3,0)=0.25_nr*(drva1(0:kk,1,0)+drva1(0:kk,1,1)+drva1(0:kk,2,0)+drva1(0:kk,2,1))
+       drva1(0:kk,3,0)=0.25_k8*(drva1(0:kk,1,0)+drva1(0:kk,1,1)+drva1(0:kk,2,0)+drva1(0:kk,2,1))
     do np=1,4
        call MPI_SEND(drva1(0:kk,3,0),kk+1,MPI_REAL8,mjct(np),itag,icom,ierr)
     end do
@@ -467,8 +467,8 @@
 
  subroutine finalout
 
- integer :: totVar
- real(nr),dimension(:),allocatable :: delt
+ integer(k4) :: totVar
+ real(k8),dimension(:),allocatable :: delt
 
 
    totVar=5

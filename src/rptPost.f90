@@ -11,7 +11,7 @@ use problemcase
 use mpi
 use rpt
 
-integer :: favg,fwavg,fcoef,fcf,fcp,floc,fwplus,fqcrit,fwss
+integer :: favg,fwavg,fcoef,fcf,fcp,floc,fwplus,fqcrit,fwss,fcurl
 
 contains
 
@@ -46,17 +46,18 @@ contains
     close(9)
 
 !===== INPUT PARAMETERS POSTPROCESS
-    open(9,file='inpost.dat',shared)
+    open(9,file='ipost.dat',shared)
     read(9,*) cinput,favg,fwavg
     read(9,*) cinput,fcoef,fcf,fcp
     read(9,*) cinput,floc
     read(9,*) cinput,fwplus
     read(9,*) cinput,fqcrit,fwss
+    read(9,*) cinput,fcurl
     close(9)
 
     cinput=cinput; fltk=pi*fltk; fltkbc=pi*fltkbc
     rhooo=1; poo=1/gam; aoo=sqrt(gam*poo/rhooo); amachoo=sqrt(amach1**2+amach2**2+amach3**2)
-    srefoo=111.0_nr/tempoo; srefp1dre=(srefoo+1)/reoo; sqrtrema=sqrt(reoo*amachoo); sqrtremai=1/sqrtrema
+    srefoo=111.0_k8/tempoo; srefp1dre=(srefoo+1)/reoo; sqrtrema=sqrt(reoo*amachoo); sqrtremai=1/sqrtrema
     uoo(1)=amach1*aoo; uoo(2)=amach2*aoo; uoo(3)=amach3*aoo
     ! rpt-Initialising the record count 
     nwrec=0
@@ -327,7 +328,7 @@ contains
  subroutine average
     implicit none
     integer :: totVar
-    real(nr),dimension(:),allocatable :: delt
+    real(k8),dimension(:),allocatable :: delt
     ! SELECT THE VARIABLE STRIDE
       totVar=5
     ! READ OUTPUT TIMES
@@ -368,7 +369,7 @@ contains
  implicit none
  integer, intent(in) :: nvar
  integer :: l,lp1,lm1,lw
- real(nr), dimension(0:lcwall) :: utau
+ real(k8), dimension(0:lcwall) :: utau
  if (wflag) then
     if(.not.allocated(wplus)) allocate(wplus(0:lcwall,3))
     call gettw(nvar)
@@ -445,9 +446,9 @@ contains
     integer, intent(in) :: dir
     logical, intent(in) :: wall
     integer :: idir,odir,ia,oa,l,ls,le,lp1,lm1,lw,lws,lwe
-    real(nr), dimension(:), allocatable :: delt
-    real(nr), dimension(:,:), allocatable :: avg
-    character, dimension(1) :: str
+    real(k8), dimension(:), allocatable :: delt
+    real(k8), dimension(:,:), allocatable :: avg
+    character, dimension(1) :: str,str2
     if (wflag) then
     if (.not.wall) then
     call getatWall
@@ -475,7 +476,7 @@ contains
           delt(i)=fctr*abs(xyz(lm1,ia)-xyz(lp1,ia))
           avg(j,2)=avg(j,2)+delt(i)*wvarr(lw)
        end do
-     write(7,"(f10.5,' ',f10.5)") avg(j,1),avg(j,2)
+     write(7,"(f10.5,1x,f10.5)") avg(j,1),avg(j,2)
     end do
     close(7)
     end if
@@ -531,9 +532,9 @@ contains
 !====================================================================================
  subroutine findll(xpos,ypos,zpos,l,id) 
     implicit none
-    real(nr), intent(in) :: xpos,ypos,zpos
+    real(k8), intent(in) :: xpos,ypos,zpos
     integer, intent (out) :: l,id
-    real(nr) :: tmp,tmpall
+    real(k8) :: tmp,tmpall
 
     id=-1
     varr(:)=sqrt((xyz(:,1)-xpos)**2+(xyz(:,2)-ypos)**2+(xyz(:,3)-zpos)**2)
@@ -602,7 +603,7 @@ contains
   lp=lpos(myid)
      lq=(num-1)*ltomb
      do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-        write(8,pos=nr*(lp+lq+lio(j,k))+1) varr(l:l+lxi)
+        write(8,pos=k8*(lp+lq+lio(j,k))+1) varr(l:l+lxi)
      end do; end do
  end subroutine postwrite
 
@@ -656,7 +657,7 @@ end subroutine flst
  subroutine p3daverage
     implicit none
     integer :: totVar
-    real(nr),dimension(:),allocatable :: delt
+    real(k8),dimension(:),allocatable :: delt
 
     if (myid==0) then
        write(*,*) ndata
@@ -744,6 +745,10 @@ end subroutine flst
    if (l==0) exit
    cout(l:l)='0'
    end do
+
+   if (nout==(ndata+1)) then
+      cout='AVG'
+   end if
 
    if (myid==0) then
      open(9,file='out/'//trim(fname)//cout//'.f'); close(9,status='delete')

@@ -15,8 +15,8 @@ contains
 !====================================================================================
  subroutine plot3d(gflag,sflag,bflag)
 
- integer, intent(in) :: gflag,sflag,bflag
- integer :: n
+ integer(k4), intent(in) :: gflag,sflag,bflag
+ integer(k4) :: n
  character(8) :: ctime
  
  write(ctime,"(f8.4)") timo
@@ -63,7 +63,7 @@ contains
          open(9,file='out/solT'//ctime//'.q'); close(9,status='delete')
        end if
        CALL MPI_BARRIER(icom,ierr)
-       open (unit=9, file='out/solT'//ctime//'.q', access='stream',shared)
+       open (unit=9, file='out/solT'//trim(adjustl(ctime))//'.q', access='stream',shared)
        lh=0
        if (myid==0) then
         write(9,pos=4*lh+1) mbk+1; lh=lh+1 ! Number of zones
@@ -312,7 +312,7 @@ contains
  subroutine forceup
  use problemcase, only: span
  
- ra0=-log(0.0001_nr)/(rfor**2); ra1=2*pi/span
+ ra0=-log(0.0001_k8)/(rfor**2); ra1=2*pi/span
  ra2=rfor**2
  ll=-1
  do l = 0, lmx
@@ -342,9 +342,9 @@ contains
  subroutine forcego
  if ((timo+dtk>tsfor).and.(timo+dtk<tefor)) then
    ra0=(timo+dtk-tsfor)
-   ra1=amfor*cos(ra0*48.76_nr*amachoo)/3
-   ra2=amfor*cos(ra0*53.6_nr*amachoo)/3
-   ra3=amfor*cos(ra0*53.6_nr*amachoo)/3
+   ra1=amfor*cos(ra0*48.76_k8*amachoo)/3
+   ra2=amfor*cos(ra0*53.6_k8*amachoo)/3
+   ra3=amfor*cos(ra0*53.6_k8*amachoo)/3
    do ll = 0, lfor; l=lcfor(ll)
      de(l,2)=de(l,2)+qa(l,1)*(ra1*xafor(ll,1)+ra2*xafor(ll,2)+ra3*xafor(ll,3))
      de(l,3)=de(l,3)-qa(l,1)*(ra1*xafor(ll,1)+ra2*xafor(ll,2)+ra3*xafor(ll,3))
@@ -357,9 +357,9 @@ contains
 !====================================================================================
  subroutine wallArea
  implicit none
-    integer :: bblock1,tblock1
-    integer :: bblock2,tblock2
-    real(nr) :: g11, g33, g13,coef
+    integer(k4) :: bblock1,tblock1
+    integer(k4) :: bblock2,tblock2
+    real(k8) :: g11, g33, g13,coef
  
     select case(mbk)
     case(19)
@@ -422,10 +422,10 @@ contains
  subroutine walldir
  implicit none
     
-    integer :: bblock1,tblock1
-    integer :: bblock2,tblock2
-    real(nr) :: coef,tmp
-    real(nr), dimension(3) :: u,v,r
+    integer(k4) :: bblock1,tblock1
+    integer(k4) :: bblock2,tblock2
+    real(k8) :: coef,tmp
+    real(k8), dimension(3) :: u,v,r
  
     select case(mbk)
     case(19)
@@ -435,7 +435,7 @@ contains
     bblock1 = 4; tblock1 = 7
     bblock2 = 12; tblock2 = 13
     end select
-    u=(/0,0,1/)
+    u=(/0.0_k8,0.0_k8,1.0_k8/)
  
     if (wflag) then
     ! Find top or bottom
@@ -466,9 +466,9 @@ contains
  use problemcase, only: span,delt1,delt2
  implicit none
     
-    integer, intent(in) :: ele,nvar
-    integer :: bblock,tblock,m,ll,dir
-    real(nr) :: dynp,clp,clv,tcl
+    integer(k4), intent(in) :: ele,nvar
+    integer(k4) :: bblock,tblock,m,ll,dir
+    real(k8) :: dynp,clp,clv,tcl
     logical :: flag
  
     clp=0;clv=0;flag=.false.;tcl=0;
@@ -543,7 +543,7 @@ contains
  subroutine gettwrun
  use subroutines3d, only: mpigo,deriv
  implicit none
- integer :: nn,ll
+ integer(k4) :: nn,ll
 
 
    if (nviscous==1) then
@@ -552,7 +552,7 @@ contains
      de(:,3)=qa(:,3)*de(:,1)
      de(:,4)=qa(:,4)*de(:,1)
      de(:,5)=gam*p(:)*de(:,1)
-     ss(:,1)=srefp1dre*de(:,5)**1.5_nr/(de(:,5)+srefoo)
+     ss(:,1)=srefp1dre*de(:,5)**1.5_k8/(de(:,5)+srefoo)
      de(:,1)=ss(:,1)
  
      rr(:,1)=de(:,2)
@@ -579,7 +579,7 @@ contains
      ss(:,2)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
      ss(:,3)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
 
-     fctr=2.0_nr/3
+     fctr=2.0_k8/3
      rr(:,1)=-de(:,1)*yaco(:)
      rr(:,2)=gamm1prndtli*rr(:,1)
      de(:,5)=fctr*(txx(:)+tyy(:)+tzz(:))
@@ -609,8 +609,8 @@ contains
  subroutine gettw(nvar)
  use subroutines3d, only: mpigo,deriv
  implicit none
- integer, intent(in) :: nvar
- integer :: nn,ll
+ integer(k4), intent(in) :: nvar
+ integer(k4) :: nn,ll
 
     if (wflag) then
     ! READ VARIABLES
@@ -635,7 +635,7 @@ contains
        de(:,3)=qo(:,3)
        de(:,4)=qo(:,4)
        de(:,5)=gam*p(:)*de(:,1)
-       de(:,1)=srefp1dre*de(:,5)**1.5_nr/(de(:,5)+srefoo)
+       de(:,1)=srefp1dre*de(:,5)**1.5_k8/(de(:,5)+srefoo)
  
      rr(:,1)=de(:,2)
      m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
@@ -655,7 +655,7 @@ contains
      tyz(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
      tzz(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
  
-     fctr=2.0_nr/3
+     fctr=2.0_k8/3
      rr(:,1)=-de(:,1)*yaco(:)
      de(:,5)=fctr*(txx(:)+tyy(:)+tzz(:))
  
@@ -682,7 +682,7 @@ contains
 !====================================================================================
  subroutine tpostread(num,lsta)
  implicit none
- integer, intent (in) :: num,lsta
+ integer(k4), intent (in) :: num,lsta
   lp=lpos(myid)+lsta
      lq=(num-1)*ltomb
      do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
@@ -695,12 +695,12 @@ contains
 !====================================================================================
  subroutine postread(num)
  implicit none
- integer, intent (in) :: num
- integer :: lp,lq,l,k,j
+ integer(k4), intent (in) :: num
+ integer(k4) :: lp,lq,l,k,j
   lp=lpos(myid)
      lq=(num-1)*ltomb
      do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-        read(8,pos=nr*(lp+lq+lio(j,k))+1) varr(l:l+lxi)
+        read(8,pos=k8*(lp+lq+lio(j,k))+1) varr(l:l+lxi)
      end do; end do
  end subroutine postread
 
@@ -709,8 +709,8 @@ contains
 !====================================================================================
 subroutine p3dread(gsflag,nout)
 
-integer, intent(in) :: gsflag,nout
-integer :: n,nfile
+integer(k4), intent(in) :: gsflag,nout
+integer(k4) :: n,nfile
 real(4) :: res
 character(8) :: ctime
 
@@ -761,10 +761,10 @@ nfile=5
           lhmb(mm+1)=lhmb(mm)+4+5*(lximb(mm)+1)*(letmb(mm)+1)*(lzemb(mm)+1)
        end do
           lh=lhmb(mb)
-          read(nfile,pos=4*lh+1) res; !amachoo=res; lh=lh+1 ! Mach Number
-          read(nfile,pos=4*lh+1) res; !aoa=res; lh=lh+1  
-          read(nfile,pos=4*lh+1) res; !reoo=res; lh=lh+1 ! Reynolds Number
-          read(nfile,pos=4*lh+1) res; !timo=res; lh=lh+1 ! Time
+          read(nfile,pos=4*lh+1) res; amachoo=res; lh=lh+1 ! Mach Number
+          read(nfile,pos=4*lh+1) res; aoa=res; lh=lh+1  
+          read(nfile,pos=4*lh+1) res; reoo=res; lh=lh+1 ! Reynolds Number
+          read(nfile,pos=4*lh+1) res; timo=res; lh=lh+1 ! Time
        lp=lpos(myid)+lhmb(mb)+4
        ns=1; ne=5
        do n=ns,ne; lq=(n-ns)*ltomb
@@ -804,8 +804,8 @@ end subroutine p3dread
 ! ====CROSS PRODUCT OF TWO VECTORS 
 !====================================================================================
  function cross(u,v) result(r)
- real(nr), dimension(3), intent(in) :: u,v
- real(nr), dimension(3) :: r
+ real(k8), dimension(3), intent(in) :: u,v
+ real(k8), dimension(3) :: r
 
     r(1)=(u(2)*v(3)-u(3)*v(2))
     r(2)=(u(3)*v(1)-u(1)*v(3))

@@ -14,11 +14,11 @@
 
  subroutine penta(xu,xl,albes,albee,alpha,beta,is,ie)
 
- integer,intent(in) :: is,ie
- real(nr),dimension(0:lim,3),intent(inout) :: xu
- real(nr),dimension(0:lim,2),intent(inout) :: xl
- real(nr),dimension(-2:2,0:2),intent(in) :: albes,albee
- real(nr),intent(in) :: alpha,beta
+ integer(k4),intent(in) :: is,ie
+ real(k8),dimension(0:lim,3),intent(inout) :: xu
+ real(k8),dimension(0:lim,2),intent(inout) :: xl
+ real(k8),dimension(-2:2,0:2),intent(in) :: albes,albee
+ real(k8),intent(in) :: alpha,beta
 
  do i=is,ie
     xl(i,:)=1; xu(i,:)=1
@@ -70,10 +70,10 @@
 
  subroutine fcbcm(fltk,fltkbc,albef,fa,fb,fc)
  
- real(nr),intent(in) :: fltk,fltkbc
- real(nr),dimension(-2:2,0:2),intent(inout) :: albef
- real(nr),dimension(0:2),intent(inout) :: fa,fb,fc
- real(nr) :: alphz,betz,za,zb,zc
+ real(k8),intent(in) :: fltk,fltkbc
+ real(k8),dimension(-2:2,0:2),intent(inout) :: albef
+ real(k8),dimension(0:2),intent(inout) :: fa,fb,fc
+ real(k8) :: alphz,betz,za,zb,zc
 
     res=(fltk-fltkbc)/3; ra0=fltkbc; ra1=ra0+res; ra2=ra1+res
 
@@ -90,15 +90,15 @@
 
  subroutine fcint(fltk,fltr,alphz,betz,za,zb,zc)
  
- real(nr),intent(in) :: fltk,fltr
- real(nr),intent(inout) :: alphz,betz,za,zb,zc
- real(nr),dimension(3) :: cosf
+ real(k8),intent(in) :: fltk,fltr
+ real(k8),intent(inout) :: alphz,betz,za,zb,zc
+ real(k8),dimension(3) :: cosf
 
     cosf(1)=cos(fltk); cosf(2)=cos(2*fltk); cosf(3)=cos(3*fltk)
     fctr=1/(30+5*(7-16*fltr)*cosf(1)+2*(1+8*fltr)*cosf(2)-3*cosf(3))
     alphz=(20*(2*fltr-1)-30*cosf(1)+12*(2*fltr-1)*cosf(2)-2*cosf(3))*fctr
     betz=(2*(13-8*fltr)+(33-48*fltr)*cosf(1)+6*cosf(2)-cosf(3))*half*fctr
-    za=60*(1-fltr)*cos(half*fltk)**4*fctr; zb=-0.4_nr*za; zc=za/15
+    za=60*(1-fltr)*cos(half*fltk)**4*fctr; zb=-0.4_k8*za; zc=za/15
 
  end subroutine fcint
 
@@ -106,9 +106,9 @@
 
  subroutine sbcco
 
- real(nr),dimension(:,:),allocatable :: ax,bx,rx,sx
- real(nr),dimension(0:4) :: zv
- real(nr) :: alphz,betz,za,zb,zc
+ real(k8),dimension(:,:),allocatable :: ax,bx,rx,sx
+ real(k8),dimension(0:4) :: zv
+ real(k8) :: alphz,betz,za,zb,zc
 
  do nt=0,1; lp=2*nt-1
  if(nt==0) then; ll=lmd; is=1; ie=2*(ll+1)
@@ -162,14 +162,14 @@
 
  subroutine mtrxi(ax,sx,is,ie)
 
- integer,intent(in) :: is,ie
- real(nr),dimension(is:ie,is:ie),intent(in) :: ax
- real(nr),dimension(is:ie,is:ie),intent(inout) :: sx
+ integer(k4),intent(in) :: is,ie
+ real(k8),dimension(is:ie,is:ie),intent(in) :: ax
+ real(k8),dimension(is:ie,is:ie),intent(inout) :: sx
 
- integer,dimension(1) :: imax
- integer,dimension(is:ie) :: ipvt
- real(nr),dimension(is:ie,is:ie) :: rx
- real(nr),dimension(is:ie) :: temp
+ integer(k4),dimension(1) :: imax
+ integer(k4),dimension(is:ie) :: ipvt
+ real(k8),dimension(is:ie,is:ie) :: rx
+ real(k8),dimension(is:ie) :: temp
 
     rx(:,:)=ax(:,:); ipvt(:)=(/(i,i=is,ie)/)
  do i=is,ie
@@ -191,7 +191,7 @@
 
  subroutine movef(dtko,dtk)
 
- real(nr),intent(in) :: dtko,dtk
+ real(k8),intent(in) :: dtko,dtk
 
  if(nsmf==0) then
     ra0=pi/timf; ra1=ra0*min(timo,timf); ra2=ra0*min(timo+dtko,timf)
@@ -215,21 +215,21 @@
 
  subroutine lambl(x,y,blu,blv,blm,lbl)
 
- integer,intent(in) :: lbl
- real(nr),dimension(0:lbl),intent(in) :: x,y
- real(nr),dimension(0:lbl),intent(inout) :: blu,blv,blm
+ integer(k4),intent(in) :: lbl
+ real(k8),dimension(0:lbl),intent(in) :: x,y
+ real(k8),dimension(0:lbl),intent(inout) :: blu,blv,blm
 
- real(nr) :: blas,spr,eta,etb
+ real(k8) :: blas,spr,eta,etb
 
-    blas=0.3320573362151963_nr; spr=sqrt(prndtl)
+    blas=0.3320573362151963_k8; spr=sqrt(prndtl)
     ra0=half*pi; ra1=3*blas*blas/560; ra2=11*blas/420
  do i=0,lbl
     fctr=1/sqrt(x(i))
     eta=fctr*sqrtrema*y(i); etb=spr*eta
-    res=0.000001_nr*eta**4*exp(eta**1.3625_nr)
+    res=0.000001_k8*eta**4*exp(eta**1.3625_k8)
     blu(i)=(blas*eta+ra1*eta**4+res)/(1+ra2*eta**3+res)
-    blv(i)=0.8604_nr*fctr*sqrtremai*(sin(ra0*tanh(exp(0.177_nr*eta)-1)))**1.96_nr
-    res=0.000001_nr*etb**4*exp(etb**1.3625_nr)
+    blv(i)=0.8604_k8*fctr*sqrtremai*(sin(ra0*tanh(exp(0.177_k8*eta)-1)))**1.96_k8
+    res=0.000001_k8*etb**4*exp(etb**1.3625_k8)
     blm(i)=(blas*etb+ra1*etb**4+res)/(1+ra2*etb**3+res)
  end do
 
@@ -239,12 +239,12 @@
 
  subroutine gridf(x,xxi,xo,xn,dxo,dxn,lxi,mxin,ip)
 
- integer,intent(in) :: lxi,mxin,ip
- real(nr),dimension(0:lxi),intent(inout) :: x,xxi
- real(nr),intent(in) :: xo,xn,dxo,dxn
+ integer(k4),intent(in) :: lxi,mxin,ip
+ real(k8),dimension(0:lxi),intent(inout) :: x,xxi
+ real(k8),intent(in) :: xo,xn,dxo,dxn
 
- integer :: i,ii
- real(nr) :: dxoo,dxnn,aa,bb,cc,ee,dd,xi,fctr
+ integer(k4) :: i,ii
+ real(k8) :: dxoo,dxnn,aa,bb,cc,ee,dd,xi,fctr
 
     dxoo=dxo; dxnn=dxn
  if(dxo==sml) then
@@ -265,48 +265,13 @@
 
  end subroutine gridf
 
-!===== SUBROUTINE FOR GRID LINE GENERATION : OLD VERSION
-!
-! subroutine gridf(x,xxi,xo,xn,dxs,am,ns,lxi,mxic,mxin,ip)
-!
-! integer,intent(in) :: ns,lxi,mxic,mxin,ip
-! real(nr),dimension(0:lxi),intent(inout) :: x,xxi
-! real(nr),intent(in) :: xo,xn,dxs,am
-!
-! integer :: i,ii
-! real(nr) :: amp0,amm0,alp0,alp1,s0,s1,c0,c1,aa,bb,xi,xic,xin,xii
-!
-!    amp0=am+1; amm0=am-1
-!    xic=mxic; xin=mxin
-!    alp0=xin+amm0*xic; alp1=am*xin-amm0*xic
-! if(ns==0) then
-!    s0=dxs; s1=(amp0*(xn-xo)-alp0*s0)/alp1
-! else
-!    s1=dxs; s0=(amp0*(xn-xo)-alp1*s1)/alp0
-! end if
-!    c0=xo; c1=xn-s1*xin
-!    aa=(s1-s0)*xic/xin; bb=(s1-s0)*(xin-xic)/xin
-! if(mxic/=0) then
-! do i=0,mxic
-!    ii=i+ip; xi=i; xii=xi/xic
-!    x(ii)=s0*xi+aa*xic*xii**amp0/amp0+c0; xxi(ii)=s0+aa*xii**am
-! end do
-! end if
-! if(mxic/=mxin) then
-! do i=mxic,mxin
-!    ii=i+ip; xi=i; xii=(xin-xi)/(xin-xic)
-!    x(ii)=s1*xi+bb*(xin-xic)*xii**amp0/amp0+c1; xxi(ii)=s1-bb*xii**am
-! end do
-! end if
-!
-! end subroutine gridf
 
 !===== SUBROUTINE FOR CHARACTER STRING CONVERSION
 
  subroutine strio(nfile,lh,cinput)
 
- integer,intent(in) :: nfile
- integer,intent(inout) :: lh
+ integer(k4),intent(in) :: nfile
+ integer(k4),intent(inout) :: lh
  character(16),intent(in) :: cinput
 
  do ll=1,len_trim(cinput)
@@ -320,8 +285,8 @@
 
  function indx3(i,j,k,nn) result(lm)
 
- integer,intent(in) :: i,j,k,nn
- integer :: lm
+ integer(k4),intent(in) :: i,j,k,nn
+ integer(k4) :: lm
 
  select case(nn)
  case(1); lm=(k*(let+1)+j)*(lxi+1)+i
@@ -335,8 +300,8 @@
 
  function indx2(i,j,nn) result(lm)
 
- integer,intent(in) :: i,j,nn
- integer :: lm
+ integer(k4),intent(in) :: i,j,nn
+ integer(k4) :: lm
 
  select case(nn)
  case(1); lm=j*(lxi+1)+i

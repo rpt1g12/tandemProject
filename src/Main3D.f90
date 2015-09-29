@@ -10,8 +10,8 @@
  use problemcase
  use rpt
  implicit none
- real(nr) :: xpos,ypos,zpos
- integer :: lsignal,idsignal
+ real(k8) :: xpos,ypos,zpos
+ integer(k4) :: lsignal,idsignal
 
 !===== PREPARATION FOR PARALLEL COMPUTING
 
@@ -52,14 +52,14 @@
 
     cinput=cinput; fltk=pi*fltk; fltkbc=pi*fltkbc
     rhooo=1; poo=1/gam; aoo=sqrt(gam*poo/rhooo); amachoo=sqrt(amach1**2+amach2**2+amach3**2)
-    srefoo=111.0_nr/tempoo; srefp1dre=(srefoo+1)/reoo; sqrtrema=sqrt(reoo*amachoo); sqrtremai=1/sqrtrema
+    srefoo=111.0_k8/tempoo; srefp1dre=(srefoo+1)/reoo; sqrtrema=sqrt(reoo*amachoo); sqrtremai=1/sqrtrema
     uoo(1)=amach1*aoo; uoo(2)=amach2*aoo; uoo(3)=amach3*aoo
     ! rpt-Initialising the record count 
     nwrec=0
     ! rpt-Do not use postprocessing subroutines
     ispost=.false.
     ! rpt-Position of signal sampling
-    xpos=-1.0_nr;ypos=0.01_nr;zpos=0.005_nr
+    !xpos=-1.0_k8;ypos=0.01_k8;zpos=0.005_k8
 
     allocate(times(0:ndata))
     allocate(lximb(0:mbk),letmb(0:mbk),lzemb(0:mbk),lhmb(0:mbk),mo(0:mbk),npc(0:mbk,3))
@@ -67,8 +67,8 @@
     call inputext
 
     ! rpt-Forcing parameters
-    xfor=-(0.5_nr+3*cos(aoa*pi/180_nr))!cos(delt1)-0.5_nr-1.0_nr+(0.1_nr);
-    yfor=-3*sin(aoa*pi/180_nr)!-sin(delt1)+(0.129_nr);
+    xfor=-(0.5_k8+3*cos(aoa*pi/180_k8))!cos(delt1)-0.5_k8-1.0_k8+(0.1_k8);
+    yfor=-3*sin(aoa*pi/180_k8)!-sin(delt1)+(0.129_k8);
     rfor=5.0e-1
     amfor=amfor*amachoo/100.0e0
     tsfor=151.751e0;tefor=200.000e0
@@ -264,7 +264,7 @@
     lp=lpos(myid)
  do nn=1,3; lq=(nn-1)*ltomb
  do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-    read(9,pos=nr*(lp+lq+lio(j,k))+1) ss(l:l+lxi,nn)
+    read(9,pos=8*(lp+lq+lio(j,k))+1) ss(l:l+lxi,nn)
  end do; end do
  end do
     close(9)
@@ -274,17 +274,17 @@
  end if
 
     !RPT-FIND POSITION FOR SIGNAL SAMPLING
-    idsignal=-1
-    varr(:)=sqrt((ss(:,1)-xpos)**2+(ss(:,2)-ypos)**2+(ss(:,3)-zpos)**2)
-    lsignal=minloc(varr(:),1)-1
-    ra0=varr(lsignal)
-    CALL MPI_ALLREDUCE(ra0,ra1,1,MPI_REAL8,MPI_MIN,icom,ierr)
-    if (abs(ra0-ra1)/ra0<sml) then
-       idsignal=myid
-    end if
-    if (myid==idsignal) then
-    open(6,file='data/signal.dat')
-    end if
+    !idsignal=-1
+    !varr(:)=sqrt((ss(:,1)-xpos)**2+(ss(:,2)-ypos)**2+(ss(:,3)-zpos)**2)
+    !lsignal=minloc(varr(:),1)-1
+    !ra0=varr(lsignal)
+    !CALL MPI_ALLREDUCE(ra0,ra1,1,MPI_REAL8,MPI_MIN,icom,ierr)
+    !if (abs(ra0-ra1)/ra0<sml) then
+    !   idsignal=myid
+    !end if
+    !if (myid==idsignal) then
+    !open(6,file='data/signal.dat')
+    !end if
 
 
     rr(:,1)=ss(:,1)
@@ -409,19 +409,19 @@
     call initialo
  else
     open(9,file=crestart,access='stream',shared); lh=0
-    read(9,pos=nr*lh+1) n; lh=lh+1
-    read(9,pos=nr*lh+1) ndt; lh=lh+1
-    read(9,pos=nr*lh+1) dt; lh=lh+1
-    read(9,pos=nr*lh+1) dts; lh=lh+1
-    read(9,pos=nr*lh+1) dte; lh=lh+1
-    read(9,pos=nr*lh+1) timo; lh=lh+1
+    read(9,pos=k8*lh+1) n; lh=lh+1
+    read(9,pos=k8*lh+1) ndt; lh=lh+1
+    read(9,pos=k8*lh+1) dt; lh=lh+1
+    read(9,pos=k8*lh+1) dts; lh=lh+1
+    read(9,pos=k8*lh+1) dte; lh=lh+1
+    read(9,pos=k8*lh+1) timo; lh=lh+1
     lp=lpos(myid)+lh
     if ((tsam-timo)/tsam<0.05e0) then
        tsam=timo
     end if
  do m=1,5; lq=(m-1)*ltomb
  do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-    read(9,pos=nr*(lp+lq+lio(j,k))+1) qa(l:l+lxi,m)
+    read(9,pos=k8*(lp+lq+lio(j,k))+1) qa(l:l+lxi,m)
  end do; end do
  end do
     close(9)
@@ -481,12 +481,12 @@
 
   do nk=1,nkrk
 
-! ----- MOVING FRAME VELOCITY & ACCELERATION BEFORE TIME ADVANCING
+!----- MOVING FRAME VELOCITY & ACCELERATION BEFORE TIME ADVANCING
 
      dtko=min(max(nk-2,0),1)*dt/(nkrk-nk+3); dtk=min(nk-1,1)*dt/(nkrk-nk+2)
      call movef(dtko,dtk)
 
-! ----- TEMPORARY STORAGE OF PRIMITIVE VARIABLES & PRESSURE
+!----- TEMPORARY STORAGE OF PRIMITIVE VARIABLES & PRESSURE
 
      de(:,1)=1/qa(:,1)
      de(:,2)=qa(:,2)*de(:,1)
@@ -494,11 +494,10 @@
      de(:,4)=qa(:,4)*de(:,1)
 
      p(:)=gamm1*(qa(:,5)-half*(qa(:,2)*de(:,2)+qa(:,3)*de(:,3)+qa(:,4)*de(:,4)))
-     de(:,5)=gam*p(:)*de(:,1) ! rpt-This is temperature
-     ss(:,1)=srefp1dre*de(:,5)**1.5_nr/(de(:,5)+srefoo) ! rpt-This is
-                                                        !     Sutherland's law
+    de(:,5)=gam*p(:)*de(:,1) ! Temperature
+    ss(:,1)=srefp1dre*de(:,5)**1.5_k8/(de(:,5)+srefoo) ! Sutherland's Law
 
-! ----- DETERMINATION OF TIME STEP SIZE & OUTPUT TIME
+!----- DETERMINATION OF TIME STEP SIZE & OUTPUT TIME
 
   if(nk==1) then
   if(mod(n,10)==1) then; ndt=n; dts=dte
@@ -523,7 +522,7 @@
      dte=dto
   end if
   end if
-     dt=dts+(dte-dts)*sin(0.05_nr*pi*(n-ndt))**2
+    dt=dts+(dte-dts)*sin(0.05_k8*pi*(n-ndt))**2
 
      nout=0; res=tsam+(ndati+1)*(tmax-tsam)/ndata
   if((timo-res)*(timo+dt-res)<=0) then
@@ -531,7 +530,7 @@
   end if
   end if
 
-! ----- VISCOUS SHEAR STRESSES & HEAT FLUXES
+!----- VISCOUS SHEAR STRESSES & HEAT FLUXES
 
   if(nviscous==1) then
      de(:,1)=ss(:,1)
@@ -560,7 +559,7 @@
      ss(:,2)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
      ss(:,3)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
 
-     fctr=2.0_nr/3
+    fctr=2.0_k8/3
      rr(:,1)=de(:,1)*yaco(:)
      rr(:,2)=gamm1prndtli*rr(:,1)
      !qb(:,3)=de(:,1)
@@ -579,7 +578,6 @@
         rr(:,2)=rr(:,2)+tgamm1prndtli*rr(:,3)*yaco(:)   
         rr(:,3)=fctr*(qa(:,1)*smago2*varr(:)*de(:,1)) ! rpt-2/3*ro*kSGS
         de(:,5)=fctr*(txx(:)+tyy(:)+tzz(:))
-
 
         txx(:)=rr(:,1)*(2*txx(:)-de(:,5))-rr(:,3)
         tyy(:)=rr(:,1)*(2*tyy(:)-de(:,5))-rr(:,3)
@@ -603,7 +601,7 @@
      hzz(:)=rr(:,2)*ss(:,3)+de(:,2)*tzx(:)+de(:,3)*tyz(:)+de(:,4)*tzz(:)
   end if
 
-! ----- CALCULATION OF FLUX DERIVATIVES
+!----- CALCULATION OF FLUX DERIVATIVES
 
      rr(:,1)=de(:,2)+umf(1)
      rr(:,2)=de(:,3)+umf(2)
@@ -663,17 +661,17 @@
      m=5; call mpigo(ntdrv,nrall,n45no,m); call deriv(1,1); call deriv(2,2); call deriv(3,3)
      de(:,m)=rr(:,1)+rr(:,2)+rr(:,3)
 
-! ----- IMPLEMENTATION OF SPONGE CONDITION
+!----- IMPLEMENTATION OF SPONGE CONDITION
 
-     call spongego ! Make sure that "ss(l,1)=0" is specified if sponge is NOT used.
+    call spongego
 
-! ----- IMPLEMENTATION OF FORCING
+!----- IMPLEMENTATION OF FORCING
 
      if (forcing==1) then
      call forcego
      end if
 
-! ----- PREPARATION FOR GCBC & GCIC
+!----- PREPARATION FOR GCBC & GCIC
 
   do nn=1,3; nz=min(nn-1,1)
   select case(nn)
@@ -694,7 +692,7 @@
   end do
   end do
 
-! ----- INTERNODE COMMNICATION FOR GCIC
+!----- INTERNODE COMMNICATION FOR GCIC
 
      ir=0; itag=30
   do nn=1,3
@@ -712,7 +710,7 @@
      call MPI_WAITALL(ir,ireq,ista,ierr)
   end if
 
-! ----- IMPLEMENTATION OF GCBC & GCIC
+!----- IMPLEMENTATION OF GCBC & GCIC
 
   do nn=1,3
   select case(nn)
@@ -745,7 +743,7 @@
   end do
   end do
 
-! ----- UPDATING CONSERVATIVE VARIABLES
+!----- UPDATING CONSERVATIVE VARIABLES
 
      dtko=min(nk-1,1)*dt/(nkrk-nk+2); dtk=dt/(nkrk-nk+1)
      call movef(dtko,dtk)
@@ -757,7 +755,7 @@
      qa(:,4)=qo(:,4)-rr(:,1)*de(:,4)
      qa(:,5)=qo(:,5)-rr(:,1)*de(:,5)
 
-! ----- WALL TEMPERATURE & VELOCITY CONDITION
+!----- WALL TEMPERATURE & VELOCITY CONDITION
 
      ra0=ham*hamm1*wtemp
   do nn=1,3; do ip=0,1; np=nbc(ip,nn); i=ip*ijk(1,nn)
@@ -771,7 +769,7 @@
   end if
   end do; end do
 
-! ----- JUNCTION & INTERFACE AVERAGING
+!----- JUNCTION & INTERFACE AVERAGING
 
      call junction
 
@@ -808,9 +806,9 @@
   end do
   end do
 
-! -------------------------------
-! ----- END OF RUNGE-KUTTA STAGES
-! -------------------------------
+!-------------------------------
+!----- END OF RUNGE-KUTTA STAGES
+!-------------------------------
 
   end do
 
@@ -877,19 +875,19 @@
          call MPI_BARRIER(icom,ierr)
          open(9,file=crestart,access='stream',shared); lh=0
       if(myid==mo(mb)) then
-         write(9,pos=nr*lh+1) n; lh=lh+1
-         write(9,pos=nr*lh+1) ndt; lh=lh+1
-         write(9,pos=nr*lh+1) dt; lh=lh+1
-         write(9,pos=nr*lh+1) dts; lh=lh+1
-         write(9,pos=nr*lh+1) dte; lh=lh+1
-         write(9,pos=nr*lh+1) timo; lh=lh+1
+         write(9,pos=k8*lh+1) n; lh=lh+1
+         write(9,pos=k8*lh+1) ndt; lh=lh+1
+         write(9,pos=k8*lh+1) dt; lh=lh+1
+         write(9,pos=k8*lh+1) dts; lh=lh+1
+         write(9,pos=k8*lh+1) dte; lh=lh+1
+         write(9,pos=k8*lh+1) timo; lh=lh+1
       else
          lh=lh+6
       end if
          lp=lpos(myid)+lh
       do m=1,5; lq=(m-1)*ltomb
       do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-         write(9,pos=nr*(lp+lq+lio(j,k))+1) qa(l:l+lxi,m)
+         write(9,pos=k8*(lp+lq+lio(j,k))+1) qa(l:l+lxi,m)
       end do; end do
       end do
          close(9)
@@ -901,7 +899,7 @@
  !end if
 
  if (myid==idsignal) then
- if (timo.le.25.5_nr) then
+ if (timo.le.25.5_k8) then
     ra0=qa(lsignal,2)/qa(lsignal,1)+umf(1)
     ra1=qa(lsignal,3)/qa(lsignal,1)+umf(2)
     ra2=qa(lsignal,4)/qa(lsignal,1)+umf(3)
@@ -930,9 +928,12 @@
     close(9)
 
     open(9,file='walltime.dat',position='append')
-    write(9,'(2es15.7)') real(npro,nr),wtime/npro
+    write(9,'(2es15.7)') real(npro,k8),wtime/npro
     close(9)
  end if
+
+
+!===== POST-PROCESSING & GENERATING TECPLOT DATA FILE
 
  if(dt==0) then
     if (myid==0) then
@@ -941,7 +942,7 @@
     ndata=ndati
  else
     if(myid==0) then
-       write(*,'("Simulation time was ",f6.2," hours")') wtime/(3600_nr*npro)
+       write(*,'("Simulation time was ",f6.2," hours")') wtime/(3600_k8*npro)
     end if
    if (output==0) then
     if (nto==2) then
