@@ -229,6 +229,7 @@
  end if
  end do
     ltz=ll; ntz=litr*slit/tla
+ ltz=-1
  if(ltz/=-1) then
      allocate(lctz(0:ltz),tt(0:ntz),vit(0:ltz,3),vito(0:ltz,0:ntz,3)); inquire(iolength=lp) vito
   do ll=0,ltz; l=de(ll,5); lctz(ll)=l
@@ -270,7 +271,7 @@
   end if
  end if
 
- if((myid==mo(9))) then
+ if((myid==mo(9)).and.(ltz/=-1)) then
      inquire(iolength=l) iit; ll=l-1; fctr=one/ll
   do l=0,ll-1
      ra1=-domlen; ra2=0; ra3=(-half+l*fctr)*span
