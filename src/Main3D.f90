@@ -45,8 +45,7 @@
     read(9,*) cinput,fltk,fltkbc
     read(9,*) cinput,dto
     read(9,*) cinput,forcing,amfor
-    read(9,*) cinput,tgustd,tguste
-    read(9,*) cinput,aoa,talphas,talphar
+    read(9,*) cinput,aoa
     read(9,*) cinput,LES,smago1,smago2
     read(9,*) cinput,output,ogrid,osol,oblock
     close(9)
