@@ -95,8 +95,12 @@
  real(k8),dimension(:,:,:),allocatable,target :: cm1,cm2,cm3
  real(k8),dimension(:,:),allocatable,target :: cmm1,cmm2,cmm3
 
+ real(k8),dimension(:,:),allocatable :: varm
  real(k8),dimension(:),allocatable :: varmin,varmax
- character(13),dimension(:),allocatable :: cfilet
+ real(k4),dimension(:),allocatable :: vart,vara,varb,vmean
+
+ character(13),dimension(:),allocatable :: ctecplt,cthead
+ character(4),dimension(:),allocatable :: cfilet
  character(7),dimension(:),allocatable :: czonet
 
 !===== CONSTANT-SIZED MAIN VARIABLES
@@ -108,10 +112,11 @@
  integer(k4),dimension(-2:2) :: ilag
  integer(k4),dimension(3) :: nbsize,nbcs,nbce,ncds,ncde,ms,me
  integer(8) :: lp,lq,ltomb
- integer(k4) :: lxio,leto,lzeo,lxi,let,lze,lmx,lim
+ integer(k4) :: lxio,leto,lzeo,lxi,let,lze,lmx,lim,nrec
  integer(k4) :: i,ii,is,ie,ip,iq,j,jj,js,je,jp,jq,jk,k,kk,kp,l,lh,ll
- integer(k4) :: m,ma,mb,mh,mm,mp,mbk,n,ndt,nn,nk,ns,ne,np,nt,nz,ndati,nsigi,nout,nfile
+ integer(k4) :: m,ma,mb,mm,mp,mq,mbk,mps,mpe,n,ndt,nn,nk,ns,ne,np,nt,nz,ndati,nsigi,nout,nfile
  integer(k4) :: nts,nscrn,nsgnl,ndata,nviscous,nkrk,nsmf,nfskp,nrestart
+ integer(k8) :: nlmx,llmb,llmo,lis,lie,ljs,lje
 
  real(k8),dimension(0:lmp,0:1,0:1) :: pbci,pbco
  real(k8),dimension(-2:2,0:2,0:1) :: albed,albef
@@ -151,7 +156,7 @@
 
 !===== INTEGER VARIABLES FOR RECORDING BY RPT
 
- integer(k4) :: nrec,nwrec,nread,totVar
+ integer(k4) :: ngrec,nwrec,nread,totVar
 
 !===== VARIABLES FOR FORCING BY RPT
 

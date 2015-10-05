@@ -306,6 +306,87 @@
 
  end subroutine xtr2q
 
+!===== SUBROUTINE FOR GENERATING TECPLOT DATA FILE
+
+ subroutine techead(nf,n,mb,lh)
+
+ integer(k4),intent(in) :: nf,n,mb
+ integer(k4),intent(inout) :: lh
+
+    lh=0
+ if(mb==0) then
+    write(nf,pos=4*lh+1) '#!TDV112'; lh=lh+2
+    write(nf,pos=4*lh+1) 1; lh=lh+1 ! Header Section
+    write(nf,pos=4*lh+1) int4(min(n+2,2)); lh=lh+1 ! File Type (0 = Full / 1 = Grid / 2 = Solution)
+    cinput=cfilet(n); call strio(nf,lh,cinput) ! File Title
+    write(nf,pos=4*lh+1) int4(mq); lh=lh+1 ! Number of Variables
+   if(n==-1) then
+      cinput='x'; call strio(nf,lh,cinput)
+      cinput='y'; call strio(nf,lh,cinput)
+      cinput='z'; call strio(nf,lh,cinput)
+   else
+      cinput='rho'; call strio(nf,lh,cinput)
+      cinput='u'; call strio(nf,lh,cinput)
+      cinput='v'; call strio(nf,lh,cinput)
+      cinput='w'; call strio(nf,lh,cinput)
+      cinput='p'; call strio(nf,lh,cinput)
+   end if
+ do mm=0,mbk
+    write(nf,pos=4*lh+1) 299.0; lh=lh+1 ! Zone Marker
+    cinput=czonet(mm); call strio(nf,lh,cinput) ! Zone Name
+    write(nf,pos=4*lh+1) -1; lh=lh+1 ! Parent Zone
+    write(nf,pos=4*lh+1) int4(n+1); lh=lh+1 ! Strand ID
+    write(nf,pos=4*lh+1) dble(times(max(n,0))); lh=lh+2 ! Solution Time (Double)
+    write(nf,pos=4*lh+1) -1; lh=lh+1 ! (Not used. Set to -1.)
+    write(nf,pos=4*lh+1) 0; lh=lh+1 ! Zone Type
+    write(nf,pos=4*lh+1) 0; lh=lh+1 ! Specify Var Location
+    write(nf,pos=4*lh+1) 0; lh=lh+1 ! Raw Local 1-to-1 Face Neighbours Suppliled
+    write(nf,pos=4*lh+1) 0; lh=lh+1 ! Number of Miscellaneous Face Neighbour Connections
+    write(nf,pos=4*lh+1) int4(lximb(mm)+1); lh=lh+1 ! IMax
+    write(nf,pos=4*lh+1) int4(letmb(mm)+1); lh=lh+1 ! JMax
+    write(nf,pos=4*lh+1) int4(lzemb(mm)+1); lh=lh+1 ! KMax
+    write(nf,pos=4*lh+1) 0; lh=lh+1 ! No Auxillary Data Pairs
+ end do
+    write(nf,pos=4*lh+1) 357.0; lh=lh+1 ! End of Header Marker
+ end if
+    write(nf,pos=4*lh+1) 299.0; lh=lh+1 ! Zone Marker
+ do m=1,mq
+    write(nf,pos=4*lh+1) 1; lh=lh+1 ! 1 = Float / 2 = Double
+ end do
+    write(nf,pos=4*lh+1) 0; lh=lh+1 ! No Passive Variables
+    write(nf,pos=4*lh+1) 0; lh=lh+1 ! No Variable Sharing
+    write(nf,pos=4*lh+1) -1; lh=lh+1 ! Zero Based Zone Number to Share
+ do m=1,mq; nn=max(3+5*n,0)+m
+    write(nf,pos=4*lh+1) varmin(nn); lh=lh+2 ! Minimum Value (Double) of Variables
+    write(nf,pos=4*lh+1) varmax(nn); lh=lh+2 ! Maximum Value (Double) of Variables
+ end do
+
+ end subroutine techead
+
+!===== SUBROUTINE FOR FINDING VARIABLE MIN/MAX VALUES FOR TECPLOT DATA FILE
+
+ subroutine vminmax(nn)
+
+ integer(k4),intent(in) :: nn
+
+	varmin(nn)=minval(varr); varmax(nn)=maxval(varr); varm(0:1,myid)=(/varmin(nn),varmax(nn)/)
+
+	ir=0; itag=nn
+ if(myid==mo(mb)) then
+	mps=mo(mb); mpe=mps+npc(mb,1)*npc(mb,2)*npc(mb,3)-1
+ do mp=mps+1,mpe
+	ir=ir+1; call MPI_IRECV(varm(:,mp),2,MPI_REAL8,mp,itag,icom,ireq(ir),ierr)
+ end do
+ if(ir/=0) then
+    call MPI_WAITALL(ir,ireq,ista,ierr)
+ end if
+	varmin(nn)=minval(varm(0,mps:mpe)); varmax(nn)=maxval(varm(1,mps:mpe))
+ else
+	call MPI_SEND(varm(:,myid),2,MPI_REAL8,mo(mb),itag,icom,ierr)
+ end if
+
+ end subroutine vminmax
+
 !=====
 
  end module subroutines3d

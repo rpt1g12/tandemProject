@@ -23,6 +23,7 @@
 
     allocate(lxim(0:mpro),letm(0:mpro),lzem(0:mpro),lpos(0:mpro),vmpi(0:mpro))
     allocate(ista(MPI_STATUS_SIZE,12))
+    inquire(iolength=ll) pi; nrec=ll/2
 
 !===== INPUT PARAMETERS
 
@@ -61,13 +62,14 @@
     ! rpt-Position of signal sampling
     !xpos=-1.0_k8;ypos=0.01_k8;zpos=0.005_k8
 
-	abc(:,0)=(/a01,a02,a03,a04,a05,a06/)
-	abc(:,1)=(/a10,a12,a13,a14,a15,a16/)
-	abc(:,2)=(/a20,a21,a23,a24,a25,a26/)
+    abc(:,0)=(/a01,a02,a03,a04,a05,a06/)
+    abc(:,1)=(/a10,a12,a13,a14,a15,a16/)
+    abc(:,2)=(/a20,a21,a23,a24,a25,a26/)
 
-
-    allocate(times(0:ndata))
+	ll=3+5*(ndata+1)
+    allocate(times(0:ndata),cfilet(-1:ndata),ctecplt(-1:ndata),varm(0:1,0:mpro),varmin(ll),varmax(ll))
     allocate(lximb(0:mbk),letmb(0:mbk),lzemb(0:mbk),lhmb(0:mbk),mo(0:mbk),npc(0:mbk,3))
+	allocate(czonet(0:mbk),cthead(0:mbk))
 
     call inputext
 
@@ -88,6 +90,21 @@
  end do
     lxio=lximb(mb); leto=letmb(mb); lzeo=lzemb(mb)
 
+    if (output==2) then
+     cfilet(-1)='grid'
+     do n=0,ndata
+        no(2)=n/100; no(1)=mod(n,100)/10; no(0)=mod(n,10)
+        cno=achar(no+48); cfilet(n)='n'//cno(2)//cno(1)//cno(0)
+     end do
+     do n=-1,ndata
+            ctecplt(n)='out/'//cfilet(n)//'.plt'
+     end do
+     do mm=0,mbk
+        no(2)=mm/100; no(1)=mod(mm,100)/10; no(0)=mod(mm,10)
+        cno=achar(no+48); czonet(mm)='z'//cno(2)//cno(1)//cno(0)
+        cthead(mm)='data/'//czonet(mm)//'.plt'
+     end do
+    end if
     no(2)=mb/100; no(1)=mod(mb,100)/10; no(0)=mod(mb,10)
     cno=achar(no+48); cnzone=cno(2)//cno(1)//cno(0)
     czone='zone'//cnzone;
@@ -99,7 +116,7 @@
     no(4)=myid/10000; no(3)=mod(myid,10000)/1000;
     no(2)=mod(myid,1000)/100; no(1)=mod(myid,100)/10; no(0)=mod(myid,10)
     cno=achar(no+48); cnnode=cno(4)//cno(3)//cno(2)//cno(1)//cno(0)
-    cdata='misc/data'//cnnode//'.dat';
+    cdata='data/data'//cnnode//'.dat';
     cturb='misc/turb'//cnnode//'.dat'
 
     call domdcomp
@@ -181,9 +198,9 @@
 
 !===== ALLOCATION OF MAIN ARRAYS
 
-    !allocate(qo(0:lmx,5),qa(0:lmx,5),qb(0:lmx,5),de(0:lmx,5))
-    !qb(:,:)=0
-    ! RPT-take out qb
+    if (output==2) then
+      allocate(qb(0:lmx,5))
+    end if
     allocate(qo(0:lmx,5),qa(0:lmx,5),de(0:lmx,5))
     allocate(xim(0:lmx,3),etm(0:lmx,3),zem(0:lmx,3),rr(0:lmx,3),ss(0:lmx,3))
     allocate(p(0:lmx),yaco(0:lmx),varr(0:lmx))
@@ -359,6 +376,16 @@
 !===== SETTING UP OUTPUT FILE & STORING GRID DATA
 
  selectcase(output)
+ case(2)
+    if(myid==0) then
+    do n=-1,ndata
+           open(0,file=ctecplt(n)); close(0,status='delete')
+    end do
+    end if
+       open(0,file=cdata,access='direct',form='unformatted',recl=nrec*(lmx+1))
+    do nn=1,3
+       varr(:)=ss(:,nn); write(0,rec=nn) varr(:); call vminmax(nn)
+    end do
  case(0)
        inquire(iolength=lp) varr
        open(0,file=cdata,access='direct',recl=lp)
@@ -368,7 +395,7 @@
        nwrec=nwrec+1
           varr(:)=ss(:,nn); write(0,rec=nwrec) varr(:)
        end do
-       ! rpt-If ngrid is 1 then store the grid metrics and increase the record count
+       ! rpt-Store the grid metrics and increase the record count
        if (ngridv==1) then
           do nn=1,3
           nwrec=nwrec+1
@@ -385,9 +412,9 @@
              varr(:)=zem(:,nn); write(0,rec=nwrec) varr(:)
           end do
        end if
-    nrec=nwrec
+    ngrec=nwrec
     else
-    nrec=3+9*ngridv
+    ngrec=3+9*ngridv
     if (nto==2) then
        nwrec=iwrec
     end if
@@ -431,7 +458,9 @@
  end do
     close(9)
  end if
-    !qb(:,:)=0
+    if (output==2) then
+      qb(:,:)=0
+    end if
 
     wts=MPI_WTIME()
 
@@ -439,7 +468,6 @@
     open(1,file='signal.dat'); close(1,status='delete')
  end if
     call MPI_BARRIER(icom,ierr)
-    wte=MPI_WTIME()
     open(1,file='signal.dat',access='direct',form='formatted',recl=16,shared)
 
      if (myid==0) then
@@ -470,7 +498,7 @@
      n,timo,cl(1,2)*ra1-cl(1,1)*ra2,cl(1,2)*ra2+cl(1,1)*ra1
   end if
 
-! ----- FILTERING
+!----- FILTERING
 
   do m=1,5
      rr(:,1)=qa(:,m)
@@ -567,7 +595,6 @@
     fctr=2.0_k8/3
      rr(:,1)=de(:,1)*yaco(:)
      rr(:,2)=gamm1prndtli*rr(:,1)
-     !qb(:,3)=de(:,1)
 
      selectcase(LES)
      case(1)
@@ -577,8 +604,6 @@
                  (hxx(:)+tyz(:))*(hxx(:)+tyz(:)))
         varr(:)=(-1/yaco(:))**1.5 ! rpt- Volume
         rr(:,3)=qa(:,1)*smago1**2*varr(:)*sqrt(2*(de(:,1))) ! rpt-nuSGS
-        !qb(:,2)=rr(:,3)
-        !qb(:,4)=qb(:,2)/qb(:,3)
         rr(:,1)=rr(:,1)+rr(:,3)*yaco(:)
         rr(:,2)=rr(:,2)+tgamm1prndtli*rr(:,3)*yaco(:)   
         rr(:,3)=fctr*(qa(:,1)*smago2*varr(:)*de(:,1)) ! rpt-2/3*ro*kSGS
@@ -780,35 +805,45 @@
 
      ir=0; itag=30
   do nn=1,3
-  select case(nn)
-  case(1); drva=>drva1; drvb=>drvb1; case(2); drva=>drva2; drvb=>drvb2; case(3); drva=>drva3; drvb=>drvb3
-  end select
-  do ip=0,1; iq=1-ip; np=nbc(ip,nn); i=ip*ijk(1,nn)
-  if((np-30)*(np-35)*(np-45)==0) then
-  do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
-  do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
-     drva(jk,:,ip)=qa(l,:); rr(l,1)=1
+   select case(nn)
+    case(1); drva=>drva1; drvb=>drvb1;
+    case(2); drva=>drva2; drvb=>drvb2;
+    case(3); drva=>drva3; drvb=>drvb3
+   end select
+   do ip=0,1; iq=1-ip; np=nbc(ip,nn); i=ip*ijk(1,nn)
+    if((np-30)*(np-35)*(np-45)==0) then
+    do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
+    do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
+       drva(jk,:,ip)=qa(l,:); rr(l,1)=1
+    end do
+    end do
+    ir=ir+1; call MPI_ISEND(drva(:,:,ip),5*nbsize(nn),MPI_REAL8,ncd(ip,nn),itag+iq,icom,ireq(ir),ierr)
+    ir=ir+1; call MPI_IRECV(drvb(:,:,ip),5*nbsize(nn),MPI_REAL8,ncd(ip,nn),itag+ip,icom,ireq(ir),ierr)
+    end if
+   end do
   end do
-  end do
-     ir=ir+1; call MPI_ISEND(drva(:,:,ip),5*nbsize(nn),MPI_REAL8,ncd(ip,nn),itag+iq,icom,ireq(ir),ierr)
-     ir=ir+1; call MPI_IRECV(drvb(:,:,ip),5*nbsize(nn),MPI_REAL8,ncd(ip,nn),itag+ip,icom,ireq(ir),ierr)
-  end if
-  end do
-  end do
+
   if(ir/=0) then
      call MPI_WAITALL(ir,ireq,ista,ierr)
   end if
+
   do nn=1,3
-  select case(nn); case(1); drvb=>drvb1; case(2); drvb=>drvb2; case(3); drvb=>drvb3; end select
-  do ip=0,1; np=nbc(ip,nn); i=ip*ijk(1,nn)
-  if((np-30)*(np-35)*(np-45)==0) then
-  do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
-  do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
-     rr(l,1)=rr(l,1)+1; rr(l,2)=1/rr(l,1); qa(l,:)=rr(l,2)*((rr(l,1)-1)*qa(l,:)+drvb(jk,:,ip))
-  end do
-  end do
-  end if
-  end do
+   select case(nn);
+   case(1); drvb=>drvb1; 
+   case(2); drvb=>drvb2; 
+   case(3); drvb=>drvb3; 
+   end select
+   do ip=0,1; np=nbc(ip,nn); i=ip*ijk(1,nn)
+    if((np-30)*(np-35)*(np-45)==0) then
+     do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
+     do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
+        rr(l,1)=rr(l,1)+1; 
+        rr(l,2)=1/rr(l,1);
+        qa(l,:)=rr(l,2)*((rr(l,1)-1)*qa(l,:)+drvb(jk,:,ip))
+     end do
+     end do
+    end if
+   end do
   end do
 
 !-------------------------------
@@ -828,21 +863,21 @@
  !if(timo-tsam+(tmax-tsam)/ndata>0) then
  !   dtsum=dtsum+dt; qb(:,:)=qb(:,:)+half*dt*(qo(:,:)+qa(:,:))
  !if(nout==1) then
- !   times(ndati)=timo-half*dtsum
- !if(n==1) then
+ !     times(ndati)=timo-half*dtsum
+ !  if(n==1) then
  !   qb(:,:)=qo(:,:)
- !else
+ !  else
  !   fctr=1/dtsum; qb(:,:)=fctr*qb(:,:)
- !end if
- !   rr(:,1)=1/qb(:,1)
- !do m=1,5
- !select case(m)
- !case(1); varr(:)=qb(:,m); case(2:4); varr(:)=rr(:,1)*qb(:,m)+umf(m-1)
- !case(5); varr(:)=gamm1*(qb(:,m)-half*rr(:,1)*(qb(:,2)*qb(:,2)+qb(:,3)*qb(:,3)+qb(:,4)*qb(:,4)))
- !end select
- !   write(0,rec=5*ndati+m+3) varr(:)
- !end do
- !   dtsum=0; qb(:,:)=0
+ !  end if
+ !     rr(:,1)=1/qb(:,1)
+ !  do m=1,5
+ !  select case(m)
+ !  case(1); varr(:)=qb(:,m); case(2:4); varr(:)=rr(:,1)*qb(:,m)+umf(m-1)
+ !  case(5); varr(:)=gamm1*(qb(:,m)-half*rr(:,1)*(qb(:,2)*qb(:,2)+qb(:,3)*qb(:,3)+qb(:,4)*qb(:,4)))
+ !  end select
+ !     write(0,rec=5*ndati+m+3) varr(:)
+ !  end do
+ !     dtsum=0; qb(:,:)=0
  !end if
  if(nout==1) then
       times(ndati)=timo
@@ -850,10 +885,20 @@
       write(*,"('===> saving output ',i3,' at time =',f12.8)") ndati,timo
    end if
    selectcase(output)
-   case(1)
+   case(2) ! New Tecplot Style
+   qb(:,:)=qa(:,:)
+   rr(:,1)=1/qb(:,1)
+   do m=1,5
+     select case(m)
+     case(1); varr(:)=qb(:,m); 
+     case(2:4); varr(:)=rr(:,1)*qb(:,m)+umf(m-1)
+     case(5); varr(:)=gam*gamm1*(qb(:,m)-half*rr(:,1)*(qb(:,2)*qb(:,2)+qb(:,3)*qb(:,3)+qb(:,4)*qb(:,4)))
+     end select
+     nn=3+5*ndati+m; write(0,rec=nn) varr(:); !call vminmax(nn)
+   end do
+   case(1) ! Plot3D Style
       call plot3d(gflag=0,sflag=osol,bflag=oblock)
-   case(0)
-      !==========SAVING INSTANTANEUS DENSITY, VELOCITY AND PRESSURE
+   case(0) ! Old Tecplot Style
       nwrec=nwrec+1
          varr(:)=qa(:,1); write(0,rec=nwrec) varr(:)
       do m = 2, 4
@@ -903,23 +948,26 @@
  !   nsigi=nsigi+1; call signalgo
  !end if
 
- if (myid==idsignal) then
- if (timo.le.25.5_k8) then
-    ra0=qa(lsignal,2)/qa(lsignal,1)+umf(1)
-    ra1=qa(lsignal,3)/qa(lsignal,1)+umf(2)
-    ra2=qa(lsignal,4)/qa(lsignal,1)+umf(3)
-    write(6,"(es15.7,1x,es15.7,1x,es15.7,1x,es15.7)") ra0,ra1,ra2,timo
- end if
- end if
+ !if (myid==idsignal) then
+ !if (timo.le.25.5_k8) then
+ !   ra0=qa(lsignal,2)/qa(lsignal,1)+umf(1)
+ !   ra1=qa(lsignal,3)/qa(lsignal,1)+umf(2)
+ !   ra2=qa(lsignal,4)/qa(lsignal,1)+umf(3)
+ !   write(6,"(es15.7,1x,es15.7,1x,es15.7,1x,es15.7)") ra0,ra1,ra2,timo
+ !end if
+ !end if
 
 !==========================
 !===== END OF TIME MARCHING
 !==========================
  end do
     close(1)
-    if (myid==idsignal) then
-       close(6)
+    if (output==2) then
+       close(0)
     end if
+    !if (myid==idsignal) then
+    !   close(6)
+    !end if
 
     wte=MPI_WTIME(); res=wte-wts
     call MPI_ALLREDUCE(res,wtime,1,MPI_REAL8,MPI_SUM,icom,ierr)
@@ -946,27 +994,103 @@
     end if
     ndata=ndati
  else
-    if(myid==0) then
-       write(*,'("Simulation time was ",f6.2," hours")') wtime/(3600_k8*npro)
-    end if
-   if (output==0) then
-    if (nto==2) then
-       ndata=ndati+(iwrec-nrec)/5-1
-       if (myid==0) then
-          write(*,*) ndata
-       end if
-    end if
-      if (output==0) then
-      call post(average=.false.)
+  if(myid==0) write(*,'("Simulation time was ",f6.2," hours")') wtime/(3600_k8*npro)
+  selectcase(output)
+  case(0)
+   if (nto==2) then
+      ndata=ndati+(iwrec-ngrec)/5-1
+      if (myid==0) then
+         write(*,*) ndata
       end if
    end if
+     if (output==0) then
+     call post(average=.false.)
+     end if
+   deallocate(qo,qa,de,xim,etm,zem,rr,ss,p,yaco)
+   if(nviscous==1) then
+      deallocate(txx,tyy,tzz,txy,tyz,tzx,hxx,hyy,hzz)
+   end if
+  case(2)
+   ! rpt-Deallocate Arrays
+   deallocate(qo,qa,qb,de,xim,etm,zem,rr,ss,p,yaco)
+   if(nviscous==1) then
+      deallocate(txx,tyy,tzz,txy,tyz,tzx,hxx,hyy,hzz)
+   end if
+   ! rpt-nlmx=>last index of total output
+   ! rpt-ll=>last index of each output
+   nlmx=(3+5*(ndata+1))*(lmx+1)-1; ll=5*(lmx+1)-1; allocate(vart(0:nlmx),vmean(0:ll))
+   ! rpt-Read all data written data into vart and delete files
+   open(9,file=cdata,access='direct',form='unformatted',recl=nrec*(nlmx+1))
+   read(9,rec=1) vart(:)
+   close(9,status='delete')
+   !!!----- CALCULATING UNSTEADY FLUCTUATIONS
+   !!     fctr=half/(times(ndata)-times(0)); vmean(:)=0
+   !!do n=0,ndata; lis=(3+5*n)*(lmx+1); lie=lis+ll
+   !!   if(n==0) then; ra0=fctr*(times(n+1)-times(n)); end if
+   !!   if(n==ndata) then; ra0=fctr*(times(n)-times(n-1)); end if
+   !!   if(n>0.and.n<ndata) then; ra0=fctr*(times(n+1)-times(n-1)); end if
+   !!   vmean(:)=vmean(:)+ra0*vart(lis:lie)
+   !!end do
+   do n=0,ndata; lis=(3+5*n)*(lmx+1); lie=lis+ll
+          !vart(lis:lie)=vart(lis:lie)-vmean(:)
+   ! rpt-Compute min and max of each variable
+   do m=1,5; nn=3+5*n+m; l=lis+(m-1)*(lmx+1)
+          varr(:)=vart(l:l+lmx); call vminmax(nn)
+   end do
+   end do
+   !----- COLLECTING DATA FROM SUBDOMAINS & BUILDING TECPLOT OUTPUT FILES
+          lje=-1
+   do n=-1,ndata
+          mq=3+2*min(n+1,1); llmb=mq*ltomb-1; allocate(vara(0:llmb),varb(0:llmb))
+          ljs=lje+1; lje=ljs+mq*(lmx+1)-1
+      if(myid==mo(mb)) then 
+     	mps=mo(mb); mpe=mps+npc(mb,1)*npc(mb,2)*npc(mb,3)-1
+     	lis=0; lie=mq*(lmx+1)-1; vara(lis:lie)=vart(ljs:lje)
+        do mp=mps+1,mpe
+       	lis=lie+1; lie=lis+mq*(lxim(mp)+1)*(letm(mp)+1)*(lzem(mp)+1)-1
+           itag=1; call MPI_RECV(vara(lis:lie),lie-lis+1,MPI_REAL4,mp,itag,icom,ista,ierr)
+        end do
+       	lis=0
+        do mp=mps,mpe; do m=1,mq; do k=0,lzem(mp); do j=0,letm(mp)
+       	ljs=lpos(mp)+(m-1)*ltomb+k*(leto+1)*(lxio+1)+j*(lxio+1)
+       	varb(ljs:ljs+lxim(mp))=vara(lis:lis+lxim(mp)); lis=lis+lxim(mp)+1
+        end do; end do; end do; end do
+       	open(9,file=cthead(mb),access='stream',form='unformatted')
+       	call techead(9,n,mb,lh)
+       	deallocate(vara); allocate(vara(0:lh+llmb)); read(9,pos=1) vara(0:lh-1)
+       	close(9,status='delete')
+       	lhmb(mb)=lh+llmb+1; vara(lh:lh+llmb)=varb(:)
+        if(mb==0) then
+          do mm=1,mbk
+         	itag=2; call MPI_RECV(lhmb(mm),1,MPI_INTEGER8,mo(mm),itag,icom,ista,ierr)
+          end do
+         	llmo=sum(lhmb(:))-1; deallocate(varb); allocate(varb(0:llmo))
+         	lis=0; lie=lhmb(mb)-1; varb(lis:lie)=vara(:)
+          do mm=1,mbk
+         	lis=lie+1; lie=lis+lhmb(mm)-1
+         	itag=3; call MPI_RECV(varb(lis:lie),lie-lis+1,MPI_REAL4,mo(mm),itag,icom,ista,ierr)
+          end do
+                write(*,*) ctecplt(n)
+          	open(0,file=ctecplt(n),access='direct',form='unformatted',recl=nrec*(llmo+1))
+         	write(0,rec=1) varb(:)
+         	close(0)
+        else
+         	itag=2; call MPI_SEND(lhmb(mb),1,MPI_INTEGER8,mo(0),itag,icom,ierr)
+         	itag=3; call MPI_SEND(vara(:),lhmb(mb),MPI_REAL4,mo(0),itag,icom,ierr)
+        end if
+      else
+       	itag=1; call MPI_SEND(vart(ljs:lje),lje-ljs+1,MPI_REAL4,mo(mb),itag,icom,ierr)
+      end if
+     	deallocate(vara,varb)
+   end do
+  end select
  end if
 
 if (myid==0) then
    open(9,file='data/post.dat')
    write(9,*) 'ngridv ',ngridv
    write(9,*) 'ndata  ',ndata
-   write(9,*) 'nrec   ',nrec
+   write(9,*) 'ngrec   ',ngrec
    write(9,*) 'nwrec  ',nwrec
    write(9,*) 'lhmb   ',lhmb(mb)
    close(9)
