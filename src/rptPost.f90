@@ -62,10 +62,6 @@ contains
     ! rpt-Initialising the record count 
     nwrec=0
 
-	abc(:,0)=(/a01,a02,a03,a04,a05,a06/)
-	abc(:,1)=(/a10,a12,a13,a14,a15,a16/)
-	abc(:,2)=(/a20,a21,a23,a24,a25,a26/)
-
     allocate(lximb(0:mbk),letmb(0:mbk),lzemb(0:mbk),lhmb(0:mbk),mo(0:mbk),npc(0:mbk,3))
 
     call inputext
@@ -93,7 +89,8 @@ contains
     no(4)=myid/10000; no(3)=mod(myid,10000)/1000;
     no(2)=mod(myid,1000)/100; no(1)=mod(myid,100)/10; no(0)=mod(myid,10)
     cno=achar(no+48); cnnode=cno(4)//cno(3)//cno(2)//cno(1)//cno(0)
-    cdata='data/data'//cnnode//'.dat'; cturb='misc/turb'//cnnode//'.dat'
+    cdata='misc/data'//cnnode//'.dat';
+    cturb='misc/turb'//cnnode//'.dat'
 
     call domdcomp
 
@@ -136,21 +133,12 @@ contains
 
 !===== SUBDOMAIN SIZES & WRITING START POSITIONS IN OUTPUT FILE
 
- if(myid==0) then
-    lxim(0)=lxi; letm(0)=let; lzem(0)=lze
- do mp=1,mpro
-	itag=1; call MPI_RECV(lxim(mp),1,MPI_INTEGER4,mp,itag,icom,ista,ierr)
-	itag=2; call MPI_RECV(letm(mp),1,MPI_INTEGER4,mp,itag,icom,ista,ierr)
-	itag=3; call MPI_RECV(lzem(mp),1,MPI_INTEGER4,mp,itag,icom,ista,ierr)
+    lxim(myid)=lxi; letm(myid)=let; lzem(myid)=lze
+ do mp=0,mpro
+    call MPI_BCAST(lxim(mp),1,MPI_INTEGER,mp,icom,ierr)
+    call MPI_BCAST(letm(mp),1,MPI_INTEGER,mp,icom,ierr)
+    call MPI_BCAST(lzem(mp),1,MPI_INTEGER,mp,icom,ierr)
  end do
- else; itag=myid
-	itag=1; call MPI_SEND(lxi,1,MPI_INTEGER4,0,itag,icom,ierr)
-	itag=2; call MPI_SEND(let,1,MPI_INTEGER4,0,itag,icom,ierr)
-	itag=3; call MPI_SEND(lze,1,MPI_INTEGER4,0,itag,icom,ierr)
- end if
-	call MPI_BCAST(lxim(:),npro,MPI_INTEGER4,0,icom,ierr)
-	call MPI_BCAST(letm(:),npro,MPI_INTEGER4,0,icom,ierr)
-	call MPI_BCAST(lzem(:),npro,MPI_INTEGER4,0,icom,ierr)
 
     ltomb=(lxio+1)*(leto+1)*(lzeo+1)
 
@@ -269,7 +257,7 @@ contains
       open(9,file='data/post.dat',shared)
       read(9,*) cinput,ngridv
       read(9,*) cinput,ndata
-      read(9,*) cinput,ngrec
+      read(9,*) cinput,nrec
       read(9,*) cinput,nwrec
       read(9,*) cinput,lsta
       close(9)
@@ -287,15 +275,15 @@ contains
  subroutine getMetrics
  !===== COMPUTE INVERSE METRICS
      rr(:,1)=ss(:,1)
-     m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+     m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
      qo(:,1)=rr(:,1); qo(:,2)=rr(:,2); qo(:,3)=rr(:,3)
  
      rr(:,1)=ss(:,2)
-     m=2; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+     m=2; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
      qa(:,1)=rr(:,1); qa(:,2)=rr(:,2); qa(:,3)=rr(:,3)
  
      rr(:,1)=ss(:,3)
-     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
      de(:,1)=rr(:,1); de(:,2)=rr(:,2); de(:,3)=rr(:,3)
  
      allocate(xyz(0:lmx,3))
@@ -332,40 +320,6 @@ contains
  end do
  end do
  end do; end do
-
-!===== EXTRA COEFFICIENTS FOR GCBC/GCIC
-
-    cbca(:,:)=0; cbca(1,1:2)=albed(1:2,0,0); cbca(2,1:3)=albed(0:2,1,0); cbca(3,1:3)=albed(-1:1,2,0)
- if(mbci>=4) then
-    cbca(3,4)=albed(2,2,0)
- do i=4,mbci
-    cbca(i,i-3:i)=(/beta,alpha,one,alpha/); if(i<mbci) then; cbca(i,i+1)=beta; end if
- end do
- end if
-    rbci(:)=0; rbci(1:3)=(/one,albed(-1,1,0),albed(-2,2,0)/)
-    call mtrxi(cbca,cbcs,1,mbci); sbci(:)=-matmul(cbcs(:,:),rbci(:))
-	fctr=pi/(mbci+1)
- do i=1,mbci
-	sbci(i)=half*sbci(i)*(1+cos(i*fctr))
- end do
-    ll=-1; rr(:,1)=0
- do nn=1,3; do ip=0,1; np=nbc(ip,nn); i=ip*ijk(1,nn); iq=1-2*ip
- if((np-10)*(np-20)*(np-25)*(np-30)==0) then
- do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
- do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
-    ll=ll+1; res=1/yaco(l); rr(l,1)=rr(l,1)+1; rr(ll,2)=res; rr(ll,3)=l+sml
- do ii=1,mbci; l=indx3(i+iq*ii,j,k,nn)
-    ll=ll+1; rr(l,1)=rr(l,1)+1; rr(ll,2)=res*sbci(ii); rr(ll,3)=l+sml
- end do
- end do
- end do
- end if
- end do; end do
-    lp=ll; allocate(sbcc(0:lp))
- do ll=0,lp; l=rr(ll,3)
-    sbcc(ll)=rr(ll,2)/rr(l,1)
- end do
-
  end subroutine getMetrics
 
 !====================================================================================
@@ -398,9 +352,9 @@ contains
        write(*,"(f5.1,'% Averaged')") real(ndata*(m-1)+n)*100.0e0/real(ndata*totVar)
     end if
        if (tecplot) then
-       call tpostread((n*totVar+ngrec+m),lsta)
+       call tpostread((n*totVar+nrec+m),lsta)
        else
-       call postread((n*totVar+ngrec+m))
+       call postread((n*totVar+nrec+m))
        end if
        rr(:,1)=rr(:,1)+delt(n)*varr(:)
     end do
@@ -487,11 +441,10 @@ contains
 !====================================================================================
 !=====AVERAGE IN SPACE OVER WALL SURFACE
 !====================================================================================
- subroutine wavg(dir,wall,fname)
+ subroutine wavg(dir,wall)
     implicit none
     integer, intent(in) :: dir
     logical, intent(in) :: wall
-    character(16), intent(in) :: fname
     integer :: idir,odir,ia,oa,l,ls,le,lp1,lm1,lw,lws,lwe
     real(k8), dimension(:), allocatable :: delt
     real(k8), dimension(:,:), allocatable :: avg
@@ -501,14 +454,14 @@ contains
     call getatWall
     end if
     select case(dir)
-    case(1); idir=lxi; odir=lze; ia=1; oa=3; str='z'; str2='X'
-    case(2); idir=lze; odir=lxi; ia=3; oa=1; str='x'; str2='Z'
+    case(1); idir=lxi; odir=lze; ia=1; oa=3; str='z'
+    case(2); idir=lze; odir=lxi; ia=3; oa=1; str='x'
     end select
     allocate(delt(0:idir))
     allocate(avg(0:odir,2))
     ! OPEN FILE TO OUTPUT RESUT
-    open(7,file='out/'//str2//'AVG'//trim(fname)//'.csv')
-    write(7,"(1a,1x,16a)") str,trim(fname)
+    open(7,file='out/avg.dat')
+    write(7,"(1a,' var')") str
     do j = 0, odir
        lws=indx2(0,j,dir);lwe=indx2(idir,j,dir)
        ls=lwall(lws);le=lwall(lwe)
@@ -549,19 +502,19 @@ contains
      de(:,4)=qo(:,4)
  
      rr(:,1)=de(:,2)
-     m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+     m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
      txx(:)=yaco(:)*(xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3))
      hzz(:)=yaco(:)*(xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3))
      tzx(:)=yaco(:)*(xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3))
  
      rr(:,1)=de(:,3)
-     m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+     m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
      txy(:)=yaco(:)*(xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3))
      tyy(:)=yaco(:)*(xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3))
      hxx(:)=yaco(:)*(xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3))
  
      rr(:,1)=de(:,4)
-     m=4; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+     m=4; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
      hyy(:)=yaco(:)*(xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3))
      tyz(:)=yaco(:)*(xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3))
      tzz(:)=yaco(:)*(xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3))
@@ -573,91 +526,6 @@ contains
     end if
 
  end subroutine qcriterion
-
-!====================================================================================
-!===== SUBROUTINE FOR CALCULATING VORTICITY
-!====================================================================================
- subroutine getCurl(nvar)
-
-    implicit none
-    integer, intent(in) :: nvar
-    selectcase(output)
-    case(0)
-    call fillqo(nvar)
-    case(1)
-    call p3dread(0,nvar)
-    p(:)=qo(:,5)
-    end select
-
-    de(:,1:3)=0
-
-    rr(:,1)=qo(:,2)
-    m=1; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
-    de(:,2)=de(:,2)+rr(:,1)*xim(:,3)+rr(:,2)*etm(:,3)+rr(:,3)*zem(:,3)
-    de(:,3)=de(:,3)-rr(:,1)*xim(:,2)-rr(:,2)*etm(:,2)-rr(:,3)*zem(:,2)
-
-    rr(:,1)=qo(:,3)
-    m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
-    de(:,3)=de(:,3)+rr(:,1)*xim(:,1)+rr(:,2)*etm(:,1)+rr(:,3)*zem(:,1)
-    de(:,1)=de(:,1)-rr(:,1)*xim(:,3)-rr(:,2)*etm(:,3)-rr(:,3)*zem(:,3)
-
-    rr(:,1)=qo(:,4)
-    m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
-    de(:,1)=de(:,1)+rr(:,1)*xim(:,2)+rr(:,2)*etm(:,2)+rr(:,3)*zem(:,2)
-    de(:,2)=de(:,2)-rr(:,1)*xim(:,1)-rr(:,2)*etm(:,1)-rr(:,3)*zem(:,1)
-
-    de(:,1)=de(:,1)*yaco(:); de(:,2)=de(:,2)*yaco(:); de(:,3)=de(:,3)*yaco(:)
-    ra0=aoa*pi/180;ra1=cos(ra0);ra2=sin(ra0)
-    ss(:,1)=de(:,1)!*ra1+de(:,2)*ra2
-    ss(:,2)=de(:,2)!*ra1-de(:,1)*ra2
-    ss(:,3)=de(:,3)
-
- end subroutine getCurl
-
-!====================================================================================
-!===== SUBROUTINE FOR CALCULATING VORTICITY TURNING
-!====================================================================================
- subroutine getCurlTurn(nvar)
-
-    implicit none
-    integer, intent(in) :: nvar
-    selectcase(output)
-    case(0)
-    call fillqo(nvar)
-    case(1)
-    call p3dread(0,nvar)
-    p(:)=qo(:,5)
-    end select
-
-    de(:,1:3)=0
-
-    qa(:,:)=0
-    rr(:,1)=qo(:,2)
-    m=1; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
-    de(:,2)=de(:,2)+rr(:,1)*xim(:,3)+rr(:,2)*etm(:,3)+rr(:,3)*zem(:,3)
-    de(:,3)=de(:,3)-rr(:,1)*xim(:,2)-rr(:,2)*etm(:,2)-rr(:,3)*zem(:,2)
-    qa(:,2)=de(:,3)
-    qa(:,3)=-de(:,2)
-
-    rr(:,1)=qo(:,3)
-    m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
-    de(:,3)=de(:,3)+rr(:,1)*xim(:,1)+rr(:,2)*etm(:,1)+rr(:,3)*zem(:,1)
-    de(:,1)=de(:,1)-rr(:,1)*xim(:,3)-rr(:,2)*etm(:,3)-rr(:,3)*zem(:,3)
-
-    rr(:,1)=qo(:,4)
-    m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
-    de(:,1)=de(:,1)+rr(:,1)*xim(:,2)+rr(:,2)*etm(:,2)+rr(:,3)*zem(:,2)
-    de(:,2)=de(:,2)-rr(:,1)*xim(:,1)-rr(:,2)*etm(:,1)-rr(:,3)*zem(:,1)
-
-    qa(:,2)=qa(:,2)*yaco(:)
-    qa(:,3)=qa(:,3)*yaco(:)
-
-    de(:,1)=de(:,1)*yaco(:); de(:,2)=de(:,2)*yaco(:); de(:,3)=de(:,3)*yaco(:)
-    ss(:,1)=de(:,2)*qa(:,2)
-    ss(:,2)=de(:,3)*qa(:,3)
-
-
- end subroutine getCurlTurn
 
 !====================================================================================
 !=====FIND INDEX FROM X,Y, AND Z COORDINATES
@@ -689,7 +557,7 @@ contains
     selectcase(output)
     case(0)
     ! READ VARIABLES
-    nread=ngrec+(totVar*nvar)
+    nread=nrec+(totVar*nvar)
     do nn = 1, 5
      if (tecplot) then
      nread=nread+1; call tpostread(nread,lsta)

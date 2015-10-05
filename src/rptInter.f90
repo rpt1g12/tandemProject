@@ -28,7 +28,6 @@ real(nr) :: dti,dtsi,dtei,timoi,wtsi,wtei
 integer :: ndti,ni
 
 real(nr), dimension(0:1,1:3) :: bounds
-real(nr) :: nspan
 real(nr), dimension(1:5) :: outside
 contains
 
@@ -68,7 +67,6 @@ contains
     allocate(lximb(0:mbk),letmb(0:mbk),lzemb(0:mbk),lhmb(0:mbk),mo(0:mbk),npc(0:mbk,3))
 
     call inputext
-    npc(:,:)=1
 
     lxi0=ilxi0
     lxi1=ilxi1
@@ -313,15 +311,15 @@ contains
  subroutine getMetrics
  !===== COMPUTE INVERSE METRICS
      rr(:,1)=ss(:,1)
-     m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+     m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
      qo(:,1)=rr(:,1); qo(:,2)=rr(:,2); qo(:,3)=rr(:,3)
  
      rr(:,1)=ss(:,2)
-     m=2; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+     m=2; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
      qa(:,1)=rr(:,1); qa(:,2)=rr(:,2); qa(:,3)=rr(:,3)
  
      rr(:,1)=ss(:,3)
-     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
      de(:,1)=rr(:,1); de(:,2)=rr(:,2); de(:,3)=rr(:,3)
  
      allocate(xxi(0:ltomb-1),xet(0:ltomb-1),xze(0:ltomb-1))
@@ -462,22 +460,22 @@ contains
 
      varr=qo(:,n); call joinBlock; f=lvarr
      rr(:,1)=qo(:,n)
-     m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+     m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
      varr=rr(:,1); call joinBlock; fxi=lvarr
      varr=rr(:,2); call joinBlock; fet=lvarr
      varr=rr(:,3); call joinBlock; fze=lvarr
  
      rr(:,1)=rr(:,2)
-     m=2; call mpigo(ntdrv,nrone,n45go,m); call deriv(1,1,m)
+     m=2; call mpigo(ntdrv,nrone,n45go,m); call deriv(1,1)
      varr=rr(:,1); call joinBlock; fetxi=lvarr
  
      rr(:,1)=rr(:,3)
-     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(2,1,m); call deriv(1,1,m)
+     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(2,1); call deriv(1,1)
      varr=rr(:,1); call joinBlock; fzexi=lvarr
      varr=rr(:,2); call joinBlock; fzeet=lvarr
 
      rr(:,1)=rr(:,2)
-     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(1,1,m)
+     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(1,1)
      varr=rr(:,1); call joinBlock; fzeetxi=lvarr
 
  end subroutine getDeri
@@ -520,23 +518,25 @@ do k = 0, lzei
              qb(l2,n)=outside(n)
          elseif (xs(2)>bounds(1,2)) then
              qb(l2,n)=outside(n)
+         !elseif (xs(3)<bounds(0,3)) then
+         !    qb(l2,n)=outside(n)
+         !elseif (xs(3)>bounds(1,3)) then
+         !    qb(l2,n)=outside(n)
          else
            if (n==1) then
-              if (xs(3)<bounds(0,3)) then
-                  xs(3)=bounds(1,3)-mod(abs(xs(3))-bounds(1,3),2*bounds(1,3))
-              elseif (xs(3)>bounds(1,3)) then
-                  xs(3)=bounds(0,3)+mod(abs(xs(3))-bounds(1,3),2*bounds(1,3))
-              end if
                  if (i==0) then
                     start(1)=0
                  else
                     l=indx4(i-1,j,k,1)
                     start(1)=(ixis(l,1))
+                    if (myid==0) then
+                       write(*,*) start(1) 
+                    end if
                  end if
                  start(1)=max(start(1),0.0_nr);
                  start(1)=min(start(1),real(lxio,nr))
                  if (j==0) then
-                    start(2)=0
+                    start(2)=(nint(real(leto*j/letio,nr)))
                  else
                     l=indx4(i,j-1,k,1)
                     start(2)=(ixis(l,2))
@@ -544,7 +544,7 @@ do k = 0, lzei
                  start(2)=max(start(2),0.0_nr);
                  start(2)=min(start(2),real(leto,nr))
                  if (k==0) then
-                    start(3)=0
+                    start(3)=(nint(real(lzeo*k/lzeio,nr)))
                  else
                     l=indx4(i,j,k-1,1)
                     start(3)=(ixis(l,3))
