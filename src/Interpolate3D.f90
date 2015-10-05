@@ -23,12 +23,12 @@
 
     mpro=npro-1; icom=MPI_COMM_WORLD; info=MPI_INFO_NULL
     wts=MPI_WTIME()
-    iflag=.true.;gflag=.false.
+    iflag=.true.;gflag=.true.
 
     allocate(lxim(0:mpro),letm(0:mpro),lzem(0:mpro),lpos(0:mpro),vmpi(0:mpro))
     allocate(ista(MPI_STATUS_SIZE,12))
 
-   call setup(280,350,280,240,90,100)
+   call setup(210,315,210,210,90,100)
 lxii=lxi;leti=let;lzei=lze
 lxiio=lxio;letio=leto;lzeio=lzeo
 allocate(qb(0:lmx,5))
@@ -40,7 +40,6 @@ call getGrid
         xyz2(:,i)=ss(:,i)
      end do
 call writeGrid
-call plot3dGrid
 else
 call readGrid
 end if
@@ -48,7 +47,7 @@ end if
 call deallocateArrays
 
 if (iflag) then
-   call setup(210,315,210,210,90,100)
+   call setup(160,320,160,160,80,100)
    color=mb;ncom=mb
    call prepareArrays
    call getGrid
@@ -64,7 +63,7 @@ if (iflag) then
    tol=abs(1.0_nr/tol**(1.0_nr/3.0_nr))
    call readRestart
    if (myid==0) then
-   write(*,"('Last time step was at:',f9.4)") timo
+   write(*,"('Last time step was at:',f7.4)") timo
    end if
 
    ! Get boundary values
@@ -77,15 +76,6 @@ if (iflag) then
    bounds(1,n)=bounds(1,n)+2*sml
    end do
    bounds(0,3)=-half*span;bounds(1,3)=half*span
-   ! Get the new span length
-   ra0=minval(xyz2(:,3),1)
-   ra1=maxval(xyz2(:,3),1)
-   ra2=ra1-ra0
-   CALL MPI_ALLREDUCE(ra2,nspan,1,MPI_REAL8,MPI_SUM,icom,ierr)
-   nspan=nspan/npro
-   if (myid==0) then
-      write(*,*) nspan
-   end if
    ! Set outside values
    outside(1)=rhooo
    outside(2:4)=0.0_nr
@@ -97,12 +87,7 @@ if (iflag) then
    
    
    call deallocateArrays
-   call setup(280,350,280,240,90,100)
-   call prepareArrays
-   qa=qb
-   p(:)=qa(:,5)
-   ss(:,1:3)=xyz2(:,1:3)
-   call plot3d(0,1,1)
+   call setup(210,315,210,210,90,100)
    call writeRestart
     if(myid==mo(mb)) then
        write(*,*) "Finished",mb

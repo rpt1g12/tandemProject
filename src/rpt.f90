@@ -13,9 +13,17 @@ contains
 !====================================================================================
 !===== POST-PROCESSING & GENERATING PLOT3D DATA FILES
 !====================================================================================
- subroutine plot3dgrid()
- integer(k4) :: n
+ subroutine plot3d(gflag,sflag,bflag)
 
+ integer(k4), intent(in) :: gflag,sflag,bflag
+ integer(k4) :: n
+ character(8) :: ctime
+ 
+ write(ctime,"(f8.4)") timo
+    
+
+ if (bflag==1) then
+    if (gflag==1) then
       if (myid==0) then
         open(9,file='out/grid.xyz'); close(9,status='delete')
       end if
@@ -48,17 +56,13 @@ contains
         if (myid==0) then
         write(*,*) 'Grid written!'
         end if
-    
- end subroutine plot3dgrid
+    end if
 
- subroutine plot3dsolution(ctime)
- character(8), intent (in) :: ctime
- integer(k4) :: n
-
-       !if (myid==0) then
-       !  open(9,file='out/solT'//trim(adjustl(ctime))//'.q'); close(9,status='delete')
-       !end if
-       !CALL MPI_BARRIER(icom,ierr)
+    if (sflag==1) then
+       if (myid==0) then
+         open(9,file='out/solT'//ctime//'.q'); close(9,status='delete')
+       end if
+       CALL MPI_BARRIER(icom,ierr)
        open (unit=9, file='out/solT'//trim(adjustl(ctime))//'.q', access='stream',shared)
        lh=0
        if (myid==0) then
@@ -99,25 +103,76 @@ contains
         if (myid==0) then
            write(*,"('Solution written! T= ',8a)") ctime 
         end if
-    
- end subroutine plot3dsolution
-
- subroutine plot3d(gflag,sflag,bflag)
-
- integer(k4), intent(in) :: gflag,sflag,bflag
- integer(k4) :: n
- character(8) :: ctime
- 
- write(ctime,"(f8.4)") timo
-    
-
+    end if
+ else
     if (gflag==1) then
-       call plot3dgrid
+       if (myid==mo(mb)) then
+         open(9,file='out/'//czone//'.xyz'); close(9,status='delete')
+       end if
+       CALL MPI_BARRIER(icom,ierr)
+       open (unit=9, file='out/'//czone//'.xyz', access='stream',shared)
+       lh=0
+       if (myid==mo(mb)) then
+        write(9,pos=4*lh+1) 1; lh=lh+1 ! Number of zones
+        write(9,pos=4*lh+1) int4(lximb(mb)+1); lh=lh+1 ! IMax
+        write(9,pos=4*lh+1) int4(letmb(mb)+1); lh=lh+1 ! JMax
+        write(9,pos=4*lh+1) int4(lzemb(mb)+1); lh=lh+1 ! KMax
+        lhmb(mb)=lh
+       end if
+       do mm=0,mbk
+          call MPI_BCAST(lhmb(mm),1,MPI_INTEGER,mo(mm),icom,ierr)
+       end do
+       lp=lpos(myid)+lhmb(mb)
+       ns=1; ne=3
+       do n=ns,ne; lq=(n-1)*ltomb
+          varr(:)=ss(:,n)
+          do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+             write(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
+          end do; end do
+       end do
+       close(9)
+       if (myid==mo(mb)) then
+          write(*,"('Grid written for block ',i2)") mb 
+       end if
     end if
-
     if (sflag==1) then
-       call plot3dsolution(ctime)
+       if (myid==mo(mb)) then
+         open(9,file='out/sol'//czone//'T'//ctime//'.q'); close(9,status='delete')
+       end if
+       CALL MPI_BARRIER(icom,ierr)
+       open (unit=9, file='out/sol'//czone//'T'//ctime//'.q', access='stream',shared)
+       lh=0
+       if (myid==mo(mb)) then
+        write(9,pos=4*lh+1) 1; lh=lh+1 ! Number of zones
+        write(9,pos=4*lh+1) int4(lximb(mb)+1); lh=lh+1 ! IMax
+        write(9,pos=4*lh+1) int4(letmb(mb)+1); lh=lh+1 ! JMax
+        write(9,pos=4*lh+1) int4(lzemb(mb)+1); lh=lh+1 ! KMax
+        write(9,pos=4*lh+1) real(amachoo,kind=4); lh=lh+1 ! Mach Number
+        write(9,pos=4*lh+1) real(aoa,kind=4); lh=lh+1  
+        write(9,pos=4*lh+1) real(reoo,kind=4); lh=lh+1 ! Reynolds Number
+        write(9,pos=4*lh+1) real(timo,kind=4); lh=lh+1 ! Time
+        lhmb(mb)=lh
+       end if
+       do mm=0,mbk
+          call MPI_BCAST(lhmb(mm),1,MPI_INTEGER,mo(mm),icom,ierr)
+       end do
+       lp=lpos(myid)+lhmb(mb)
+       ns=1; ne=5
+       do n=ns,ne; lq=(n-ns)*ltomb
+           selectcase(n)
+           case(1,5); varr(:)=qa(:,n)
+           case(2,3,4); varr(:)=qa(:,n)+qa(:,1)*umf(n-1)
+           end select
+          do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+             write(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
+          end do; end do
+       end do
+       close(9)
+       if (myid==0) then
+          write(*,"('Solution written! T= ',8a)") ctime 
+       end if
     end if
+ end if
           
  end subroutine plot3d
 
@@ -274,12 +329,6 @@ contains
     bfor(ll,2)=cos(3*ra1*ss(l,3))
     bfor(ll,3)=cos(4*ra1*ss(l,3))
     ra1=half*exp(-ra0*rr(l,1))/yaco(l)
-    !rpt- Xeta-Xxi
-    !ra3=(qo(l,2)-qo(l,1))
-    !ra1=half*exp(-ra0*rr(l,1))*(qo(l,2)-qo(l,1))
-    !rpt- Yeta-Yxi
-    !ra3=(qa(l,2)-qa(l,1))
-    !ra2=half*exp(-ra0*rr(l,1))*(qa(l,2)-qa(l,1))
     xafor(ll,1)=ra1*bfor(ll,1)
     xafor(ll,2)=ra1*bfor(ll,2)
     xafor(ll,3)=ra1*bfor(ll,3)
@@ -507,25 +556,25 @@ contains
      de(:,1)=ss(:,1)
  
      rr(:,1)=de(:,2)
-     m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+     m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
      txx(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
      hzz(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
      tzx(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
 
      rr(:,1)=de(:,3)
-     m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+     m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
      txy(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
      tyy(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
      hxx(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
 
      rr(:,1)=de(:,4)
-     m=4; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+     m=4; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
      hyy(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
      tyz(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
      tzz(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
 
      rr(:,1)=de(:,5)
-     m=5; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+     m=5; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
      ss(:,1)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
      ss(:,2)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
      ss(:,3)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
@@ -567,7 +616,7 @@ contains
     ! READ VARIABLES
        selectcase(output)
        case(0)
-       nread=ngrec+(totVar*nvar)
+       nread=nrec+(totVar*nvar)
        do nn = 1, 5
         if (tecplot) then
         nread=nread+1; call tpostread(nread,lsta)
@@ -589,19 +638,19 @@ contains
        de(:,1)=srefp1dre*de(:,5)**1.5_k8/(de(:,5)+srefoo)
  
      rr(:,1)=de(:,2)
-     m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+     m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
      txx(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
      hzz(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
      tzx(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
  
      rr(:,1)=de(:,3)
-     m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+     m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
      txy(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
      tyy(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
      hxx(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
  
      rr(:,1)=de(:,4)
-     m=4; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+     m=4; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
      hyy(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
      tyz(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
      tzz(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
@@ -619,9 +668,9 @@ contains
  
        if(.not.allocated(tw)) allocate(tw(0:lcwall,3))
        do ll = 0, lcwall; l=lwall(ll)
-         tw(ll,1)=qo(l,1)*(txx(l)*wnor(ll,1)+txy(l)*wnor(ll,2)+tzx(l)*wnor(ll,3))!/reoo
-         tw(ll,2)=qo(l,1)*(txy(l)*wnor(ll,1)+tyy(l)*wnor(ll,2)+tyz(l)*wnor(ll,3))!/reoo
-         tw(ll,3)=qo(l,1)*(tzx(l)*wnor(ll,1)+tyz(l)*wnor(ll,2)+tzz(l)*wnor(ll,3))!/reoo
+         tw(ll,1)=qo(l,1)*(txx(l)*wnor(ll,1)+txy(l)*wnor(ll,2)+tzx(l)*wnor(ll,3))
+         tw(ll,2)=qo(l,1)*(txy(l)*wnor(ll,1)+tyy(l)*wnor(ll,2)+tyz(l)*wnor(ll,3))
+         tw(ll,3)=qo(l,1)*(tzx(l)*wnor(ll,1)+tyz(l)*wnor(ll,2)+tzz(l)*wnor(ll,3))
        end do
     end if
     end if
@@ -750,45 +799,6 @@ nfile=5
    end select
          
 end subroutine p3dread
-
-!====================================================================================
-!===== GENERATE RESTART DATA FILE
-!====================================================================================
-subroutine wRestart()
-
-integer(k4) :: nfile=10
-
-      if (myid==0) then
-         write(*,*) 'Writting restart file..'
-      end if
-    if (ndati==0) then
-    if(myid==mo(mb)) then
-       open(nfile,file=crestart); close(nfile,status='delete')
-    end if
-       call MPI_BARRIER(icom,ierr)
-       open(nfile,file=crestart,access='stream',shared);
-    end if; lh=0
-    if(myid==mo(mb)) then
-       write(nfile,pos=k8*lh+1) n; lh=lh+1
-       write(nfile,pos=k8*lh+1) ndt; lh=lh+1
-       write(nfile,pos=k8*lh+1) dt; lh=lh+1
-       write(nfile,pos=k8*lh+1) dts; lh=lh+1
-       write(nfile,pos=k8*lh+1) dte; lh=lh+1
-       write(nfile,pos=k8*lh+1) timo; lh=lh+1
-    else
-       lh=lh+6
-    end if
-       lp=lpos(myid)+lh
-    do m=1,5; lq=(m-1)*ltomb
-    do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-       write(nfile,pos=k8*(lp+lq+lio(j,k))+1) qa(l:l+lxi,m)
-    end do; end do
-    end do
-    if (ndati==ndata) then
-       close(nfile)
-    end if
-   
-end subroutine wRestart
 
 !====================================================================================
 ! ====CROSS PRODUCT OF TWO VECTORS 

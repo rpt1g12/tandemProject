@@ -91,7 +91,7 @@
     read(9,*) yit(:); read(9,*) zit(:)
     close(9)
  do nn=1,nits
-	if(ran(nn,1)-gaus<=0) then; mxc(nn)=0; else; mxc(nn)=1; end if
+ if(ran(nn,1)-gaus<=0) then; mxc(nn)=0; else; mxc(nn)=1; end if
  end do
     res=(2*(2-cutlb)*tlb*span*slit/nits)**(one/3)
  do m=1,3; do nn=1,nits
@@ -110,6 +110,14 @@
     yit(nn)=(1-cutlb)*ran(nn,2)*(2*yit(nn)-1)
     zit(nn)=min(span,res)*(zit(nn)-half)
  end do
+    call MPI_BCAST(mxc,nits,MPI_INTEGER,0,icom,ierr)
+ do m=1,3
+    call MPI_BCAST(sit(:,m),nits,MPI_REAL8,0,icom,ierr)
+    call MPI_BCAST(ait(:,m),nits,MPI_REAL8,0,icom,ierr)
+ end do
+    call MPI_BCAST(zit,nits,MPI_REAL8,0,icom,ierr)
+    call MPI_BCAST(yit,nits,MPI_REAL8,0,icom,ierr)
+    call MPI_BCAST(xit,nits,MPI_REAL8,0,icom,ierr)
 
  end subroutine inputext
 
@@ -192,25 +200,23 @@
  end select
  end do
 
-    ll=-1; ra2=pi/(2*domlen); ra3=pi/szth1
+    ll=-1; ra0=half*szco; ra1=1+min(2*amach1/(1+amach1),one)
  do l=0,lmx
     rr(l,:)=nsz(0,:)*szr(0,:)*max(szp(0,:)-ss(l,:),zero)+nsz(1,:)*szr(1,:)*max(ss(l,:)-szp(1,:),zero)
     ! rpt-this is sigma(x,y,z)
-    de(l,1)=szco*(1-0.125*(1+cos(pi*rr(l,1)))*(1+cos(pi*rr(l,2)))*(1+cos(pi*rr(l,3))))
+    de(l,1)=ra0*(1+cos(pi*(1-rr(l,1))*(1-rr(l,2))*(1-rr(l,3)))) 
     ! rpt-this is lambda(x)
-    de(l,2)=half*(1+cos(ra2*(min(ss(l,1),domlen)+domlen)))
-    de(l,3)=sin(ra3*min(ss(l,1)+domlen,szth1))**2
+    de(l,2)=ra1*(1-tanh(ss(l,1)))+1
  if(de(l,1)-sml>0) then
     ll=ll+1; de(ll,5)=l+sml ! rpt-this gives the l's containing sponge points
  end if
  end do
     lsz=ll ! rpt-total number of points in sponge zone
  if(lsz/=-1) then
-    allocate(lcsz(0:lsz),asz(0:lsz),bsz(0:lsz),csz(0:lsz))
+    allocate(lcsz(0:lsz),asz(0:lsz),bsz(0:lsz))
  do ll=0,lsz; l=de(ll,5); lcsz(ll)=l
     ! rpt-asz=sigma(x,y,z) and bsc=sigma(x,y,z)*lambda(x)
-    asz(ll)=de(l,1)*de(l,2)/yaco(l); bsz(ll)=hamm1*de(l,1)*(1-de(l,2))/yaco(l)
-    csz(ll)=de(l,3)
+    asz(ll)=de(l,1)/yaco(l); bsz(ll)=asz(ll)*de(l,2)
  end do
  end if
 
@@ -223,67 +229,68 @@
  end if
  end do
     ltz=ll; ntz=litr*slit/tla
+ ltz=-1
  if(ltz/=-1) then
-    allocate(lctz(0:ltz),tt(0:ntz),vit(0:ltz,3),vito(0:ltz,0:ntz,3)); lp=2*nrec*(ltz+1)*(ntz+1)
- do ll=0,ltz; l=de(ll,5); lctz(ll)=l
-    vit(ll,:)=ss(l,:)
- end do
-    fctr=slit/(ntz*uoo(1)); tt(:)=fctr*(/0:ntz/); vito(:,:,:)=0
- if(nito==0) then
- do nn=1,nits
-    ve(:)=(-9+mxc(nn))*sit(nn,:)*sit(nn,:); ra1=-36-60*mxc(nn); ra2=2*mxc(nn)/3.0_k8
- do i=0,1; do k=-1,1
-    dm(:)=(/xit(nn)-i*slit,yit(nn),zit(nn)-k*span/)
- do ii=0,ntz
-    rv(:)=dm(:)+tt(ii)*uoo(:)
-    de(0:ltz,1)=vit(:,1)-rv(1); de(0:ltz,2)=vit(:,2)-rv(2); de(0:ltz,3)=vit(:,3)-rv(3)
-    de(0:ltz,4)=de(0:ltz,1)*de(0:ltz,1)+de(0:ltz,2)*de(0:ltz,2)+de(0:ltz,3)*de(0:ltz,3)
-    de(0:ltz,5)=de(0:ltz,4)*de(0:ltz,4)
-    rr(0:ltz,1)=ve(1)*de(0:ltz,5); rr(0:ltz,2)=ve(2)*de(0:ltz,5); rr(0:ltz,3)=ve(3)*de(0:ltz,5)
-    de(0:ltz,5)=ra1*de(0:ltz,4)
-    rr(0:ltz,1)=ait(nn,1)*de(0:ltz,5)*exp(rr(0:ltz,1))*(1+ra2*rr(0:ltz,1))
-    rr(0:ltz,2)=ait(nn,2)*de(0:ltz,5)*exp(rr(0:ltz,2))*(1+ra2*rr(0:ltz,2))
-    rr(0:ltz,3)=ait(nn,3)*de(0:ltz,5)*exp(rr(0:ltz,3))*(1+ra2*rr(0:ltz,3))
-    vito(:,ii,1)=vito(:,ii,1)+rr(0:ltz,2)*de(0:ltz,3)-rr(0:ltz,3)*de(0:ltz,2)
-    vito(:,ii,2)=vito(:,ii,2)+rr(0:ltz,3)*de(0:ltz,1)-rr(0:ltz,1)*de(0:ltz,3)
-    vito(:,ii,3)=vito(:,ii,3)+rr(0:ltz,1)*de(0:ltz,2)-rr(0:ltz,2)*de(0:ltz,1)
- end do
- end do; end do
- if(myid==mo(9)) then; write(*,"('Vortex',i3,' Done')") nn; end if
- end do
-    open(9,file=cturb); close(9,status='delete')
-    open(9,file=cturb,access='direct',form='unformatted',recl=lp)
-    write(9,rec=1) vito(:,:,1); write(9,rec=2) vito(:,:,2); write(9,rec=3) vito(:,:,3)
-    close(9)
-    vito(:,:,:)=cfit*vito(:,:,:)
- else
-    open(9,file=cturb,access='direct',form='unformatted',recl=lp)
-    read(9,rec=1) vito(:,:,1); read(9,rec=2) vito(:,:,2); read(9,rec=3) vito(:,:,3)
-    close(9)
-    vito(:,:,:)=cfit*vito(:,:,:)
- end if
+     allocate(lctz(0:ltz),tt(0:ntz),vit(0:ltz,3),vito(0:ltz,0:ntz,3)); inquire(iolength=lp) vito
+  do ll=0,ltz; l=de(ll,5); lctz(ll)=l
+     vit(ll,:)=ss(l,:)
+  end do
+     fctr=slit/(ntz*uoo(1)); tt(:)=fctr*(/0:ntz/); vito(:,:,:)=0
+  if(nito==0) then
+   do nn=1,nits
+      ve(:)=(-9+mxc(nn))*sit(nn,:)*sit(nn,:); ra1=-36-60*mxc(nn); ra2=2*mxc(nn)/3.0_k8
+    do i=0,1; do k=-1,1
+       dm(:)=(/xit(nn)-i*slit,yit(nn),zit(nn)-k*span/)
+     do ii=0,ntz
+        rv(:)=dm(:)+tt(ii)*uoo(:)
+        de(0:ltz,1)=vit(:,1)-rv(1); de(0:ltz,2)=vit(:,2)-rv(2); de(0:ltz,3)=vit(:,3)-rv(3)
+        de(0:ltz,4)=de(0:ltz,1)*de(0:ltz,1)+de(0:ltz,2)*de(0:ltz,2)+de(0:ltz,3)*de(0:ltz,3)
+        de(0:ltz,5)=de(0:ltz,4)*de(0:ltz,4)
+        rr(0:ltz,1)=ve(1)*de(0:ltz,5); rr(0:ltz,2)=ve(2)*de(0:ltz,5); rr(0:ltz,3)=ve(3)*de(0:ltz,5)
+        de(0:ltz,5)=ra1*de(0:ltz,4)
+        rr(0:ltz,1)=ait(nn,1)*de(0:ltz,5)*exp(rr(0:ltz,1))*(1+ra2*rr(0:ltz,1))
+        rr(0:ltz,2)=ait(nn,2)*de(0:ltz,5)*exp(rr(0:ltz,2))*(1+ra2*rr(0:ltz,2))
+        rr(0:ltz,3)=ait(nn,3)*de(0:ltz,5)*exp(rr(0:ltz,3))*(1+ra2*rr(0:ltz,3))
+        vito(:,ii,1)=vito(:,ii,1)+rr(0:ltz,2)*de(0:ltz,3)-rr(0:ltz,3)*de(0:ltz,2)
+        vito(:,ii,2)=vito(:,ii,2)+rr(0:ltz,3)*de(0:ltz,1)-rr(0:ltz,1)*de(0:ltz,3)
+        vito(:,ii,3)=vito(:,ii,3)+rr(0:ltz,1)*de(0:ltz,2)-rr(0:ltz,2)*de(0:ltz,1)
+     end do
+    end do; end do
+    if(myid==mo(9)) then; write(*,"('Vortex',i3,' Done')") nn; end if
+   end do
+      open(9,file=cturb); close(9,status='delete')
+      open(9,file=cturb,access='direct',recl=lp/3)
+      write(9,rec=1) vito(:,:,1); write(9,rec=2) vito(:,:,2); write(9,rec=3) vito(:,:,3)
+      close(9)
+      vito(:,:,:)=cfit*vito(:,:,:)
+   else
+      open(9,file=cturb,access='direct',recl=lp/3)
+      read(9,rec=1) vito(:,:,1); read(9,rec=2) vito(:,:,2); read(9,rec=3) vito(:,:,3)
+      close(9)
+      vito(:,:,:)=cfit*vito(:,:,:)
+  end if
  end if
 
- if(myid==mo(9)) then
-    fctr=one/lze0
- do l=0,lze0
-    ra1=-domlen; ra2=0; ra3=(-half+l*fctr)*span
-    iit(l)=minloc((vit(:,1)-ra1)**2+(vit(:,2)-ra2)**2+(vit(:,3)-ra3)**2,1)-1
- end do
-    open(9,file='inflowsignal.dat',status='replace',access='direct',form='formatted',recl=16)
- do ii=0,ntz; lp=(1+3*lze0)*ii
-    write(9,'(es15.7)',rec=lp+1) tt(ii)
- do l=0,lze0-2; i=iit(l)
-    write(9,'(es15.7)',rec=lp+3*l+2) vito(i,ii,1)
-    write(9,'(es15.7)',rec=lp+3*l+3) vito(i,ii,2)
-    write(9,'(es15.7)',rec=lp+3*l+4) vito(i,ii,3)
- end do
-    l=lze0-1; i=iit(l)
-    write(9,'(es15.7)',rec=lp+3*l+2) vito(i,ii,1)
-    write(9,'(es15.7)',rec=lp+3*l+3) vito(i,ii,2)
-    write(9,'(es15.7,a)',rec=lp+3*l+4) vito(i,ii,3),achar(10)
- end do
-    close(9)
+ if((myid==mo(9)).and.(ltz/=-1)) then
+     inquire(iolength=l) iit; ll=l-1; fctr=one/ll
+  do l=0,ll-1
+     ra1=-domlen; ra2=0; ra3=(-half+l*fctr)*span
+     iit(l)=minloc((vit(:,1)-ra1)**2+(vit(:,2)-ra2)**2+(vit(:,3)-ra3)**2,1)-1
+  end do
+     open(9,file='inflowsignal.dat',status='replace',access='direct',form='formatted',recl=16)
+  do ii=0,ntz; lp=(1+3*ll)*ii
+     write(9,'(es15.7)',rec=lp+1) tt(ii)
+  do l=0,ll-2; i=iit(l)
+     write(9,'(es15.7)',rec=lp+3*l+2) vito(i,ii,1)
+     write(9,'(es15.7)',rec=lp+3*l+3) vito(i,ii,2)
+     write(9,'(es15.7)',rec=lp+3*l+4) vito(i,ii,3)
+  end do
+     l=ll-1; i=iit(l)
+     write(9,'(es15.7)',rec=lp+3*l+2) vito(i,ii,1)
+     write(9,'(es15.7)',rec=lp+3*l+3) vito(i,ii,2)
+     write(9,'(es15.7,a)',rec=lp+3*l+4) vito(i,ii,3),achar(10)
+  end do
+     close(9)
  end if
 
  end subroutine spongeup
@@ -292,25 +299,17 @@
 
  subroutine initialo
 
-    itag=1; fctr=one/lze0
- do l=0,lze0
+    inquire(iolength=l) idsgnl; ll=l-1; fctr=one/ll
+ do l=0,ll
  if(l==0) then
     ra1=0; ra2=domlen-szth2; ra3=0
  else
-    ra1=-half; ra2=0; ra3=(-half+l*fctr)*span
+    ra1=-half; ra2=0; ra3=(-half+(l-1)*fctr)*span
  end if
     rr(:,1)=(ss(:,1)-ra1)**2+(ss(:,2)-ra2)**2+(ss(:,3)-ra3)**2; vmpi(myid)=minval(rr(:,1))
- if(myid==0) then
- do mp=1,mpro
-    ir=mp; call MPI_IRECV(vmpi(mp),1,MPI_REAL8,mp,itag,icom,ireq(ir),ierr)
+ do mp=0,mpro
+    call MPI_BCAST(vmpi(mp),1,MPI_REAL8,mp,icom,ierr)
  end do
- if(ir/=0) then
-    call MPI_WAITALL(ir,ireq,ista,ierr)
- end if
- else
-	call MPI_SEND(vmpi(myid),1,MPI_REAL8,0,itag,icom,ierr)
- end if
-    call MPI_BCAST(vmpi(:),npro,MPI_REAL8,0,icom,ierr)
     idsgnl(l)=minloc(vmpi,1)-1; lsgnl(l)=minloc(rr(:,1),1)-1
  end do
 
@@ -367,23 +366,17 @@
  end if
 
  do ll=0,lsz; l=lcsz(ll)
-    rr(l,:)=0
+    rr(l,:)=0; ss(l,1)=gamm1*asz(ll)*yaco(l)
  end do
- if (timo+dtk>tgustd) then
-    ra0=timo-tgustd+dtk; ra1=min(ra0*half*pi/tguste,half*pi)
-    fctr=cos(ra1)**2
- else
-    fctr=1
- end if
  do ll=0,ltz; l=lctz(ll)
-    rr(l,:)=csz(ll)*vit(ll,:)*fctr
+    rr(l,:)=vit(ll,:)
  end do
-    fctr=half*gamm1
+!    fctr=half*gamm1
  do ll=0,lsz; l=lcsz(ll)
-    res=(1-fctr*(rr(l,1)**2+rr(l,2)**2+rr(l,3)**2))**hamm1
-    de(l,1)=de(l,1)+asz(ll)*(qa(l,1)-res)
-    de(l,2:4)=de(l,2:4)+asz(ll)*(qa(l,2:4)-qa(l,1)*rr(l,:))
-    de(l,5)=de(l,5)+bsz(ll)*(p(l)-poo)
+!    res=(1-fctr*(rr(l,1)**2+rr(l,2)**2+rr(l,3)**2))**hamm1
+    de(l,1)=de(l,1)+asz(ll)*(qa(l,1)-rhooo)
+    de(l,2:4)=de(l,2:4)+bsz(ll)*(qa(l,2:4)-qa(l,1)*rr(l,:))
+    de(l,5)=de(l,5)+asz(ll)*(p(l)-poo)
  end do
 
  end subroutine spongego
@@ -397,7 +390,6 @@
     is=mbk; ie=0; kk=5*(lze+1)-1
     kp=mod((myid-mo(mb))/(npc(mb,1)*npc(mb,2)),npc(mb,3))
     ns=mo(is)+(kp+1)*npc(is,2)*npc(is,1)-1; ne=mo(ie)+kp*npc(ie,2)*npc(ie,1)
-
  do nn=0,5; 
     select case(nn);
     case(0);  mp=ns; njct=nn  ;itag=njct
@@ -449,25 +441,25 @@
 
  subroutine signalgo
 
-    lp=(2+3*lze0)*nsigi
+    inquire(iolength=l) idsgnl; ll=l-1; lp=(2+3*ll)*nsigi
 
     m=0; l=lsgnl(m)
  if(myid==idsgnl(m)) then
     write(1,'(es15.7)',rec=lp+1) timo
     write(1,'(es15.7)',rec=lp+2) gam*p(l)-1
  end if
- do m=1,lze0-1; l=lsgnl(m)
+ do m=1,ll-1; l=lsgnl(m)
  if(myid==idsgnl(m)) then; ve(:)=qa(l,2:4)/qa(l,1)
     write(1,'(es15.7)',rec=lp+3*m) ve(1)
     write(1,'(es15.7)',rec=lp+3*m+1) ve(2)
     write(1,'(es15.7)',rec=lp+3*m+2) ve(3)
  end if
  end do
-    m=lze0; l=lsgnl(m)
+    m=ll; l=lsgnl(m)
  if(myid==idsgnl(m)) then; ve(:)=qa(l,2:4)/qa(l,1)
     write(1,'(es15.7)',rec=lp+3*m) ve(1)
     write(1,'(es15.7)',rec=lp+3*m+1) ve(2)
-    write(1,'(es15.7,a)',rec=lp+3*m+2) ve(3),achar(10)
+    write(1,'(es15.7,a)',rec=lp+3*m+2) 8,achar(10)
  end if
 
  end subroutine signalgo
@@ -493,13 +485,13 @@
  do m = 1, totVar
     rr(:,1)=0
  do n=0,ndata
-    read(0,rec=(n*totVar)+ngrec+m) varr(:)
+    read(0,rec=(n*totVar)+nrec+m) varr(:)
     rr(:,1)=rr(:,1)+delt(n)*varr(:)
  end do
  !   ss(:,1)=0
  !do n=0,ndata
  !   varr(:)=varr(:)-rr(:,1)
- !   write(0,rec=(n*5)+ngrec+m) varr(:)
+ !   write(0,rec=(n*5)+nrec+m) varr(:)
  !   ss(:,1)=ss(:,1)+delt(n)*varr(:)**2
  !end do
     !varr=sqrt(ss(:,1))

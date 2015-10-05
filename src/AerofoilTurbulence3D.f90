@@ -9,18 +9,18 @@
  use gridgen
  implicit none
 
- integer(k4) :: nbody,nthick,ngridv,nito,nits,litr,lsz,ltz,ntz
- integer(k4),dimension(:),allocatable :: iit,idsgnl,lsgnl
- integer(k4),dimension(4) :: mjct
- real(k8),dimension(:,:,:),allocatable :: vito
- real(k8),dimension(:,:),allocatable :: vit
- real(k8),dimension(:),allocatable :: tt
- real(k8),dimension(0:1,3) :: szr,szp
- real(k8),dimension(3,0:1) :: tam
- real(k8),dimension(0:1) :: tl0,tl1,tlw
- real(k8) :: smgrid,domlen,span,wlew,wlea,szth1,szth2,szxt,szco
- real(k8) :: tgusto,eps,ck1,ck2,ck3,amp1,amp2,amp3,vk1,vk2,slit,gaus,cfit,tla,tlb,cutlb
- real(k8) :: denxit
+ integer*4 :: nbody,nthick,ngridv,nito,nits,litr,lsz,ltz,ntz
+ integer*4,dimension(:),allocatable :: iit,idsgnl,lsgnl
+ integer*4,dimension(4) :: mjct
+ real*8,dimension(:,:,:),allocatable :: vito
+ real*8,dimension(:,:),allocatable :: vit
+ real*8,dimension(:),allocatable :: tt
+ real*8,dimension(0:1,3) :: szr,szp
+ real*8,dimension(3,0:1) :: tam
+ real*8,dimension(0:1) :: tl0,tl1,tlw
+ real*8 :: smgrid,domlen,span,wlew,wlea,szth1,szth2,szxt,szco
+ real*8 :: tgusto,eps,ck1,ck2,ck3,amp1,amp2,amp3,vk1,vk2,slit,gaus,cfit,tla,tlb,cutlb
+ real*8 :: denxit
 
  contains
 
@@ -138,21 +138,18 @@
 	if(nbce(nn)==10) then; nsz(1,nn)=1; else; nsz(1,nn)=0; end if
  select case(nn)
  case(1); szr(0,nn)=1/szth1; szp(0,nn)=-domlen+szth1; szr(1,nn)=1/(szth1+szxt)
- 
  szp(1,nn)=domlen-szth1
  case(2); szr(0,nn)=1/szth2; szp(0,nn)=-domlen+szth2; szr(1,nn)=1/szth2; szp(1,nn)=domlen-szth2
  case(3); szr(0,nn)=0; szp(0,nn)=0; szr(1,nn)=0; szp(1,nn)=0
  end select
  end do
 
-    ll=-1; ra2=pi/(2*domlen); ra3=pi/szth1
+    ll=-1; ra0=pi/(2*domlen+szxt); ra1=pi/szth1
  do l=0,lmx
     rr(l,:)=nsz(0,:)*szr(0,:)*max(szp(0,:)-ss(l,:),zero)+nsz(1,:)*szr(1,:)*max(ss(l,:)-szp(1,:),zero)
-
     de(l,1)=szco*(1-0.125*(1+cos(pi*rr(l,1)))*(1+cos(pi*rr(l,2)))*(1+cos(pi*rr(l,3))))
-
-    de(l,2)=half*(1+cos(ra2*(min(ss(l,1),domlen)+domlen)))
-    de(l,3)=sin(ra3*min(ss(l,1)+domlen,szth1))**2
+	de(l,2)=half*(1+cos(ra0*(ss(l,1)+domlen)))
+	de(l,3)=sin(ra1*min(ss(l,1)+domlen,szth1))**2
  if(de(l,1)-sml>0) then
     ll=ll+1; de(ll,5)=l+sml
  end if
@@ -161,9 +158,7 @@
  if(lsz/=-1) then
     allocate(lcsz(0:lsz),asz(0:lsz),bsz(0:lsz),csz(0:lsz))
  do ll=0,lsz; l=de(ll,5); lcsz(ll)=l
-
-    asz(ll)=de(l,1)*de(l,2)/yaco(l); bsz(ll)=hamm1*de(l,1)*(1-de(l,2))/yaco(l)
-    csz(ll)=de(l,3)
+	asz(ll)=de(l,1)*de(l,2)/yaco(l); bsz(ll)=de(l,1)*(1-de(l,2))/yaco(l); csz(ll)=de(l,3)
  end do
  end if
 
@@ -405,14 +400,16 @@
     write(1,'(es15.7)',rec=lp+2) gam*p(l)-1
  end if
  do m=1,lze0-1; l=lsgnl(m)
- if(myid==idsgnl(m)) then; ve(:)=qa(l,2:4)/qa(l,1)
+ if(myid==idsgnl(m)) then
+    ve(:)=qa(l,2:4)/qa(l,1)
     write(1,'(es15.7)',rec=lp+3*m) ve(1)
     write(1,'(es15.7)',rec=lp+3*m+1) ve(2)
     write(1,'(es15.7)',rec=lp+3*m+2) ve(3)
  end if
  end do
     m=lze0; l=lsgnl(m)
- if(myid==idsgnl(m)) then; ve(:)=qa(l,2:4)/qa(l,1)
+ if(myid==idsgnl(m)) then
+    ve(:)=qa(l,2:4)/qa(l,1)
     write(1,'(es15.7)',rec=lp+3*m) ve(1)
     write(1,'(es15.7)',rec=lp+3*m+1) ve(2)
     write(1,'(es15.7,a)',rec=lp+3*m+2) ve(3),achar(10)

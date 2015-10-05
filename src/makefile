@@ -5,10 +5,9 @@ PGMP	= ../post.exe
 PGMPS	= ../spost.exe
 PGMI	= ../inter.exe
 FC	= mpif90
-#FLAGS	= -O3 -i_dynamic -o
-FLAGS	= -g -O3 -traceback -o
+FLAGS	= -O3 -mcmodel=medium -shared-intel  -o
 #FC	= ftn
-#FLAGS	= -fast -o
+#FLAGS	= -O5 -o
 OBJ	= MainVar3D.f90 Subroutineso.f90 Subroutines3D.f90 GridTandem.f90 TandemTurbulence3D.f90 rpt.f90 Main3D.f90
 OBJS	= MainVar3D.f90 Subroutineso.f90 Subroutines3D.f90 GridSingle.f90 SingleTurbulence3D.f90 rpt.f90 Main3D.f90
 OBJP	= MainVar3D.f90 Subroutineso.f90 Subroutines3D.f90 GridTandem.f90 TandemTurbulence3D.f90 rpt.f90 rptPost.f90 MainPost.f90
