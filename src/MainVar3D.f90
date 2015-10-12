@@ -152,6 +152,7 @@
  integer(k4),dimension(:,:),allocatable :: ista
  integer(k4),dimension(:),allocatable :: ireq
  integer(k4) :: ir,mpro,npro,myid,itag,info,icom,ierr
+ integer(k4) :: wcom
 
 !===== INTEGER VARIABLES FOR RECORDING BY RPT
 
