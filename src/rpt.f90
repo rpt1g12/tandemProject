@@ -106,13 +106,15 @@ contains
  end subroutine plot3dgrid
 
  subroutine plot3dsolution(ctime)
- character(8), intent (in) :: ctime
+ character(8), intent (inout) :: ctime
  integer(k4) :: n
 
-       !if (myid==0) then
-       !  open(9,file='out/solT'//trim(adjustl(ctime))//'.q'); close(9,status='delete')
-       !end if
-       !CALL MPI_BARRIER(icom,ierr)
+   do i = 0, 8
+   l=scan(ctime,' ')
+   if (l==0) exit
+   ctime(l:l)='0'
+   end do
+
        open (unit=9, file='out/solT'//trim(adjustl(ctime))//'.q', access='stream')
        lh=0
        if (myid==0) then
@@ -362,18 +364,8 @@ contains
 !====================================================================================
  subroutine wallArea
  implicit none
-    integer(k4) :: bblock1,tblock1
-    integer(k4) :: bblock2,tblock2
+    integer(k4) :: bct,bcb,bcw,color
     real(k8) :: g11, g33, g13,coef
- 
-    select case(mbk)
-    case(19)
-    bblock1 = 6; tblock1 = 11
-    bblock2 = 8; tblock2 = 13
-    case(11)
-    bblock1 = 4; tblock1 = 7
-    bblock2 = 12; tblock2 = 13
-    end select
  
     ! Find parallel grid position
     ip=mod(myid-mo(mb),npc(mb,1))
@@ -383,41 +375,43 @@ contains
     ! Initialise values
     wflag=.false.
     g11=0;g33=g11;g13=g33
+    color=MPI_UNDEFINED
  
-    if ((mb==bblock1).AND.(jp==npc(mb,2)-1)) then
-    j=ijk(1,2); wflag=.true.
-    elseif ((mb==tblock1).AND.(jp==0)) then
-    j=0; wflag=.true.
+    ! Find processors in contact with wall
+    bct=nbc(1,2); bcb=nbc(0,2); bcw=20+5*nviscous
+    if (bcb==bcw) then
+       j=0; wflag=.true.
+    elseif (bct==bcw) then
+       j=ijk(1,2); wflag=.true.
     end if
-    if ((mb==bblock2).AND.(jp==npc(mb,2)-1)) then
-    j=ijk(1,2); wflag=.true.
-    elseif ((mb==tblock2).AND.(jp==0)) then
-    j=0; wflag=.true.
-    end if
- 
+    
     ll=-1; lcwall=(nbsize(2)-1)
+    if(myid==0) color=1
     if (wflag) then
-    allocate(lwall(0:lcwall),area(0:lcwall))
-    do k=0,ijk(2,2)
-    do i=0,ijk(3,2); l=indx3(j,k,i,2)
-       g11 = qo(l,1)*qo(l,1)+qa(l,1)*qa(l,1)+de(l,1)*de(l,1)
-       g33 = qo(l,3)*qo(l,3)+qa(l,3)*qa(l,3)+de(l,3)*de(l,3)
-       g13 = qo(l,1)*qo(l,3)+qa(l,1)*qa(l,3)+de(l,1)*de(l,3)
-       ll=ll+1; lwall(ll)=l+sml
-       area(ll)=sqrt(g11*g33-g13*g13)
-       if ((ip==0).and.(i==0)) then
-         area(ll) = area(ll)*half
-       elseif ((ip==npc(mb,1)-1).and.(i==ijk(3,2))) then
-         area(ll) = area(ll)*half
-       end if
-       if ((kp==0).and.(k==0)) then
-         area(ll) = area(ll)*half
-       elseif ((kp==npc(mb,3)-1).and.(k==ijk(2,2))) then
-         area(ll) = area(ll)*half
-       end if
-    end do
-    end do
+       color=1
+       allocate(lwall(0:lcwall),area(0:lcwall))
+       do k=0,ijk(2,2)
+          do i=0,ijk(3,2); l=indx3(j,k,i,2)
+             g11 = qo(l,1)*qo(l,1)+qa(l,1)*qa(l,1)+de(l,1)*de(l,1)
+             g33 = qo(l,3)*qo(l,3)+qa(l,3)*qa(l,3)+de(l,3)*de(l,3)
+             g13 = qo(l,1)*qo(l,3)+qa(l,1)*qa(l,3)+de(l,1)*de(l,3)
+             ll=ll+1; lwall(ll)=l+sml
+             area(ll)=sqrt(g11*g33-g13*g13)
+             if ((ip==0).and.(i==0)) then
+               area(ll) = area(ll)*half
+             elseif ((ip==npc(mb,1)-1).and.(i==ijk(3,2))) then
+               area(ll) = area(ll)*half
+             end if
+             if ((kp==0).and.(k==0)) then
+               area(ll) = area(ll)*half
+             elseif ((kp==npc(mb,3)-1).and.(k==ijk(2,2))) then
+               area(ll) = area(ll)*half
+             end if
+          end do
+       end do
     end if
+
+    call MPI_COMM_SPLIT(icom,color,myid,wcom,ierr)
  
  end subroutine wallArea
 
@@ -429,36 +423,30 @@ contains
     
     integer(k4) :: bblock1,tblock1
     integer(k4) :: bblock2,tblock2
+    integer(k4) :: bct,bcb,bcw
     real(k8) :: coef,tmp
     real(k8), dimension(3) :: u,v,r
  
-    select case(mbk)
-    case(19)
-    bblock1 = 6; tblock1 = 11
-    bblock2 = 8; tblock2 = 13
-    case(11)
-    bblock1 = 4; tblock1 = 7
-    bblock2 = 12; tblock2 = 13
-    end select
     u=(/0.0_k8,0.0_k8,1.0_k8/)
  
     if (wflag) then
-    ! Find top or bottom
-    if ((mb==bblock1).or.(mb==bblock2)) then
-       coef=-one
-    elseif ((mb==tblock1).or.(mb==tblock2)) then
-       coef=one
-    end if
-    allocate(wnor(0:lcwall,3),wtan(0:lcwall,3))
-    do ll = 0, lcwall; l=lwall(ll)
-       tmp=coef/sqrt(etm(l,1)*etm(l,1)+etm(l,2)*etm(l,2)+etm(l,3)*etm(l,3))
-       do m = 1, 3
-       wnor(ll,m)=etm(l,m)*tmp
+       ! Find top or bottom
+       bct=nbc(1,2); bcb=nbc(0,2); bcw=20+5*nviscous
+       if (bcb==bcw) then
+          coef=-one
+       elseif (bct==bcw) then
+          coef=one
+       end if
+       allocate(wnor(0:lcwall,3),wtan(0:lcwall,3))
+       do ll = 0, lcwall; l=lwall(ll)
+          tmp=coef/sqrt(etm(l,1)*etm(l,1)+etm(l,2)*etm(l,2)+etm(l,3)*etm(l,3))
+          do m = 1, 3
+          wnor(ll,m)=etm(l,m)*tmp
+          end do
+          v=wnor(ll,:)
+          r=cross(u,v)
+          wtan(ll,:)=r(:)*coef
        end do
-       v=wnor(ll,:)
-       r=cross(u,v)
-       wtan(ll,:)=r(:)*coef
-    end do
     end if
  
  end subroutine walldir
@@ -472,72 +460,45 @@ contains
  implicit none
     
     integer(k4), intent(in) :: ele,nvar
-    integer(k4) :: bblock,tblock,m,ll,dir
+    integer(k4) :: bct,bcb,bcw,m,ll,dir,mp
     real(k8) :: dynp,clp,clv,tcl
     logical :: flag
  
     clp=0;clv=0;flag=.false.;tcl=0;
 
- 
-    ! Define aerofoil blocks
-    select case(mbk)
-    case(19)
-    select case(ele)
-    case(1)
-    bblock = 6; tblock = 11
-    case(2)
-    bblock = 8; tblock = 13
-    end select
-    case(11)
-    select case(ele)
-    case(1)
-    bblock = 4; tblock = 7
-    case(2)
-    bblock = 12; tblock = 13
-    end select
-    end select
- 
-    if (mb==bblock) then
-    ! Find master of the block
-    mp = mo(mb) + npc(mb,1)*(npc(mb,2)-1)
-    flag=.true.
-    elseif (mb==tblock) then
-    ! Find master of the block
-    mp = mo(mb)
-    flag=.true.
+    ! Find block in contact with wall
+    bct=nbce(2); bcb=nbcs(2); bcw=20+5*nviscous
+    if (bcb==bcw) then
+       mp = mo(mb)
+       flag=.true.
+    elseif (bct==bcw) then
+       mp = mo(mb) + npc(mb,1)*(npc(mb,2)-1)
+       flag=.true.
     end if
+
  
     do dir = 1, 2
     clp=0;clv=0;tcl=0;
-       if (flag) then
-          ! Compute Dynamic pressure
-          dynp=two/(amachoo*amachoo*span)
-          if (dir==1) then
-             if (ispost) then
-                call gettw(nvar)
-             else
-                call gettwrun
+    if (ispost.and.(dir==1)) call gettw(nvar)
+        if (wflag) then
+        ! Compute Dynamic pressure
+        dynp=two/(amachoo*amachoo*span)
+           do ll = 0, lcwall; l=lwall(ll)
+             clp=clp+(p(l)*wnor(ll,dir)*area(ll))
+             if (nviscous==1) then
+                if(.not.allocated(tw)) allocate(tw(0:lcwall,3))
+                selectcase(dir)
+                case(1)
+                  tw(ll,1)=qa(l,1)*(txx(l)*wnor(ll,1)+txy(l)*wnor(ll,2)+tzx(l)*wnor(ll,3))
+                case(2)
+                  tw(ll,2)=qa(l,1)*(txy(l)*wnor(ll,1)+tyy(l)*wnor(ll,2)+tyz(l)*wnor(ll,3))
+                end select
+                clv=clv+tw(ll,dir)*area(ll)
              end if
-          end if
-          if (wflag) then
-             do ll = 0, lcwall; l=lwall(ll)
-               clp=clp+(p(l)*wnor(ll,dir)*area(ll))
-               if (nviscous==1) then
-               clv=clv+tw(ll,dir)*area(ll)
-               end if
-             end do
-             tcl=(clp+clv)*dynp
-             if (myid==mp) then
-                do m = 1, (npc(mb,1)*npc(mb,3)-1)
-                CALL MPI_RECV(clp,1,MPI_REAL8,MPI_ANY_SOURCE,10,MPI_COMM_WORLD,ista,ierr)
-                tcl=tcl+clp
-                end do
-             else
-                CALL MPI_SEND(tcl,1,MPI_REAL8,mp,10,MPI_COMM_WORLD,ierr)
-             end if
-          end if
-       end if
-    CALL MPI_ALLREDUCE(tcl,cl(ele,dir),1,MPI_REAL8,MPI_SUM,icom,ierr)
+           end do
+           tcl=(clp+clv)*dynp
+        end if
+    if(wflag.or.(myid==0)) CALL MPI_REDUCE(tcl,cl(ele,dir),1,MPI_REAL8,MPI_SUM,0,wcom,ierr)
     end do
  
  end subroutine clpost
@@ -599,9 +560,9 @@ contains
       if (wflag) then
       if(.not.allocated(tw)) allocate(tw(0:lcwall,3))
       do ll = 0, lcwall; l=lwall(ll)
-        tw(ll,1)=qa(l,1)*(txx(l)*wnor(ll,1)+txy(l)*wnor(ll,2)+tzx(l)*wnor(ll,3))!/reoo
-        tw(ll,2)=qa(l,1)*(txy(l)*wnor(ll,1)+tyy(l)*wnor(ll,2)+tyz(l)*wnor(ll,3))!/reoo
-        tw(ll,3)=qa(l,1)*(tzx(l)*wnor(ll,1)+tyz(l)*wnor(ll,2)+tzz(l)*wnor(ll,3))!/reoo
+        tw(ll,1)=qa(l,1)*(txx(l)*wnor(ll,1)+txy(l)*wnor(ll,2)+tzx(l)*wnor(ll,3))
+        tw(ll,2)=qa(l,1)*(txy(l)*wnor(ll,1)+tyy(l)*wnor(ll,2)+tyz(l)*wnor(ll,3))
+        tw(ll,3)=qa(l,1)*(tzx(l)*wnor(ll,1)+tyz(l)*wnor(ll,2)+tzz(l)*wnor(ll,3))
       end do
       end if
    end if
