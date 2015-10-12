@@ -67,11 +67,7 @@ module gridgen
     shs2=etamod*smgrid;
     smod=2
     tmp=(shs2+smod*shs2)*half
-    lbl=cutlb*half/sin(pi4)
-    !lbl=min(lbl,cutlb*half*0.98/sin(pi4))
-    if (myid==0) then
-       write(*,*) lbl
-    end if
+    lbl=0.2_k8
 
     allocate(xx(0:lxit,0:lett),yy(0:lxit,0:lett),zz(0:lxit,0:lett),zs(0:lzebk(0)))
     allocate(pxi(0:lxit),qet(0:lett))
@@ -88,42 +84,35 @@ if(myid==mo(mb)) then
  do k=0,lzebk(0)
     zs(k)=span*(real(lzebk(0)-k,k8)/lzebk(0)-half)
 !---BLOCKS' BOUNDARIES
-    sho=shs1; ll=litr; lsz1=ll*shs1; lsz2=lsz1+szxt
+    lsz1=litr*shs1; lsz2=lsz1+szxt
+    lbl=lsz1
 !---VERTICAL LINES
     px(0,:)=-domlen
     px(1,:)=px(0,:)+lsz1
     px(2,:)=zero
     px(3,:)=domlen-lsz1
-    px(4,:)=px(3,:)+lsz2
+    px(4,:)=domlen
 !---HORIZONTAL LINES
     py(0,:)=-domlen
-    py(1,:)=py(0,:)+lsz1
+    py(1,:)=py(0,:)+lbl
     py(2,:)=zero
-    py(3,:)=domlen-lsz1
+    py(3,:)=domlen-lbl
     py(4,:)=domlen
 
-    fctr=2*pi/wlew; shswle=shs*sqrt(1+0*(fctr*wlea*cos(fctr*(zs(k)-zs(0))))**2)
-
 !----- INITIAL AND END HORIZONTAL SLOPES
-    hslo(0,:,:)=zero
-    hslo(1,0,:)=(/zero,-tand(10.0_k8)/)
-    hslo(1,1,:)=(/-tand(10.0_k8),zero/)
-    hslo(2,:,:)=zero
+    hslo(:,:,:)=zero
 
 !----- INITIAL AND END VERTICAL SLOPES
-    vslo(0,:,:)=zero
-    vslo(1,0,:)=(/zero,tand(10.0_k8)/)
-    vslo(1,1,:)= (/tand(10.0_k8),zero/)
-    vslo(2,:,:)=zero
+    vslo(:,:,:)=zero
 
 !--HORIZONTAL INTERFACES
    do n = 0,bky
    !--X-COORDINATE
    !--BLOCK0
    !--0-1
-      sho=shs1; ll=litr
+      ll=litr
       ip=lxise(0,0); im=ll;
-      tmpa=px(0,n);sha=sho;tmpb=px(1,n);shb=sho
+      tmpa=px(0,n);sha=shs1;tmpb=px(1,n);shb=shs1
       call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
    !--1-2
       ip=ip+im; im=lxibk(0)-ll;
@@ -135,7 +124,7 @@ if(myid==mo(mb)) then
    !--BLOCK1
    !--2-3
       ip=lxise(1,0); im=lxibk(1)-ll;
-      tmpa=px(2,n);sha=shb;tmpb=px(3,n);shb=sho
+      tmpa=px(2,n);sha=shb;tmpb=px(3,n);shb=shs1
       call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
    !--3-4
       ip=ip+im; im=ll;
@@ -169,16 +158,16 @@ if(myid==mo(mb)) then
       !-0-1
       ll=litr
       ip=letse(0,0); im=ll;
-      tmpa=py(0,n);sha=sho;tmpb=py(1,n);shb=sha
+      tmpa=py(0,n);sha=shs1;tmpb=py(1,n);shb=shs1
       call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lxit,im,ip)
       !-1-2
       ip=ip+im; im=letbk(0)-ll;
-      tmpa=py(1,n);sha=sha;tmpb=py(2,n);shb=shs1
+      tmpa=py(1,n);sha=shb;tmpb=py(2,n);shb=shs1
       call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lxit,im,ip)
       !-BLOCK1
       !-2-3
       ip=letse(1,0); im=letbk(1)-ll;
-      tmpa=py(2,n);sha=sho;tmpb=py(3,n);shb=sho
+      tmpa=py(2,n);sha=shs1;tmpb=py(3,n);shb=shs1
       call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lxit,im,ip)   
       !-3-4
       ip=ip+im; im=ll
