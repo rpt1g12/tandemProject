@@ -32,7 +32,6 @@
 
  subroutine inputext
 
- !integer(k4), dimension(:) :: lxibk(0:bkx-1),letbk(0:bky-1),lzebk(0:bkz-1)
  integer(k4), dimension(:) :: npcx(0:bkx-1),npcy(0:bky-1),npcz(0:bkz-1)
 
     open(9,file='inputp.dat')
@@ -125,30 +124,31 @@
 
  subroutine domdcomp
 
- integer(k4) :: ll
+ integer(k4) :: ll,bcw
+ bcw=20+5*nviscous
 
  ! rpt-setting the neighbouring blocks and BCS
  
  ll=mod(mb,bkx)
  if (ll==0) then ! rpt-Left boundary blocks
-    ms(1)=mb+2; me(1)=mb+1
-    nbcs(1)=10; nbce(1)=35
+    ms(1)=mb+(bkx-1); me(1)=mb+1
+    nbcs(1)=45; nbce(1)=30
  elseif (ll==(bkx-1)) then ! rpt-Right boundary blocks
-    ms(1)=mb-1; me(1)=mb-2
-    nbcs(1)=35; nbce(1)=10
+    ms(1)=mb-1; me(1)=mb-(bkx-1)
+    nbcs(1)=30; nbce(1)=45
  else ! rpt-Middle blocks
     ms(1)=mb-1; me(1)=mb+1
-    nbcs(1)=35; nbce(1)=35
+    nbcs(1)=30; nbce(1)=30
  end if
  if (mb<bkx) then ! rpt-Bottom boundary blocks
     ms(2)=mb+bkx*(bky-1); me(2)=mb+bkx
-    nbcs(2)=10; nbce(2)=35
+    nbcs(2)=bcw; nbce(2)=30
  elseif(mb>(mbk-bkx)) then ! rpt-Top boundary blocks
     ms(2)=mb-bkx; me(2)=mb-(bkx*(bky-1))
-    nbcs(2)=35; nbce(2)=10
+    nbcs(2)=30; nbce(2)=bcw
  else ! rpt-Middle blocks
     ms(2)=mb-bkx; me(2)=mb+bkx
-    nbcs(2)=35; nbce(2)=35
+    nbcs(2)=30; nbce(2)=30
  end if
     nbcs(3)=45; nbce(3)=45
     ms(3)=mb; me(3)=mb
@@ -214,6 +214,7 @@
  end if
  end do
     ltz=ll; ntz=litr*slit/tla
+    ltz=-1
  if(ltz/=-1) then
     allocate(lctz(0:ltz),tt(0:ntz),vit(0:ltz,3),vito(0:ltz,0:ntz,3)); 
     lp=2*nrec*(ltz+1)*(ntz+1)
@@ -258,7 +259,7 @@
     end if
  end if
 
- if(myid==mo(mbk+1-bkx)) then
+ if((myid==mo(mbk+1-bkx)).and.(ltz/=-1)) then
     fctr=one/lzebk(0)
  do l=0,lzebk(0)
     ra1=-domlen; ra2=0; ra3=(-half+l*fctr)*span
