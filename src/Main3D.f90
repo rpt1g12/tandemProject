@@ -77,11 +77,11 @@
     call inputext
 
     ! rpt-Forcing parameters
-    xfor=-(0.5_k8+3*cos(aoa*pi/180_k8))!cos(delt1)-0.5_k8-1.0_k8+(0.1_k8);
-    yfor=-3*sin(aoa*pi/180_k8)!-sin(delt1)+(0.129_k8);
-    rfor=5.0e-1
+    xfor=-0.5_k8!cos(delt1)-0.5_k8-1.0_k8+(0.1_k8);
+    yfor=4.95_k8!-sin(delt1)+(0.129_k8);
+    rfor=2.5e-2
     amfor=amfor*amachoo/100.0e0
-    tsfor=151.751e0;tefor=200.000e0
+    tsfor=100.0e0;tefor=200.000e0
 !===== DOMAIN DECOMPOSITION & BOUNDARY INFORMATION
 
     mo(0)=0
@@ -144,18 +144,26 @@
  end select
     ma=npc(mb,nn)
  if(ma==1) then
-    l=ll; nbc(0,nn)=nbcs(nn); nbc(1,nn)=nbce(nn); ncd(0,nn)=ncds(nn); ncd(1,nn)=ncde(nn)
+    l=ll;
+    nbc(0,nn)=nbcs(nn); nbc(1,nn)=nbce(nn);
+    ncd(0,nn)=ncds(nn); ncd(1,nn)=ncde(nn)
  end if
  if(ma>=2) then
- if(lp==0) then
-    l=ll-((ll+1)/ma)*(ma-1); nbc(0,nn)=nbcs(nn); nbc(1,nn)=40; ncd(0,nn)=ncds(nn); ncd(1,nn)=myid+mp
- end if
- if(lp>0.and.lp<ma-1) then
-    l=(ll+1)/ma-1; nbc(0,nn)=40; nbc(1,nn)=40; ncd(0,nn)=myid-mp; ncd(1,nn)=myid+mp
- end if
- if(lp==ma-1) then
-    l=(ll+1)/ma-1; nbc(0,nn)=40; nbc(1,nn)=nbce(nn); ncd(0,nn)=myid-mp; ncd(1,nn)=ncde(nn)
- end if
+    if(lp==0) then
+       l=ll-((ll+1)/ma)*(ma-1);
+       nbc(0,nn)=nbcs(nn); nbc(1,nn)=40;
+       ncd(0,nn)=ncds(nn); ncd(1,nn)=myid+mp
+    end if
+    if(lp>0.and.lp<ma-1) then
+       l=(ll+1)/ma-1;
+       nbc(0,nn)=40; nbc(1,nn)=40;
+       ncd(0,nn)=myid-mp; ncd(1,nn)=myid+mp
+    end if
+    if(lp==ma-1) then
+       l=(ll+1)/ma-1;
+       nbc(0,nn)=40; nbc(1,nn)=nbce(nn);
+       ncd(0,nn)=myid-mp; ncd(1,nn)=ncde(nn)
+    end if
  end if
  select case(nn); case (1); lxi=l; case (2); let=l; case (3); lze=l; end select
  end do
@@ -291,7 +299,7 @@
     close(9)
     call MPI_BARRIER(icom,ierr)
  if(myid==mo(mb)) then
-    open(9,file=cgrid); close(9,status='delete')
+    !open(9,file=cgrid); close(9,status='delete')
  end if
 
     !RPT-FIND POSITION FOR SIGNAL SAMPLING
@@ -339,11 +347,10 @@
     qo(:,3)=qa(:,1);
     qo(:,4)=qa(:,2);
     qo(:,5)=(-1/yaco(:))
-    call wffile(cinput,n,5)
+    call wffile(cinput,0,5)
 
     call wallArea
     call walldir
-
 
  do nn=1,3; do ip=0,1; i=ip*ijk(1,nn)
  do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
@@ -477,42 +484,31 @@
  end if
     !qb(:,:)=0
 
-!============================================
-!===== BEGINNING OF TIME MARCHING IN SOLUTION
-!============================================
 
-    wts=MPI_WTIME()
+ ! START MEASURING WALL TIME
+ wts=MPI_WTIME()
 
  if(myid==0) then
     open(1,file='signal.dat'); close(1,status='delete')
  end if
-    call MPI_BARRIER(icom,ierr)
-    open(1,file='signal.dat',access='direct',form='formatted',recl=16)
+ call MPI_BARRIER(icom,ierr)
+ open(1,file='signal.dat',access='direct',form='formatted',recl=16)
 
-     if (myid==0) then
-     write(*,"(3x,'n',8x,'time',9x,'Cl',9x,'Cd',5x)")  
-     write(*,"('============================================')")
-     end if
-    ndati=-1; nsigi=-1; dtsum=0
-    if ((nto==2).and.(output==0)) then
-       ndati=0
-    end if
+  ! OUTPUT HEADER
+  if (myid==0) then
+  write(*,"(3x,'n',8x,'time',9x,'Cl',9x,'Cd',5x)")  
+  write(*,"('============================================')")
+  end if
+ ndati=-1; nsigi=-1; dtsum=0
+ if ((nto==2).and.(output==0)) then
+    ndati=0
+ end if
+!============================================
+!===== BEGINNING OF TIME MARCHING IN SOLUTION
+!============================================
  do while(timo-tmax<0.and.(dt/=0.or.n<=2))
 
-  if (mod(n,nscrn)==0) then
-  if (n.ge.2) then
-    call clpost(1,ndati) 
-  else
-    cl=0
-  end if
-  end if
 
-  if(myid==0.and.mod(n,nscrn)==0) then
-     !Change ra0 to the angle of attack needed!!!
-     ra0=aoa*pi/180;ra1=cos(ra0);ra2=sin(ra0)
-     write(*,"(i8,f12.5,f12.7,f12.7)") &
-     n,timo,cl(1,2)*ra1-cl(1,1)*ra2,cl(1,2)*ra2+cl(1,1)*ra1
-  end if
 
 !----- FILTERING
 
@@ -611,21 +607,22 @@
     fctr=2.0_k8/3
     rr(:,1)=de(:,1)*yaco(:)
     rr(:,2)=gamm1prndtli*rr(:,1)
-    !qb(:,3)=de(:,1)
 
     selectcase(LES)
     case(1)
-    de(:,1)=(txx(:)*txx(:)+tyy(:)*tyy(:)+tzz(:)*tzz(:)+& !rpt- SijSij
+    ! rpt- SijSij
+    de(:,1)=(txx(:)*txx(:)+tyy(:)*tyy(:)+tzz(:)*tzz(:)+&
              (hzz(:)+txy(:))*(hzz(:)+txy(:))+&
              (hyy(:)+tzx(:))*(hyy(:)+tzx(:))+&
              (hxx(:)+tyz(:))*(hxx(:)+tyz(:)))
-    varr(:)=(-1/yaco(:))**1.5 ! rpt- Volume
-    rr(:,3)=qa(:,1)*smago1**2*varr(:)*sqrt(2*(de(:,1))) ! rpt-nuSGS
-    !qb(:,2)=rr(:,3)
-    !qb(:,4)=qb(:,2)/qb(:,3)
+    ! rpt- Volume
+    varr(:)=(-1/yaco(:))**1.5 
+    ! rpt-nuSGS
+    rr(:,3)=qa(:,1)*smago1**2*varr(:)*sqrt(2*(de(:,1))) 
     rr(:,1)=rr(:,1)+rr(:,3)*yaco(:)
     rr(:,2)=rr(:,2)+tgamm1prndtli*rr(:,3)*yaco(:)   
-    rr(:,3)=fctr*(qa(:,1)*smago2*varr(:)*de(:,1)) ! rpt-2/3*ro*kSGS
+    ! rpt-2/3*ro*kSGS
+    rr(:,3)=fctr*(qa(:,1)*smago2*varr(:)*de(:,1)) 
     de(:,5)=fctr*(txx(:)+tyy(:)+tzz(:))
 
     txx(:)=rr(:,1)*(2*txx(:)-de(:,5))-rr(:,3)
@@ -649,6 +646,16 @@
     hyy(:)=rr(:,2)*ss(:,2)+de(:,2)*txy(:)+de(:,3)*tyy(:)+de(:,4)*tyz(:)
     hzz(:)=rr(:,2)*ss(:,3)+de(:,2)*tzx(:)+de(:,3)*tyz(:)+de(:,4)*tzz(:)
  end if
+
+!----- OUTPUT N,TIME,CL & CD
+  if((mod(n,nscrn)==0).and.nk==1) then
+     call clpost(1,ndati) 
+     if (myid==0) then
+     ra0=aoa*pi/180;ra1=cos(ra0);ra2=sin(ra0)
+     write(*,"(i8,f12.5,f12.7,f12.7)") &
+     n,timo,cl(1,2)*ra1-cl(1,1)*ra2,cl(1,2)*ra2+cl(1,1)*ra1
+     end if
+  end if
 
 !----- CALCULATION OF FLUX DERIVATIVES
 
