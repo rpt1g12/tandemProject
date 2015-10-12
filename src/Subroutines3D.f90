@@ -21,28 +21,37 @@
 
     ir=0
  do nn=1,3; nz=(1-nrt)*(nn-1)+1
- select case(nn)
- case(1); send=>send1; recv=>recv1; case(2); send=>send2; recv=>recv2; case(3); send=>send3; recv=>recv3
- end select
- do ip=0,1; iq=1-ip; is=ip*ijk(1,nn); ie=1-2*ip
- select case(nbc(ip,nn)); case(35); np=0; ii=1; case(40); np=0; ii=0; case(45); np=n45; ii=1; end select
- if(ndf(ip,nt,nn)==1) then
- do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
- do j=0,ijk(2,nn); jk=kp+j; l=indx3(is,j,k,nn)
-    res=np*rr(l,nz)
- do i=0,mp; l=indx3(is+ie*(i+ii),j,k,nn)
-    sap(i)=rr(l,nz)
+   select case(nn)
+    case(1); send=>send1; recv=>recv1;
+    case(2); send=>send2; recv=>recv2;
+    case(3); send=>send3; recv=>recv3
+   end select
+   do ip=0,1; iq=1-ip; is=ip*ijk(1,nn); ie=1-2*ip
+     select case(nbc(ip,nn)); 
+      case(35); np=0; ii=1; 
+      case(40); np=0; ii=0; 
+      case(45); np=n45; ii=1; 
+     end select
+     if(ndf(ip,nt,nn)==1) then
+       do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
+         do j=0,ijk(2,nn); jk=kp+j; l=indx3(is,j,k,nn)
+            res=np*rr(l,nz)
+         do i=0,mp; l=indx3(is+ie*(i+ii),j,k,nn)
+            sap(i)=rr(l,nz)
+         end do
+            send(jk,0,ip)=sum(pbco(0:mp,0,nt)*sap(0:mp))-res*pbcot(0,nt)
+            send(jk,1,ip)=sum(pbco(0:mp,1,nt)*sap(0:mp))-res*pbcot(1,nt)
+            send(jk,2,ip)=sap(0)-res
+         end do
+       end do
+          ir=ir+1; call MPI_ISEND(send(:,:,ip),3*nbsize(nn),MPI_REAL8,&
+                                  ncd(ip,nn),itag+iq,icom,ireq(ir),ierr)
+          ir=ir+1; call MPI_IRECV(recv(:,:,ip),3*nbsize(nn),MPI_REAL8,&
+                                  ncd(ip,nn),itag+ip,icom,ireq(ir),ierr)
+     end if
+   end do
  end do
-    send(jk,0,ip)=sum(pbco(0:mp,0,nt)*sap(0:mp))-res*pbcot(0,nt)
-    send(jk,1,ip)=sum(pbco(0:mp,1,nt)*sap(0:mp))-res*pbcot(1,nt)
-    send(jk,2,ip)=sap(0)-res
- end do
- end do
-    ir=ir+1; call MPI_ISEND(send(:,:,ip),3*nbsize(nn),MPI_REAL8,ncd(ip,nn),itag+iq,icom,ireq(ir),ierr)
-    ir=ir+1; call MPI_IRECV(recv(:,:,ip),3*nbsize(nn),MPI_REAL8,ncd(ip,nn),itag+ip,icom,ireq(ir),ierr)
- end if
- end do
- end do
+
  if(ir/=0) then
     call MPI_WAITALL(ir,ireq,ista,ierr)
  end if
