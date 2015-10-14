@@ -84,7 +84,8 @@ if(myid==mo(mb)) then
  do k=0,lzebk(0)
     zs(k)=span*(real(lzebk(0)-k,k8)/lzebk(0)-half)
 !---BLOCKS' BOUNDARIES
-    lsz1=litr*shs1; lsz2=lsz1+szxt
+    smod=int(0.05*(lxit+lett)*half,k4)
+    lsz1=smod*shs1; lsz2=lsz1+szxt
     lbl=lsz1
 !---VERTICAL LINES
     px(0,:)=-domlen
@@ -110,7 +111,7 @@ if(myid==mo(mb)) then
    !--X-COORDINATE
    !--BLOCK0
    !--0-1
-      ll=litr
+      ll=smod
       ip=lxise(0,0); im=ll;
       tmpa=px(0,n);sha=shs1;tmpb=px(1,n);shb=shs1
       call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
@@ -156,7 +157,7 @@ if(myid==mo(mb)) then
    do n = 0, bkx
       !-BLOCK0
       !-0-1
-      ll=litr
+      ll=smod
       ip=letse(0,0); im=ll;
       tmpa=py(0,n);sha=shs1;tmpb=py(1,n);shb=shs1
       call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lxit,im,ip)
