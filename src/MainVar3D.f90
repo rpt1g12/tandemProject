@@ -165,6 +165,13 @@
  integer(k4) ,allocatable,dimension(:)  ::  lcfor
  real(k8),allocatable,dimension(:,:)  ::  xafor,yafor,bfor
 
+!===== MPI-IO VARIABLES BY RPT
+ integer(k4), dimension (3) :: mpc,mbijkl,mpijkl,mpijks
+ integer(k4), dimension (:), allocatable :: ibegin,jbegin,kbegin
+ integer :: bcom
+ integer :: q4arr,q4fh,qarr,qfh
+ logical :: qflag=.false.,gflag=.false.,q4flag=.false.
+ logical :: wrsfg=.false.,wrrfg=.false.
 !===== VARIABLES FOR WALL OPERATIONS BY RPT
  integer(k4) :: lcwall
  integer(k4), dimension(:), allocatable ::lwall
@@ -172,12 +179,14 @@
  real(k8), dimension(:,:), allocatable ::wnor,wtan,tw
  logical :: wflag
  real(k8), dimension(:,:), allocatable,target :: xyz
+ integer(k4) :: wcom
 
 !===== POST-PROCESSING VARIABLES BY RPT
 
  integer(k4) :: lsta
  logical :: tecplot,ispost
  real(k8), dimension(:,:), allocatable :: wplus
+ real(k4), dimension(:,:), allocatable :: fout,xyz4,q4
  real(k8), dimension(:), allocatable :: wvarr
  character(18),dimension(:),allocatable :: ofiles 
 
