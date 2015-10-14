@@ -10,172 +10,465 @@ use mpi
 
 contains
 !====================================================================================
-!=====WRITE FUNCTION FILE PLOT3D
+!=====  PLOT3D F FILES WRITE
 !====================================================================================
- subroutine wffile(fname,nout,ndim)
- integer, intent(in) :: nout,ndim
- character(16), intent(in) :: fname
- character(3) :: cout
- integer :: n,l,i
- 
-   write(cout,"(i3)") nout
-   do i = 0, 2
-   l=scan(cout,' ')
-   if (l==0) exit
-   cout(l:l)='0'
-   end do
+  subroutine wrP3dF(fname,nout,ndim,mblkin)
+     integer, intent(in),optional :: mblkin
+     integer, intent(in) :: nout,ndim
+     character(len=*), intent(in) :: fname
+     character(len=:),allocatable :: lfname
+     character(3) :: cout,cblk
+     character(len=:),parameter :: cext='.f',cpath='out/'
+     integer :: n,l,i,lh,iolen,foper,wrcom,nbk,err,mblk
+     integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
+     integer :: fh,amode,farr
+     integer(k4) :: ibuf
+     integer, dimension (4) :: gsizes,lsizes,starts
 
-   if (nout==(ndata+1)) then
-      cout='AVG'
-   end if
-
-   if (myid==0) then
-     open(9,file='out/'//trim(fname)//cout//'.f'); close(9,status='delete')
-   end if
-   CALL MPI_BARRIER(icom,ierr)
-   open (unit=9, file='out/'//trim(fname)//cout//'.f', access='stream')
-   lh=0
-   if (myid==0) then
-    write(9,pos=4*lh+1) mbk+1; lh=lh+1 ! Number of zones
-    do mm = 0, mbk
-       write(9,pos=4*lh+1) int4(lximb(mm)+1); lh=lh+1 ! IMax
-       write(9,pos=4*lh+1) int4(letmb(mm)+1); lh=lh+1 ! JMax
-       write(9,pos=4*lh+1) int4(lzemb(mm)+1); lh=lh+1 ! KMax
-       write(9,pos=4*lh+1) int4(ndim); lh=lh+1 ! #dimensions
-    end do
-    lhmb(mb)=lh
-    do mm = 0, mbk-1
-       lhmb(mm+1)=lhmb(mm)+ndim*(lximb(mm)+1)*(letmb(mm)+1)*(lzemb(mm)+1)
-    end do
-   end if
-   call MPI_BCAST(lhmb,mbk+1,MPI_INTEGER,0,icom,ierr)
-   lp=lpos(myid)+lhmb(mb)
-   ns=1; ne=ndim
-   do n=ns,ne; lq=(n-ns)*ltomb
-   varr(:)=qo(:,n)
-   do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-     write(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
-   end do; end do
-   end do
-   close(9)
-   CALL MPI_BARRIER(icom,ierr)
-   if (myid==0) then
-      write(*,"(a,' funtion written!')") trim(fname)//cout
-   end if
- end subroutine wffile
-
-!====================================================================================
-!===== POST-PROCESSING & GENERATING PLOT3D DATA FILES
-!====================================================================================
- subroutine plot3dgrid()
- integer(k4) :: n
-
-      if (myid==0) then
-        open(9,file='out/grid.xyz'); close(9,status='delete')
-      end if
-      CALL MPI_BARRIER(icom,ierr)
-      open (unit=9, file='out/grid.xyz', access='stream')
-      lh=0
-      if (myid==0) then
-       write(9,pos=4*lh+1) mbk+1; lh=lh+1 ! Number of zones
-       do mm = 0, mbk
-          write(9,pos=4*lh+1) int4(lximb(mm)+1); lh=lh+1 ! IMax
-          write(9,pos=4*lh+1) int4(letmb(mm)+1); lh=lh+1 ! JMax
-          write(9,pos=4*lh+1) int4(lzemb(mm)+1); lh=lh+1 ! KMax
-       end do
-       lhmb(mb)=lh
-       do mm = 0, mbk-1
-          lhmb(mm+1)=lhmb(mm)+3*(lximb(mm)+1)*(letmb(mm)+1)*(lzemb(mm)+1)
-       end do
-      end if
-       call MPI_BCAST(lhmb,mbk+1,MPI_INTEGER,0,icom,ierr)
-       lp=lpos(myid)+lhmb(mb)
-       ns=1; ne=3
-       do n=ns,ne; lq=(n-1)*ltomb
-          varr(:)=ss(:,n)
-       do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-          write(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
-       end do; end do
-       end do
-       close(9)
-      CALL MPI_BARRIER(icom,ierr)
-        if (myid==0) then
-        write(*,*) 'Grid written!'
-        end if
-    
- end subroutine plot3dgrid
-
- subroutine plot3dsolution(ctime)
- character(8), intent (inout) :: ctime
- integer(k4) :: n
-
-   do i = 0, 8
-   l=scan(ctime,' ')
-   if (l==0) exit
-   ctime(l:l)='0'
-   end do
-
-       open (unit=9, file='out/solT'//trim(adjustl(ctime))//'.q', access='stream')
-       lh=0
-       if (myid==0) then
-        write(9,pos=4*lh+1) mbk+1; lh=lh+1 ! Number of zones
-        do mm = 0, mbk
-           write(9,pos=4*lh+1) int4(lximb(mm)+1); lh=lh+1 ! IMax
-           write(9,pos=4*lh+1) int4(letmb(mm)+1); lh=lh+1 ! JMax
-           write(9,pos=4*lh+1) int4(lzemb(mm)+1); lh=lh+1 ! KMax
+     ! rpt- Set default option to Multiblock
+     if(present(mblkin)) then
+        mblk=mblkin
+     else
+        mblk=1
+     end if
+     
+     selectcase(mblk);
+     case(1)
+        cblk=''
+        foper=0
+        wrcom=icom
+        nbk=mbk
+     case(0)
+        write(cblk,"(i2,a)") mb,'n'
+        do i = 0, 1
+           l=scan(cblk,' ')
+           if (l==0) exit
+           cblk(l:l)='0'
         end do
-        lhmb(mb)=lh
-        do mm = 0, mbk-1
+        foper=mo(mb)
+        wrcom=bcom
+        nbk=0
+     case default
+        if(myid==0) write(*,*) 'Wrong multiblock option! Aborting...'
+        CALL MPI_ABORT(icom,err,ierr)
+     end select
+     write(cout,"(i3)") nout
+     do i = 0, 2
+        l=scan(cout,' ')
+        if (l==0) exit
+        cout(l:l)='0'
+     end do
+     l=len(cpath)+len(fname)+len(trim(cblk))+len(cout)+len(cext)
+     allocate(character(len=l) :: lfname)
+     lfname=cpath//trim(fname)//trim(cblk)//cout//cext
+     if(myid==foper) CALL MPI_FILE_DELETE(lfname,info,ierr)
+
+     wrlen=ndim*(lmx+1)
+     amode=IOR(MPI_MODE_WRONLY,MPI_MODE_CREATE)
+
+     CALL MPI_TYPE_EXTENT(MPI_INTEGER4,iolen,ierr)
+     gsizes(:)=(/mbijkl(:),ndim/)
+     lsizes(:)=(/mpijkl(:),ndim/)
+     starts(:)=(/mpijks(:),0/)
+     CALL MPI_TYPE_CREATE_SUBARRAY(4,gsizes,lsizes,starts,MPI_ORDER_FORTRAN,MPI_REAL4,farr,ierr) 
+     CALL MPI_TYPE_COMMIT(farr,ierr)
+     
+     if(myid==foper) CALL MPI_FILE_DELETE(lfname,info,ierr)
+     CALL MPI_FILE_OPEN(wrcom,lfname ,amode ,info ,fh,ierr)
+
+     lh=0
+     if (myid==foper) then
+      ibuf=nbk+1; offset=lh*iolen          ! Number of blocks
+      CALL MPI_FILE_WRITE_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+      do l = 0, nbk
+         mm=l+(1-mblk)*mb
+         ibuf=lximb(mm)+1; offset=lh*iolen ! IMax
+         CALL MPI_FILE_WRITE_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+         ibuf=letmb(mm)+1; offset=lh*iolen ! JMax
+         CALL MPI_FILE_WRITE_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+         ibuf=lzemb(mm)+1; offset=lh*iolen ! KMax
+         CALL MPI_FILE_WRITE_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+         ibuf=ndim; offset=lh*iolen        ! #Dimensions
+         CALL MPI_FILE_WRITE_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+      end do
+     end if
+     l=(1-mblk)*mb
+     lhmb(l)=1+(nbk+1)*4
+     do mm = 0, nbk-1
+        lhmb(mm+1)=lhmb(mm)+ndim*(lximb(mm)+1)*(letmb(mm)+1)*(lzemb(mm)+1)
+     end do
+     disp=lhmb(mb)*iolen
+     CALL MPI_FILE_SET_VIEW(fh,disp,MPI_REAL4,farr,'native',info,ierr)
+     CALL MPI_FILE_WRITE_ALL_BEGIN(fh,fout,wrlen,MPI_REAL4,ierr)
+     CALL MPI_FILE_WRITE_ALL_END(fh,fout,ista,ierr)
+     CALL MPI_FILE_CLOSE(fh,ierr)
+     CALL MPI_TYPE_FREE(farr,ierr)
+     if (myid==foper) then
+        write(*,"(a,' funtion written!')") trim(fname)//cout
+     end if
+  end subroutine wrP3dF
+
+
+!====================================================================================
+!=====  PLOT3D Q FILES WRITE
+!====================================================================================
+  subroutine wrP3dS(mblkin)
+     integer, intent(in),optional :: mblkin
+     character(len=:),parameter :: fname='solT'
+     character(len=:),allocatable :: lfname
+     character(3) :: cout
+     character(8) :: ctime
+     character(len=:),parameter :: cext='.q',cpath='out/'
+     integer :: n,l,i,lh,iolen,foper,wrcom,nbk,err,mblk
+     integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
+     integer :: amode
+     integer, dimension (4) :: gsizes,lsizes,starts
+     integer(k4) :: ibuf
+     real   (k4) :: rbuf
+
+     if (wrsfg) then
+        CALL MPI_FILE_WRITE_ALL_END(q4fh,q4,ista,ierr)
+        CALL MPI_FILE_CLOSE(q4fh,ierr)
+        wrsfg=.false.
+     end if
+     if(.not.wrsfg) then
+        ! rpt- Set default option to Multiblock
+        if(present(mblkin)) then
+           mblk=mblkin
+        else
+           mblk=1
+        end if
+
+        selectcase(mblk);
+        case(1)
+           cout=''
+           foper=0
+           wrcom=icom
+           nbk=mbk
+        case(0)
+           write(cout,"(a,i2)") 'b',mb
+           do i = 0, 1
+              l=scan(cout,' ')
+              if (l==0) exit
+              cout(l:l)='0'
+           end do
+           foper=mo(mb)
+           wrcom=bcom
+           nbk=0
+        case default
+           if(myid==0) write(*,*) 'Wrong multiblock option! Aborting...'
+           CALL MPI_ABORT(icom,err,ierr)
+        end select
+        write(ctime,"(f8.4)") timo
+        do i = 0, 8
+        l=scan(ctime,' ')
+        if (l==0) exit
+        ctime(l:l)='0'
+        end do
+        l=len(cpath)+len(fname)+len(trim(adjustl(ctime)))+len(trim(cout))+len(cext)
+        allocate(character(len=l) :: lfname)
+        lfname=cpath//trim(fname)//trim(adjustl(ctime))//trim(cout)//cext
+        if(myid==foper) CALL MPI_FILE_DELETE(lfname,info,ierr)
+
+        wrlen=5*(lmx+1)
+        if(.not.allocated(q4)) allocate(q4(0:lmx,5))
+
+           q4(:,1)=qa(:,1)
+        do i = 2, 4
+           q4(:,i)=((qa(:,i)/qa(:,1))+umf(i-1))
+        end do
+           q4(:,5)=p(:)
+
+        amode=IOR(MPI_MODE_WRONLY,MPI_MODE_CREATE)
+
+        CALL MPI_TYPE_EXTENT(MPI_INTEGER4,iolen,ierr)
+        if (.not.q4flag) then
+           gsizes(:)=(/mbijkl(:),5/)
+           lsizes(:)=(/mpijkl(:),5/)
+           starts(:)=(/mpijks(:),0/)
+           CALL MPI_TYPE_CREATE_SUBARRAY(4,gsizes,lsizes,starts,&
+                           MPI_ORDER_FORTRAN,MPI_REAL4,q4arr,ierr) 
+           CALL MPI_TYPE_COMMIT(q4arr,ierr)
+           q4flag=.true.
+        end if
+        
+        CALL MPI_FILE_OPEN(wrcom,lfname ,amode ,info ,q4fh,ierr)
+
+        lh=0
+        if (myid==foper) then
+         ibuf=nbk+1; offset=lh*iolen          ! Number of blocks
+         CALL MPI_FILE_WRITE_AT(q4fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+         do l = 0, nbk
+            mm=l+(1-mblk)*mb
+            ibuf=lximb(mm)+1; offset=lh*iolen ! IMax
+            CALL MPI_FILE_WRITE_AT(q4fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+            ibuf=letmb(mm)+1; offset=lh*iolen ! JMax
+            CALL MPI_FILE_WRITE_AT(q4fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+            ibuf=lzemb(mm)+1; offset=lh*iolen ! KMax
+            CALL MPI_FILE_WRITE_AT(q4fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+         end do
+        end if
+        l=(1-mblk)*mb
+        lhmb(l)=1+(nbk+1)*3
+        do mm = 0, nbk-1
            lhmb(mm+1)=lhmb(mm)+4+5*(lximb(mm)+1)*(letmb(mm)+1)*(lzemb(mm)+1)
         end do
-       end if
-        call MPI_BCAST(lhmb,mbk+1,MPI_INTEGER,0,icom,ierr)
         if (myid==mo(mb)) then
            lh=lhmb(mb)
-           write(9,pos=4*lh+1) real(amachoo,kind=4); lh=lh+1 ! Mach Number
-           write(9,pos=4*lh+1) real(aoa,kind=4); lh=lh+1  ! AoA
-           write(9,pos=4*lh+1) real(reoo,kind=4); lh=lh+1 ! Reynolds Number
-           write(9,pos=4*lh+1) real(timo,kind=4); lh=lh+1 ! Time
+            rbuf=amachoo; offset=lh*iolen ! Mach Number
+            CALL MPI_FILE_WRITE_AT(q4fh,offset,rbuf,1,MPI_REAL4,ista,ierr); lh=lh+1
+            rbuf=aoa    ; offset=lh*iolen ! AoA
+            CALL MPI_FILE_WRITE_AT(q4fh,offset,rbuf,1,MPI_REAL4,ista,ierr); lh=lh+1
+            rbuf=reoo   ; offset=lh*iolen ! Reynolds Number
+            CALL MPI_FILE_WRITE_AT(q4fh,offset,rbuf,1,MPI_REAL4,ista,ierr); lh=lh+1
+            rbuf=timo   ; offset=lh*iolen ! Time
+            CALL MPI_FILE_WRITE_AT(q4fh,offset,rbuf,1,MPI_REAL4,ista,ierr); lh=lh+1
         end if
-        lp=lpos(myid)+lhmb(mb)+4
-        ns=1; ne=5
-        
-        do n=ns,ne; lq=(n-ns)*ltomb
-           selectcase(n)
-           case(1); varr(:)=qa(:,n)
-           case(2,3,4); !de(:,n)=qa(:,1)*umf(n-1)
-           varr(:)=((qa(:,n)/qa(:,1))+umf(n-1))
-           case(5); varr(:)=p(:)
-           end select
-        do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-          write(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
-        end do; end do
-        end do
-        close(9)
-        if (myid==0) then
+        disp=(lhmb(mb)+4)*iolen
+        CALL MPI_FILE_SET_VIEW(q4fh,disp,MPI_REAL4,q4arr,'native',info,ierr)
+        CALL MPI_FILE_WRITE_ALL_BEGIN(q4fh,q4,wrlen,MPI_REAL4,ierr)
+        wrsfg=.true.
+        if (myid==foper) then
            write(*,"('Solution written! T= ',8a)") ctime 
         end if
-    
- end subroutine plot3dsolution
+        if (ndati==ndata) then
+           CALL MPI_FILE_WRITE_ALL_END(q4fh,q4,ista,ierr)
+           CALL MPI_FILE_CLOSE(q4fh,ierr)
+           CALL MPI_TYPE_FREE(q4arr,ierr)
+           wrsfg=.false.
+        end if
+     end if !wrsfg
+  end subroutine wrP3dS
 
- subroutine plot3d(gflag,sflag,bflag)
+!====================================================================================
+!=====  PLOT3D XYZ FILES WRITE
+!====================================================================================
+  subroutine wrP3dG(mblkin)
+     integer, intent(in),optional :: mblkin
+     character(len=:),parameter :: fname='grid'
+     character(len=:),allocatable :: lfname
+     character(2) :: cout
+     character(len=:),parameter :: cext='.xyz',cpath='out/'
+     integer :: n,l,i,lh,iolen,foper,wrcom,nbk,err,mblk
+     integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
+     integer :: fh,amode,garr
+     integer, dimension (4) :: gsizes,lsizes,starts
+     integer(k4) :: ibuf
 
- integer(k4), intent(in) :: gflag,sflag,bflag
- integer(k4) :: n
- character(8) :: ctime
- 
- write(ctime,"(f8.4)") timo
-    
+     ! rpt- Set default option to Multiblock
+     if(present(mblkin)) then
+        mblk=mblkin
+     else
+        mblk=1
+     end if
 
-    if (gflag==1) then
-       call plot3dgrid
-    end if
+     selectcase(mblk);
+     case(1)
+        cout=''
+        foper=0
+        wrcom=icom
+        nbk=mbk
+     case(0)
+        write(cout,"(i2)") mb
+        do i = 0, 1
+           l=scan(cout,' ')
+           if (l==0) exit
+           cout(l:l)='0'
+        end do
+        foper=mo(mb)
+        wrcom=bcom
+        nbk=0
+     case default
+        if(myid==0) write(*,*) 'Wrong multiblock option! Aborting...'
+        CALL MPI_ABORT(icom,err,ierr)
+     end select
+     l=len(cpath)+len(fname)+len(trim(cout))+len(cext)
+     allocate(character(len=l) :: lfname)
+     lfname=cpath//trim(fname)//trim(cout)//cext
+     if(myid==foper) CALL MPI_FILE_DELETE(lfname,info,ierr)
 
-    if (sflag==1) then
-       call plot3dsolution(ctime)
-    end if
-          
- end subroutine plot3d
+     wrlen=3*(lmx+1)
+     amode=IOR(MPI_MODE_WRONLY,MPI_MODE_CREATE)
+
+     CALL MPI_TYPE_EXTENT(MPI_INTEGER4,iolen,ierr)
+     gsizes(:)=(/mbijkl(:),3/)
+     lsizes(:)=(/mpijkl(:),3/)
+     starts(:)=(/mpijks(:),0/)
+     CALL MPI_TYPE_CREATE_SUBARRAY(4,gsizes,lsizes,starts,MPI_ORDER_FORTRAN,MPI_REAL4,garr,ierr) 
+     CALL MPI_TYPE_COMMIT(garr,ierr)
+     
+     CALL MPI_FILE_OPEN(wrcom,lfname ,amode ,info ,fh,ierr)
+
+     lh=0
+     if (myid==foper) then
+      ibuf=nbk+1; offset=lh*iolen          ! Number of blocks
+      CALL MPI_FILE_WRITE_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+      do l = 0, nbk
+         mm=l+(1-mblk)*mb
+         ibuf=lximb(mm)+1; offset=lh*iolen ! IMax
+         CALL MPI_FILE_WRITE_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+         ibuf=letmb(mm)+1; offset=lh*iolen ! JMax
+         CALL MPI_FILE_WRITE_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+         ibuf=lzemb(mm)+1; offset=lh*iolen ! KMax
+         CALL MPI_FILE_WRITE_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+      end do
+     end if
+     l=(1-mblk)*mb
+     lhmb(l)=1+(nbk+1)*3
+     do mm = 0, nbk-1
+        lhmb(mm+1)=lhmb(mm)+3*(lximb(mm)+1)*(letmb(mm)+1)*(lzemb(mm)+1)
+     end do
+     disp=lhmb(mb)*iolen
+     CALL MPI_FILE_SET_VIEW(fh,disp,MPI_REAL4,garr,'native',info,ierr)
+     CALL MPI_FILE_WRITE_ALL_BEGIN(fh,xyz4,wrlen,MPI_REAL4,ierr)
+     CALL MPI_FILE_WRITE_ALL_END(fh,xyz4,ista,ierr)
+     CALL MPI_FILE_CLOSE(fh,ierr)
+     CALL MPI_TYPE_FREE(garr,ierr)
+     if (myid==foper) then
+        write(*,"('Grid written!')")
+     end if
+  end subroutine wrP3dG
+!====================================================================================
+!=====  WRITE RAW RESTART
+!====================================================================================
+  subroutine wrRsta()
+     integer(kind=MPI_OFFSET_KIND) :: wrlen,disp,offset
+     integer :: amode,iolen
+     integer, dimension (4) :: gsizes,lsizes,starts
+     real(k8) :: rbuf
+
+     if (wrrfg) then
+        CALL MPI_FILE_WRITE_ALL_END(qfh,q4,ista,ierr)
+        CALL MPI_FILE_CLOSE(qfh,ierr)
+        wrrfg=.false.
+     end if
+     if (.not.wrrfg) then
+        wrlen=5*(lmx+1)
+        amode=IOR(MPI_MODE_WRONLY,MPI_MODE_CREATE)
+        CALL MPI_TYPE_EXTENT(MPI_REAL8,iolen,ierr)
+
+        if (.not.qflag) then
+        gsizes(:)=(/mbijkl(:),5/)
+        lsizes(:)=(/mpijkl(:),5/)
+        starts(:)=(/mpijks(:),0/)
+        CALL MPI_TYPE_CREATE_SUBARRAY(4,gsizes,lsizes,starts,&
+                         MPI_ORDER_FORTRAN,MPI_REAL8,qarr,ierr) 
+        CALL MPI_TYPE_COMMIT(qarr,ierr)
+        qflag=.true.
+        end if
+        
+
+        if(myid==mo(mb)) CALL MPI_FILE_DELETE(crestart,info,ierr)
+        CALL MPI_FILE_OPEN(bcom,crestart,amode,info,qfh,ierr)
+        lh=0
+        if (myid==mo(mb)) then
+            rbuf=n; offset=lh*iolen ! Iteration Number
+            CALL MPI_FILE_WRITE_AT(qfh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1
+            rbuf=ndt; offset=lh*iolen ! ?
+            CALL MPI_FILE_WRITE_AT(qfh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1
+            rbuf=dt; offset=lh*iolen ! Timestep
+            CALL MPI_FILE_WRITE_AT(qfh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1
+            rbuf=dts; offset=lh*iolen ! ?
+            CALL MPI_FILE_WRITE_AT(qfh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1
+            rbuf=dte; offset=lh*iolen ! ?
+            CALL MPI_FILE_WRITE_AT(qfh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1
+            rbuf=timo; offset=lh*iolen ! time
+            CALL MPI_FILE_WRITE_AT(qfh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1
+        else
+            lh=lh+6
+        end if
+        disp=lh*iolen
+        CALL MPI_FILE_SET_VIEW(qfh,disp,MPI_REAL8,qarr,'native',info,ierr)
+        CALL MPI_FILE_WRITE_ALL_BEGIN(qfh,qa,wrlen,MPI_REAL8,ierr)
+        wrrfg=.true.
+        if (myid==0) then
+           write(*,"('Restart file written!')") 
+        end if
+        if (ndati==ndata) then
+           CALL MPI_FILE_WRITE_ALL_END(qfh,q4,ista,ierr)
+           CALL MPI_FILE_CLOSE(qfh,ierr)
+           CALL MPI_TYPE_FREE(qarr,ierr)
+           wrrfg=.false.
+        end if
+     end if !wrrfg
+  end subroutine wrRsta
+
+!====================================================================================
+!=====  READ RAW RESTART
+!====================================================================================
+  subroutine rdRsta()
+     integer(kind=MPI_OFFSET_KIND) :: wrlen,disp,offset
+     integer :: fh,amode,qarr,iolen
+     integer, dimension (4) :: gsizes,lsizes,starts
+     real(k8) :: rbuf
+
+      if (myid==0) then
+         write(*,"('Reading restart file..')") 
+      end if
+
+     wrlen=5*(lmx+1)
+     amode=MPI_MODE_RDONLY
+     CALL MPI_TYPE_EXTENT(MPI_REAL8,iolen,ierr)
+
+     gsizes(:)=(/mbijkl(:),5/)
+     lsizes(:)=(/mpijkl(:),5/)
+     starts(:)=(/mpijks(:),0/)
+     CALL MPI_TYPE_CREATE_SUBARRAY(4,gsizes,lsizes,starts,MPI_ORDER_FORTRAN,MPI_REAL8,qarr,ierr) 
+     CALL MPI_TYPE_COMMIT(qarr,ierr)
+     
+
+     CALL MPI_FILE_OPEN(bcom,crestart,amode,info,fh,ierr)
+     lh=0
+
+         offset=lh*iolen ! Iteration Number
+         CALL MPI_FILE_READ_AT(fh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1; n=rbuf
+         offset=lh*iolen ! 10*(n/10)+1
+         CALL MPI_FILE_READ_AT(fh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1; ndt=rbuf
+         offset=lh*iolen ! Timestep
+         CALL MPI_FILE_READ_AT(fh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1; dt=rbuf
+         offset=lh*iolen ! ?
+         CALL MPI_FILE_READ_AT(fh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1; dts=rbuf
+         offset=lh*iolen ! ?
+         CALL MPI_FILE_READ_AT(fh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1; dte=rbuf
+         offset=lh*iolen ! time
+         CALL MPI_FILE_READ_AT(fh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1; timo=rbuf
+
+     disp=lh*iolen
+     CALL MPI_FILE_SET_VIEW(fh,disp,MPI_REAL8,qarr,'native',info,ierr)
+     CALL MPI_FILE_READ_ALL(fh,qa,wrlen,MPI_REAL8,ista,ierr)
+     CALL MPI_FILE_CLOSE(fh,ierr)
+     CALL MPI_TYPE_FREE(qarr,ierr)
+
+
+  end subroutine rdRsta
+
+!====================================================================================
+!=====  READ RAW GRID
+!====================================================================================
+  subroutine rdGrid()
+     integer(kind=MPI_OFFSET_KIND) :: wrlen,disp
+     integer :: fh,amode,garr
+     integer, dimension (4) :: gsizes,lsizes,starts
+
+     wrlen=3*(lmx+1)
+     amode=MPI_MODE_RDONLY
+
+     gsizes(:)=(/mbijkl(:),3/)
+     lsizes(:)=(/mpijkl(:),3/)
+     starts(:)=(/mpijks(:),0/)
+     CALL MPI_TYPE_CREATE_SUBARRAY(4,gsizes,lsizes,starts,MPI_ORDER_FORTRAN,MPI_REAL8,garr,ierr) 
+     CALL MPI_TYPE_COMMIT(garr,ierr)
+     
+     disp=0
+
+     CALL MPI_FILE_OPEN(bcom,cgrid,amode,info,fh,ierr)
+     CALL MPI_FILE_SET_VIEW(fh,disp,MPI_REAL8,garr,'native',info,ierr)
+     CALL MPI_FILE_READ_ALL(fh,ss,wrlen,MPI_REAL8,ista,ierr)
+     CALL MPI_FILE_CLOSE(fh,ierr)
+     CALL MPI_TYPE_FREE(garr,ierr)
+
+     if(myid==0) CALL MPI_FILE_DELETE(cgrid,info,ierr)
+  end subroutine rdGrid
 
 !====================================================================================
 !===== POST-PROCESSING & GENERATING TECPLOT DATA FILE
@@ -766,44 +1059,6 @@ nfile=5
          
 end subroutine p3dread
 
-!====================================================================================
-!===== GENERATE RESTART DATA FILE
-!====================================================================================
-subroutine wRestart()
-
-integer(k4) :: nfile=10
-
-      if (myid==0) then
-         write(*,*) 'Writting restart file..'
-      end if
-    if (ndati==0) then
-    if(myid==mo(mb)) then
-       open(nfile,file=crestart); close(nfile,status='delete')
-    end if
-       call MPI_BARRIER(icom,ierr)
-       open(nfile,file=crestart,access='stream');
-    end if; lh=0
-    if(myid==mo(mb)) then
-       write(nfile,pos=k8*lh+1) n; lh=lh+1
-       write(nfile,pos=k8*lh+1) ndt; lh=lh+1
-       write(nfile,pos=k8*lh+1) dt; lh=lh+1
-       write(nfile,pos=k8*lh+1) dts; lh=lh+1
-       write(nfile,pos=k8*lh+1) dte; lh=lh+1
-       write(nfile,pos=k8*lh+1) timo; lh=lh+1
-    else
-       lh=lh+6
-    end if
-       lp=lpos(myid)+lh
-    do m=1,5; lq=(m-1)*ltomb
-    do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-       write(nfile,pos=k8*(lp+lq+lio(j,k))+1) qa(l:l+lxi,m)
-    end do; end do
-    end do
-    if (ndati==ndata) then
-       close(nfile)
-    end if
-   
-end subroutine wRestart
 
 !====================================================================================
 ! ====CROSS PRODUCT OF TWO VECTORS 

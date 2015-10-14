@@ -78,10 +78,10 @@
 
     ! rpt-Forcing parameters
     xfor=-0.5_k8!cos(delt1)-0.5_k8-1.0_k8+(0.1_k8);
-    yfor=4.95_k8!-sin(delt1)+(0.129_k8);
-    rfor=2.5e-2
+    yfor=-0.7_k8!-sin(delt1)+(0.129_k8);
+    rfor=2.0e-1
     amfor=amfor*amachoo/100.0e0
-    tsfor=100.0e0;tefor=200.000e0
+    tsfor=20.0e0;tefor=200.000e0
 !===== DOMAIN DECOMPOSITION & BOUNDARY INFORMATION
 
     mo(0)=0
@@ -92,6 +92,8 @@
  if(myid>=mo(mm)) then; mb=mm; end if
  end do
     lxio=lximb(mb); leto=letmb(mb); lzeo=lzemb(mb)
+     ! rpt- Create communicator per block
+     CALL MPI_COMM_SPLIT(icom,mb,myid,bcom,ierr)   
 
     if (output==2) then
     cfilet(-1)='grid'
@@ -126,6 +128,9 @@
     ip=mod(myid-mo(mb),npc(mb,1))
     jp=mod((myid-mo(mb))/npc(mb,1),npc(mb,2))
     kp=mod((myid-mo(mb))/(npc(mb,1)*npc(mb,2)),npc(mb,3))
+
+    ! rpt- Store processors coordinates
+    mpc=(/ip,jp,kp/)
 
     ncds(1)=mo(ms(1))+kp*npc(ms(1),2)*npc(ms(1),1)+jp*npc(ms(1),1)+npc(ms(1),1)-1
     ncde(1)=mo(me(1))+kp*npc(me(1),2)*npc(me(1),1)+jp*npc(me(1),1)
@@ -197,24 +202,60 @@
 
     nbsize(:)=(ijk(2,:)+1)*(ijk(3,:)+1)
 
- do mm=0,mbk
-    lpos(mo(mm))=0
- do i=1,npc(mm,1)-1
-    mp=mo(mm)+i
-    lpos(mp)=lpos(mp-1)+lxim(mp-1)+1
- end do
-    jp=npc(mm,1)
- do j=1,npc(mm,2)-1; do i=0,npc(mm,1)-1
-    mp=mo(mm)+j*jp+i
-    lpos(mp)=lpos(mp-jp)+(lximb(mm)+1)*(letm(mp-jp)+1)
- end do; end do
-    kp=npc(mm,1)*npc(mm,2)
- do k=1,npc(mm,3)-1; do j=0,npc(mm,2)-1; do i=0,npc(mm,1)-1
-    mp=mo(mm)+k*kp+j*jp+i
-    lpos(mp)=lpos(mp-kp)+(lximb(mm)+1)*(letmb(mm)+1)*(lzem(mp-kp)+1)
- end do; end do; end do
- end do
+    do mm=0,mbk
+       lpos(mo(mm))=0
+       do i=1,npc(mm,1)-1
+          mp=mo(mm)+i
+          lpos(mp)=lpos(mp-1)+lxim(mp-1)+1
+       end do
+          jp=npc(mm,1)
+       do j=1,npc(mm,2)-1;
+          do i=0,npc(mm,1)-1
+            mp=mo(mm)+j*jp+i
+            lpos(mp)=lpos(mp-jp)+(lximb(mm)+1)*(letm(mp-jp)+1)
+           end do;
+       end do
+          kp=npc(mm,1)*npc(mm,2)
+       do k=1,npc(mm,3)-1;
+          do j=0,npc(mm,2)-1;
+             do i=0,npc(mm,1)-1
+             mp=mo(mm)+k*kp+j*jp+i
+             lpos(mp)=lpos(mp-kp)+(lximb(mm)+1)*(letmb(mm)+1)*(lzem(mp-kp)+1)
+             end do;
+          end do;
+       end do
+    end do
 
+    ! rpt- Find out start indices depending on proc coordinates
+    allocate(ibegin(0:npc(mb,1)))
+    allocate(jbegin(0:npc(mb,2)))
+    allocate(kbegin(0:npc(mb,3)))
+    ! setup first process
+    ibegin(0)=0
+    jbegin(0)=0
+    kbegin(0)=0
+    ! setup i-start indices
+    do i=1,npc(mb,1)
+    mp=mo(mb)+i
+    ibegin(i)=ibegin(i-1)+lxim(mp-1)+1
+    end do
+    ! setup j-start indices
+    do j=1,npc(mb,2)
+    mp=mo(mb)+j*npc(mb,1)
+    jbegin(j)=jbegin(j-1)+letm(mp-1)+1
+    end do
+    ! setup k-start indices
+    do k=1,npc(mb,3)
+    mp=mo(mb)+k*npc(mb,1)*npc(mb,2)
+    kbegin(k)=kbegin(k-1)+lzem(mp-1)+1
+    end do
+
+    ! rpt- #Points in block per direction
+    mbijkl=(/lxio,leto,lzeo/)+1
+    ! rpt- #Points in proccessor per direction
+    mpijkl=(/lxi,let,lze/)+1
+    ! rpt- Starts in proccessor per direction
+    mpijks=(/ibegin(mpc(1)),jbegin(mpc(2)),kbegin(mpc(3))/)
 !===== ALLOCATION OF MAIN ARRAYS
 
     !allocate(qo(0:lmx,5),qa(0:lmx,5),qb(0:lmx,5),de(0:lmx,5))
@@ -289,18 +330,12 @@
     call makegrid
     call MPI_BARRIER(icom,ierr)
 
-    open(9,file=cgrid,access='stream',form='unformatted')
-    lp=lpos(myid)
- do nn=1,3; lq=(nn-1)*ltomb
- do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-    read(9,pos=8*(lp+lq+lio(j,k))+1) ss(l:l+lxi,nn)
- end do; end do
- end do
-    close(9)
-    call MPI_BARRIER(icom,ierr)
- if(myid==mo(mb)) then
-    !open(9,file=cgrid); close(9,status='delete')
- end if
+    call rdGrid
+    if (output==1) then
+       allocate(xyz4(0:lmx,3))
+       xyz4(:,:)=ss(:,:)
+    end if
+
 
     !RPT-FIND POSITION FOR SIGNAL SAMPLING
     !idsignal=-1
@@ -343,11 +378,13 @@
               +de(:,1)*xim(:,3)+de(:,2)*etm(:,3)+de(:,3)*zem(:,3))
 
 
-    cinput='met'; 
-    qo(:,3)=qa(:,1);
-    qo(:,4)=qa(:,2);
-    qo(:,5)=(-1/yaco(:))
-    call wffile(cinput,0,5)
+    if ((ngridv==1).and.(output==1)) then
+       allocate(fout(0:lmx,5))
+       fout(:,1:2)=qo(:,1:2)
+       fout(:,3:4)=qa(:,1:2)
+       fout(:,5)=(-1/yaco(:))
+       call wrP3dF('met',0,5)
+    end if
 
     call wallArea
     call walldir
@@ -444,7 +481,8 @@
     end if
     end if
  case(1)
-   call plot3d(gflag=ogrid,sflag=0,bflag=oblock)
+   call wrP3dG
+   deallocate(xyz4)
  end select
 
 
@@ -464,23 +502,10 @@
     n=0; ndt=0; dt=0; dts=0; dte=0; timo=0
     call initialo
  else
-    open(9,file=crestart,access='stream',form='unformatted'); lh=0
-    read(9,pos=k8*lh+1) n; lh=lh+1
-    read(9,pos=k8*lh+1) ndt; lh=lh+1
-    read(9,pos=k8*lh+1) dt; lh=lh+1
-    read(9,pos=k8*lh+1) dts; lh=lh+1
-    read(9,pos=k8*lh+1) dte; lh=lh+1
-    read(9,pos=k8*lh+1) timo; lh=lh+1
-    lp=lpos(myid)+lh
+    call rdRsta
     if (tsam<timo) then
        tsam=timo
     end if
- do m=1,5; lq=(m-1)*ltomb
- do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-    read(9,pos=k8*(lp+lq+lio(j,k))+1) qa(l:l+lxi,m)
- end do; end do
- end do
-    close(9)
  end if
     !qb(:,:)=0
 
@@ -557,11 +582,11 @@
     res=maxval((sqrt(de(:,5)*rr(:,1))+rr(:,2))*ss(:,2))
     call MPI_ALLREDUCE(res,fctr,1,MPI_REAL8,MPI_MAX,icom,ierr)
     ra0=cfl/fctr; ra1=ra0
- if(nviscous==1) then
-    res=maxval(de(:,1)*ss(:,1)*rr(:,1)*ss(:,2)*ss(:,2))
-    call MPI_ALLREDUCE(res,fctr,1,MPI_REAL8,MPI_MAX,icom,ierr)
-    ra1=half/fctr
- end if
+    if(nviscous==1) then
+       res=maxval(de(:,1)*ss(:,1)*rr(:,1)*ss(:,2)*ss(:,2))
+       call MPI_ALLREDUCE(res,fctr,1,MPI_REAL8,MPI_MAX,icom,ierr)
+       ra1=half/fctr
+    end if
     dte=min(ra0,ra1)
  else
     dte=dto
@@ -911,7 +936,7 @@
     nn=3+5*ndati+m; write(0,rec=nn) varr(:); call vminmax(nn)
  end do
    case(1)
-      call plot3d(gflag=0,sflag=osol,bflag=oblock)
+      call wrP3dS
    case(0)
       !==========SAVING INSTANTANEUS DENSITY, VELOCITY AND PRESSURE
       nwrec=nwrec+1
@@ -931,7 +956,7 @@
    !===== GENERATING RESTART DATA FILE
    
     if(nrestart==1) then
-       call wRestart()
+       call wrRsta
     end if
  end if
 
