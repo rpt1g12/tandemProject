@@ -88,6 +88,8 @@
  if(myid>=mo(mm)) then; mb=mm; end if
  end do
     lxio=lximb(mb); leto=letmb(mb); lzeo=lzemb(mb)
+     ! rpt- Create communicator per block
+     CALL MPI_COMM_SPLIT(icom,mb,myid,bcom,ierr)   
 
     if (output==2) then
      cfilet(-1)='grid'
@@ -124,6 +126,9 @@
     jp=mod((myid-mo(mb))/npc(mb,1),npc(mb,2))
     kp=mod((myid-mo(mb))/(npc(mb,1)*npc(mb,2)),npc(mb,3))
 
+    ! rpt- Store processors coordinates
+    mpc=(/ip,jp,kp/)
+
     ncds(1)=mo(ms(1))+kp*npc(ms(1),2)*npc(ms(1),1)+jp*npc(ms(1),1)+npc(ms(1),1)-1
     ncde(1)=mo(me(1))+kp*npc(me(1),2)*npc(me(1),1)+jp*npc(me(1),1)
 
@@ -141,17 +146,25 @@
  end select
     ma=npc(mb,nn)
  if(ma==1) then
-    l=ll; nbc(0,nn)=nbcs(nn); nbc(1,nn)=nbce(nn); ncd(0,nn)=ncds(nn); ncd(1,nn)=ncde(nn)
+    l=ll;
+    nbc(0,nn)=nbcs(nn); nbc(1,nn)=nbce(nn);
+    ncd(0,nn)=ncds(nn); ncd(1,nn)=ncde(nn)
  end if
  if(ma>=2) then
  if(lp==0) then
-    l=ll-((ll+1)/ma)*(ma-1); nbc(0,nn)=nbcs(nn); nbc(1,nn)=40; ncd(0,nn)=ncds(nn); ncd(1,nn)=myid+mp
+       l=ll-((ll+1)/ma)*(ma-1);
+       nbc(0,nn)=nbcs(nn); nbc(1,nn)=40;
+       ncd(0,nn)=ncds(nn); ncd(1,nn)=myid+mp
  end if
  if(lp>0.and.lp<ma-1) then
-    l=(ll+1)/ma-1; nbc(0,nn)=40; nbc(1,nn)=40; ncd(0,nn)=myid-mp; ncd(1,nn)=myid+mp
+       l=(ll+1)/ma-1;
+       nbc(0,nn)=40; nbc(1,nn)=40;
+       ncd(0,nn)=myid-mp; ncd(1,nn)=myid+mp
  end if
  if(lp==ma-1) then
-    l=(ll+1)/ma-1; nbc(0,nn)=40; nbc(1,nn)=nbce(nn); ncd(0,nn)=myid-mp; ncd(1,nn)=ncde(nn)
+       l=(ll+1)/ma-1;
+       nbc(0,nn)=40; nbc(1,nn)=nbce(nn);
+       ncd(0,nn)=myid-mp; ncd(1,nn)=ncde(nn)
  end if
  end if
  select case(nn); case (1); lxi=l; case (2); let=l; case (3); lze=l; end select
@@ -184,17 +197,53 @@
     lpos(mp)=lpos(mp-1)+lxim(mp-1)+1
  end do
     jp=npc(mm,1)
- do j=1,npc(mm,2)-1; do i=0,npc(mm,1)-1
+       do j=1,npc(mm,2)-1;
+          do i=0,npc(mm,1)-1
     mp=mo(mm)+j*jp+i
     lpos(mp)=lpos(mp-jp)+(lximb(mm)+1)*(letm(mp-jp)+1)
- end do; end do
+           end do;
+       end do
     kp=npc(mm,1)*npc(mm,2)
- do k=1,npc(mm,3)-1; do j=0,npc(mm,2)-1; do i=0,npc(mm,1)-1
+       do k=1,npc(mm,3)-1;
+          do j=0,npc(mm,2)-1;
+             do i=0,npc(mm,1)-1
     mp=mo(mm)+k*kp+j*jp+i
     lpos(mp)=lpos(mp-kp)+(lximb(mm)+1)*(letmb(mm)+1)*(lzem(mp-kp)+1)
- end do; end do; end do
+             end do;
+          end do;
+       end do
  end do
 
+    ! rpt- Find out start indices depending on proc coordinates
+    allocate(ibegin(0:npc(mb,1)))
+    allocate(jbegin(0:npc(mb,2)))
+    allocate(kbegin(0:npc(mb,3)))
+    ! setup first process
+    ibegin(0)=0
+    jbegin(0)=0
+    kbegin(0)=0
+    ! setup i-start indices
+    do i=1,npc(mb,1)
+    mp=mo(mb)+i
+    ibegin(i)=ibegin(i-1)+lxim(mp-1)+1
+    end do
+    ! setup j-start indices
+    do j=1,npc(mb,2)
+    mp=mo(mb)+j*npc(mb,1)
+    jbegin(j)=jbegin(j-1)+letm(mp-1)+1
+    end do
+    ! setup k-start indices
+    do k=1,npc(mb,3)
+    mp=mo(mb)+k*npc(mb,1)*npc(mb,2)
+    kbegin(k)=kbegin(k-1)+lzem(mp-1)+1
+    end do
+
+    ! rpt- #Points in block per direction
+    mbijkl=(/lxio,leto,lzeo/)+1
+    ! rpt- #Points in proccessor per direction
+    mpijkl=(/lxi,let,lze/)+1
+    ! rpt- Starts in proccessor per direction
+    mpijks=(/ibegin(mpc(1)),jbegin(mpc(2)),kbegin(mpc(3))/)
 !===== ALLOCATION OF MAIN ARRAYS
 
     if (output==2) then
@@ -281,17 +330,10 @@
     call makegrid
     call MPI_BARRIER(icom,ierr)
 
-    open(9,file=cgrid,access='stream',shared)
-    lp=lpos(myid)
- do nn=1,3; lq=(nn-1)*ltomb
- do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-    read(9,pos=8*(lp+lq+lio(j,k))+1) ss(l:l+lxi,nn)
- end do; end do
- end do
-    close(9)
-    call MPI_BARRIER(icom,ierr)
- if(myid==mo(mb)) then
-    open(9,file=cgrid); close(9,status='delete')
+    call rdGrid
+    if (output==1) then
+       allocate(xyz4(0:lmx,3))
+       xyz4(:,:)=ss(:,:)
  end if
 
     !RPT-FIND POSITION FOR SIGNAL SAMPLING
@@ -356,6 +398,15 @@
               +de(:,1)*xim(:,3)+de(:,2)*etm(:,3)+de(:,3)*zem(:,3))
 
 
+    if ((ngridv==1).and.(output==1)) then
+       allocate(fout(0:lmx,5))
+       fout(:,1:2)=qo(:,1:2)
+       fout(:,3:4)=qa(:,1:2)
+       fout(:,5)=abs(yaco(:))
+       call wrP3dF('met',0,5)
+       deallocate(fout)
+    end if
+
     call wallArea
     call walldir
 
@@ -419,7 +470,8 @@
     end if
     end if
  case(1)
-   call plot3d(gflag=ogrid,sflag=0,bflag=oblock)
+   call wrP3dG
+   deallocate(xyz4)
  end select
 
 
@@ -439,28 +491,16 @@
     n=0; ndt=0; dt=0; dts=0; dte=0; timo=0
     call initialo
  else
-    open(9,file=crestart,access='stream',shared); lh=0
-    read(9,pos=k8*lh+1) n; lh=lh+1
-    read(9,pos=k8*lh+1) ndt; lh=lh+1
-    read(9,pos=k8*lh+1) dt; lh=lh+1
-    read(9,pos=k8*lh+1) dts; lh=lh+1
-    read(9,pos=k8*lh+1) dte; lh=lh+1
-    read(9,pos=k8*lh+1) timo; lh=lh+1
-    lp=lpos(myid)+lh
-    if ((tsam-timo)/tsam<0.05e0) then
+    call rdRsta
+    if (tsam<timo) then
        tsam=timo
     end if
- do m=1,5; lq=(m-1)*ltomb
- do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-    read(9,pos=k8*(lp+lq+lio(j,k))+1) qa(l:l+lxi,m)
- end do; end do
- end do
-    close(9)
  end if
     if (output==2) then
       qb(:,:)=0
     end if
 
+ ! START MEASURING WALL TIME
     wts=MPI_WTIME()
 
  if(myid==0) then
@@ -469,6 +509,7 @@
     call MPI_BARRIER(icom,ierr)
     open(1,file='signal.dat',access='direct',form='formatted',recl=16,shared)
 
+  ! OUTPUT HEADER
      if (myid==0) then
      write(*,"(3x,'n',8x,'time',9x,'Cl',9x,'Cd',5x)")  
      write(*,"('============================================')")
@@ -482,20 +523,7 @@
 !============================================
  do while(timo-tmax<0.and.(dt/=0.or.n<=2))
 
-  if (mod(n,nscrn)==0) then
-  if (n.ge.2) then
-    call clpost(1,ndati) 
-  else
-    cl=0
-  end if
-  end if
 
-  if(myid==0.and.mod(n,nscrn)==0) then
-     !Change ra0 to the angle of attack needed!!!
-     ra0=aoa*pi/180;ra1=cos(ra0);ra2=sin(ra0)
-     write(*,"(i8,f12.5,f12.7,f12.7)") &
-     n,timo,cl(1,2)*ra1-cl(1,1)*ra2,cl(1,2)*ra2+cl(1,1)*ra1
-  end if
 
 !----- FILTERING
 
@@ -597,15 +625,19 @@
 
      selectcase(LES)
      case(1)
-        de(:,1)=(txx(:)*txx(:)+tyy(:)*tyy(:)+tzz(:)*tzz(:)+& !rpt- SijSij
+    ! rpt- SijSij
+    de(:,1)=(txx(:)*txx(:)+tyy(:)*tyy(:)+tzz(:)*tzz(:)+&
                  (hzz(:)+txy(:))*(hzz(:)+txy(:))+&
                  (hyy(:)+tzx(:))*(hyy(:)+tzx(:))+&
                  (hxx(:)+tyz(:))*(hxx(:)+tyz(:)))
-        varr(:)=(-1/yaco(:))**1.5 ! rpt- Volume
-        rr(:,3)=qa(:,1)*smago1**2*varr(:)*sqrt(2*(de(:,1))) ! rpt-nuSGS
+    ! rpt- Volume
+    varr(:)=(-1/yaco(:))**1.5 
+    ! rpt-nuSGS
+    rr(:,3)=qa(:,1)*smago1**2*varr(:)*sqrt(2*(de(:,1))) 
         rr(:,1)=rr(:,1)+rr(:,3)*yaco(:)
         rr(:,2)=rr(:,2)+tgamm1prndtli*rr(:,3)*yaco(:)   
-        rr(:,3)=fctr*(qa(:,1)*smago2*varr(:)*de(:,1)) ! rpt-2/3*ro*kSGS
+    ! rpt-2/3*ro*kSGS
+    rr(:,3)=fctr*(qa(:,1)*smago2*varr(:)*de(:,1)) 
         de(:,5)=fctr*(txx(:)+tyy(:)+tzz(:))
 
         txx(:)=rr(:,1)*(2*txx(:)-de(:,5))-rr(:,3)
@@ -628,6 +660,16 @@
      hxx(:)=rr(:,2)*ss(:,1)+de(:,2)*txx(:)+de(:,3)*txy(:)+de(:,4)*tzx(:)
      hyy(:)=rr(:,2)*ss(:,2)+de(:,2)*txy(:)+de(:,3)*tyy(:)+de(:,4)*tyz(:)
      hzz(:)=rr(:,2)*ss(:,3)+de(:,2)*tzx(:)+de(:,3)*tyz(:)+de(:,4)*tzz(:)
+  end if
+
+!----- OUTPUT N,TIME,CL & CD
+  if((mod(n,nscrn)==0).and.nk==1) then
+     call clpost(1,ndati) 
+     if (myid==0) then
+     ra0=aoa*pi/180;ra1=cos(ra0);ra2=sin(ra0)
+     write(*,"(i8,f12.5,f12.7,f12.7)") &
+     n,timo,cl(1,2)*ra1-cl(1,1)*ra2,cl(1,2)*ra2+cl(1,1)*ra1
+     end if
   end if
 
 !----- CALCULATION OF FLUX DERIVATIVES
@@ -895,9 +937,10 @@
      end select
      nn=3+5*ndati+m; write(0,rec=nn) varr(:); !call vminmax(nn)
    end do
-   case(1) ! Plot3D Style
-      call plot3d(gflag=0,sflag=osol,bflag=oblock)
-   case(0) ! Old Tecplot Style
+   case(1)
+      call wrP3dS
+   case(0)
+      !==========SAVING INSTANTANEUS DENSITY, VELOCITY AND PRESSURE
       nwrec=nwrec+1
          varr(:)=qa(:,1); write(0,rec=nwrec) varr(:)
       do m = 2, 4
@@ -915,31 +958,7 @@
    !===== GENERATING RESTART DATA FILE
    
    if(nrestart==1) then
-      if (myid==0) then
-         write(*,*) 'Writting restart file..'
-      end if
-      if(myid==mo(mb)) then
-         open(9,file=crestart); close(9,status='delete')
-      end if
-         call MPI_BARRIER(icom,ierr)
-         open(9,file=crestart,access='stream',shared); lh=0
-      if(myid==mo(mb)) then
-         write(9,pos=k8*lh+1) n; lh=lh+1
-         write(9,pos=k8*lh+1) ndt; lh=lh+1
-         write(9,pos=k8*lh+1) dt; lh=lh+1
-         write(9,pos=k8*lh+1) dts; lh=lh+1
-         write(9,pos=k8*lh+1) dte; lh=lh+1
-         write(9,pos=k8*lh+1) timo; lh=lh+1
-      else
-         lh=lh+6
-      end if
-         lp=lpos(myid)+lh
-      do m=1,5; lq=(m-1)*ltomb
-      do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-         write(9,pos=k8*(lp+lq+lio(j,k))+1) qa(l:l+lxi,m)
-      end do; end do
-      end do
-         close(9)
+       call wrRsta
    end if
  end if
 
