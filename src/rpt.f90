@@ -336,14 +336,17 @@ contains
      integer :: amode,iolen
      integer, dimension (4) :: gsizes,lsizes,starts
      real(k8) :: rbuf
+     integer(k4) :: ibuf
 
      if (wrrfg) then
-        CALL MPI_FILE_WRITE_ALL_END(qfh,q4,ista,ierr)
+        CALL MPI_FILE_WRITE_ALL_END(qfh,q8,ista,ierr)
         CALL MPI_FILE_CLOSE(qfh,ierr)
         wrrfg=.false.
      end if
      if (.not.wrrfg) then
         wrlen=5*(lmx+1)
+        if(.not.allocated(q8)) allocate(q8(0:lmx,5))
+        q8(:,:)=qa(:,:)
         amode=IOR(MPI_MODE_WRONLY,MPI_MODE_CREATE)
         CALL MPI_TYPE_EXTENT(MPI_REAL8,iolen,ierr)
 
@@ -362,10 +365,10 @@ contains
         CALL MPI_FILE_OPEN(bcom,crestart,amode,info,qfh,ierr)
        lh=0
        if (myid==mo(mb)) then
-            rbuf=n; offset=lh*iolen ! Iteration Number
-            CALL MPI_FILE_WRITE_AT(qfh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1
-            rbuf=ndt; offset=lh*iolen ! ?
-            CALL MPI_FILE_WRITE_AT(qfh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1
+            ibuf=n; offset=lh*iolen ! Iteration Number
+            CALL MPI_FILE_WRITE_AT(qfh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+            ibuf=ndt; offset=lh*iolen ! ?
+            CALL MPI_FILE_WRITE_AT(qfh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
             rbuf=dt; offset=lh*iolen ! Timestep
             CALL MPI_FILE_WRITE_AT(qfh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1
             rbuf=dts; offset=lh*iolen ! ?
@@ -379,7 +382,7 @@ contains
        end if
         disp=lh*iolen
         CALL MPI_FILE_SET_VIEW(qfh,disp,MPI_REAL8,qarr,'native',info,ierr)
-        CALL MPI_FILE_WRITE_ALL_BEGIN(qfh,qa,wrlen,MPI_REAL8,ierr)
+        CALL MPI_FILE_WRITE_ALL_BEGIN(qfh,q8,wrlen,MPI_REAL8,ierr)
         wrrfg=.true.
        if (myid==0) then
            write(*,"('Restart file written!')") 
@@ -401,6 +404,7 @@ contains
      integer :: fh,amode,qarr,iolen
      integer, dimension (4) :: gsizes,lsizes,starts
      real(k8) :: rbuf
+     integer(k4) :: ibuf
 
       if (myid==0) then
          write(*,"('Reading restart file..')") 
@@ -421,11 +425,14 @@ contains
      lh=0
 
          offset=lh*iolen ! Iteration Number
-         CALL MPI_FILE_READ_AT(fh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1; n=rbuf
+         CALL MPI_FILE_READ_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1; n=ibuf
+         if(myid==0) write(*,*) ibuf,n
          offset=lh*iolen ! 10*(n/10)+1
-         CALL MPI_FILE_READ_AT(fh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1; ndt=rbuf
+         CALL MPI_FILE_READ_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1; ndt=ibuf
+         if(myid==0) write(*,*) ibuf,ndt
          offset=lh*iolen ! Timestep
          CALL MPI_FILE_READ_AT(fh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1; dt=rbuf
+         if(myid==0) write(*,*) rbuf,dt
          offset=lh*iolen ! ?
          CALL MPI_FILE_READ_AT(fh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1; dts=rbuf
          offset=lh*iolen ! ?
@@ -469,136 +476,6 @@ contains
 
      if(myid==0) CALL MPI_FILE_DELETE(cgrid,info,ierr)
   end subroutine rdGrid
-
-!====================================================================================
-!===== POST-PROCESSING & GENERATING TECPLOT DATA FILE
-!====================================================================================
- subroutine post(average)
- use problemcase, only: finalout,ngridv
- logical, intent(in) :: average
- 
-  if(myid==mo(mb)) then
-     if (ispost) then
-     open(9,file=ctecout); close(9,status='delete')
-     else
-     open(9,file=coutput); close(9,status='delete')
-     end if
-  end if
-     call MPI_BARRIER(icom,ierr)
-     if (ispost) then
-     open(9,file=ctecout,access='stream',shared)
-     else
-     open(9,file=coutput,access='stream',shared)
-     end if
-     lh=0
-  if(myid==mo(mb)) then
-     write(9,pos=4*lh+1) '#!TDV112'; lh=lh+2
-     write(9,pos=4*lh+1) 1; lh=lh+1 ! Header Section
-     write(9,pos=4*lh+1) 0; lh=lh+1 ! File Type
-     cinput='title'; call strio(9,lh,cinput) ! File Title
-     write(9,pos=4*lh+1) int4(nwrec); lh=lh+1 ! Number of Variables
-     cinput='x'; call strio(9,lh,cinput)
-     cinput='y'; call strio(9,lh,cinput)
-     cinput='z'; call strio(9,lh,cinput)
-     if (ngridv==1) then
-        cinput='xix'; call strio(9,lh,cinput)
-        cinput='xiy'; call strio(9,lh,cinput)
-        cinput='xiz'; call strio(9,lh,cinput)
-        cinput='etax'; call strio(9,lh,cinput)
-        cinput='etay'; call strio(9,lh,cinput)
-        cinput='etaz'; call strio(9,lh,cinput)
-        cinput='zetax'; call strio(9,lh,cinput)
-        cinput='zetay'; call strio(9,lh,cinput)
-        cinput='zetaz'; call strio(9,lh,cinput)
-     end if
-  do n=0,ndata
-     no(2)=n/100; no(1)=mod(n,100)/10; no(0)=mod(n,10); cno=achar(no+48)
-     cinput='r'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
-     cinput='u'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
-     cinput='v'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
-     cinput='w'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
-     cinput='p'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
-  end do
-     if (average) then
-     cinput='r'; call strio(9,lh,cinput)
-     cinput='u'; call strio(9,lh,cinput)
-     cinput='v'; call strio(9,lh,cinput)
-     cinput='w'; call strio(9,lh,cinput)
-     cinput='p'; call strio(9,lh,cinput)
-     end if
-  !do n=0,ndata
-  !   no(2)=n/100; no(1)=mod(n,100)/10; no(0)=mod(n,10); cno=achar(no+48)
-  !   cinput='Q'//cno(2)//cno(1)//cno(0); call strio(9,lh,cinput)
-  !end do
-     write(9,pos=4*lh+1) 299.0; lh=lh+1 ! Zone Marker
-     cinput=czone; call strio(9,lh,cinput)
-     write(9,pos=4*lh+1) -1; lh=lh+1 ! Parent Zone
-     write(9,pos=4*lh+1) -2; lh=lh+1 ! Strand ID
-     write(9,pos=4*lh+1) dble(0.0); lh=lh+2 ! Solution Time (Double)
-     write(9,pos=4*lh+1) -1; lh=lh+1 ! (Not used. Set to -1.)
-     write(9,pos=4*lh+1) 0; lh=lh+1 ! Zone Type
-     write(9,pos=4*lh+1) 0; lh=lh+1 ! Specify Var Location
-     write(9,pos=4*lh+1) 0; lh=lh+1 ! Raw Local 1-to-1 Face Neighbours Suppliled
-     write(9,pos=4*lh+1) 0; lh=lh+1 ! Number of Miscellaneous Face Neighbour Connections
-     write(9,pos=4*lh+1) int4(lximb(mb)+1); lh=lh+1 ! IMax
-     write(9,pos=4*lh+1) int4(letmb(mb)+1); lh=lh+1 ! JMax
-     write(9,pos=4*lh+1) int4(lzemb(mb)+1); lh=lh+1 ! KMax
-     write(9,pos=4*lh+1) 0; lh=lh+1 ! No Auxillary Data Pairs
-     write(9,pos=4*lh+1) 357.0; lh=lh+1 ! End of Header Marker
-     write(9,pos=4*lh+1) 299.0; lh=lh+1 ! Zone Marker
-  do n=1,nwrec
-     write(9,pos=4*lh+1) 1; lh=lh+1 ! 1 = Float / 2 = Double
-  end do
-     write(9,pos=4*lh+1) 0; lh=lh+1 ! No Passive Variables
-     write(9,pos=4*lh+1) 0; lh=lh+1 ! No Variable Sharing
-     write(9,pos=4*lh+1) -1; lh=lh+1 ! Zero Based Zone Number to Share
-  do n=1,nwrec
-     lh=lh+2 ! Minimum Value (Double) of Variables (to be filled)
-     lh=lh+2 ! Maximum Value (Double) of Variables (to be filled)
-  end do
-     lhmb(mb)=lh
-  end if
- 
-  ! rpt- COMPUTE MAX AND MIN
-  do mm=0,mbk
-     call MPI_BCAST(lhmb(mm),1,MPI_INTEGER,mo(mm),icom,ierr)
-  end do
-     ns=1; ne=nwrec; allocate(varmin(ns:ne),varmax(ns:ne))
-     lp=lpos(myid)+lhmb(mb)
-  do n=ns,ne; lq=(n-1)*ltomb
-     if (ispost) then
-     call postread(n)   
-     else
-     read(0,rec=n) varr(:)
-     end if
-  do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-     write(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
-  end do; end do
-     varmin(n)=minval(varr(:)); varmax(n)=maxval(varr(:))
-  end do
-     if (ispost) then
-        close(8)
-     else
-        if (nto==0) then
-        close(0,status='delete')
-        else
-        close(0)
-        end if
-     end if
-  do n=ns,ne
-     res=varmin(n); call MPI_ALLREDUCE(res,fctr,1,MPI_REAL8,MPI_MIN,icom,ierr); varmin(n)=fctr
-     res=varmax(n); call MPI_ALLREDUCE(res,fctr,1,MPI_REAL8,MPI_MAX,icom,ierr); varmax(n)=fctr
-  end do
-  if(myid==mo(mb)) then
-     l=0; lq=4*(nwrec)
-  do n=ns,ne
-     write(9,pos=4*(lp-lq+l)+1) dble(varmin(n)); l=l+2 ! 8-Bytes "Stream"
-     write(9,pos=4*(lp-lq+l)+1) dble(varmax(n)); l=l+2 ! 8-Bytes "Stream"
-  end do
-  end if
-     close(9)
- 
- end subroutine post
 
 !====================================================================================
 ! ====SET UP FORCING PARAMETERS
@@ -746,114 +623,38 @@ contains
  implicit none
     
     integer(k4), intent(in) :: ele,nvar
-    integer(k4) :: bct,bcb,bcw,m,ll,dir,mp
+    integer(k4) :: bct,bcb,bcw,m,ll,dir
     real(k8) :: dynp,clp,clv,tcl
-    logical :: flag
  
-    clp=0;clv=0;flag=.false.;tcl=0;
+    clp=0;clv=0;;tcl=0;
 
-    ! Find block in contact with wall
-    bct=nbce(2); bcb=nbcs(2); bcw=20+5*nviscous
-    if (bcb==bcw) then
-       mp = mo(mb)
-       flag=.true.
-    elseif (bct==bcw) then
-    mp = mo(mb) + npc(mb,1)*(npc(mb,2)-1)
-    flag=.true.
-    end if
- 
- 
     do dir = 1, 2
     clp=0;clv=0;tcl=0;
     if (ispost.and.(dir==1)) call gettw(nvar)
-        if (wflag) then
-          ! Compute Dynamic pressure
-          dynp=two/(amachoo*amachoo*span)
-             do ll = 0, lcwall; l=lwall(ll)
-               clp=clp+(p(l)*wnor(ll,dir)*area(ll))
-               if (nviscous==1) then
-                if(.not.allocated(tw)) allocate(tw(0:lcwall,3))
-                selectcase(dir)
-                case(1)
-                  tw(ll,1)=qa(l,1)*(txx(l)*wnor(ll,1)+txy(l)*wnor(ll,2)+tzx(l)*wnor(ll,3))
-                case(2)
-                  tw(ll,2)=qa(l,1)*(txy(l)*wnor(ll,1)+tyy(l)*wnor(ll,2)+tyz(l)*wnor(ll,3))
-                end select
-               clv=clv+tw(ll,dir)*area(ll)
-               end if
-             end do
-             tcl=(clp+clv)*dynp
-          end if
+    if (wflag) then
+      ! Compute Dynamic pressure
+      dynp=two/(amachoo*amachoo*span)
+      do ll = 0, lcwall; l=lwall(ll)
+        clp=clp+(p(l)*wnor(ll,dir)*area(ll))
+      end do
+      if (nviscous==1) then
+        if ((.not.ispost).and.(dir==1)) then
+           if(.not.allocated(tw)) allocate(tw(0:lcwall,3))
+           do ll = 0, lcwall; l=lwall(ll)
+              tw(ll,1)=qa(l,1)*(txx(l)*wnor(ll,1)+txy(l)*wnor(ll,2)+tzx(l)*wnor(ll,3))
+              tw(ll,2)=qa(l,1)*(txy(l)*wnor(ll,1)+tyy(l)*wnor(ll,2)+tyz(l)*wnor(ll,3))
+           end do
+        end if
+        do ll = 0, lcwall; l=lwall(ll)
+          clv=clv+tw(ll,dir)*area(ll)
+        end do
+      end if
+      tcl=(clp+clv)*dynp
+    end if
     if(wflag.or.(myid==0)) CALL MPI_REDUCE(tcl,cl(ele,dir),1,MPI_REAL8,MPI_SUM,0,wcom,ierr)
     end do
  
  end subroutine clpost
-
-!====================================================================================
-!=====COMPUTE WALL SHEAR STRESS AT RUNTIME
-!====================================================================================
- subroutine gettwrun
- use subroutines3d, only: mpigo,deriv
- implicit none
- integer(k4) :: nn,ll
-
-
-   if (nviscous==1) then
-     de(:,1)=1/qa(:,1)
-     de(:,2)=qa(:,2)*de(:,1)
-     de(:,3)=qa(:,3)*de(:,1)
-     de(:,4)=qa(:,4)*de(:,1)
-     de(:,5)=gam*p(:)*de(:,1)
-     ss(:,1)=srefp1dre*de(:,5)**1.5_k8/(de(:,5)+srefoo)
-     de(:,1)=ss(:,1)
- 
-     rr(:,1)=de(:,2)
-     m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
-     txx(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
-     hzz(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
-     tzx(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
-
-     rr(:,1)=de(:,3)
-     m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
-     txy(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
-     tyy(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
-     hxx(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
-
-     rr(:,1)=de(:,4)
-     m=4; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
-     hyy(:)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
-     tyz(:)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
-     tzz(:)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
-
-     rr(:,1)=de(:,5)
-     m=5; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
-     ss(:,1)=xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3)
-     ss(:,2)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
-     ss(:,3)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
-
-     fctr=2.0_k8/3
-     rr(:,1)=-de(:,1)*yaco(:)
-     rr(:,2)=gamm1prndtli*rr(:,1)
-     de(:,5)=fctr*(txx(:)+tyy(:)+tzz(:))
-
-     txx(:)=rr(:,1)*(2*txx(:)-de(:,5))
-     tyy(:)=rr(:,1)*(2*tyy(:)-de(:,5))
-     tzz(:)=rr(:,1)*(2*tzz(:)-de(:,5))
-     txy(:)=rr(:,1)*(txy(:)+hzz(:))
-     tyz(:)=rr(:,1)*(tyz(:)+hxx(:))
-     tzx(:)=rr(:,1)*(tzx(:)+hyy(:))
- 
-      if (wflag) then
-      if(.not.allocated(tw)) allocate(tw(0:lcwall,3))
-      do ll = 0, lcwall; l=lwall(ll)
-        tw(ll,1)=qa(l,1)*(txx(l)*wnor(ll,1)+txy(l)*wnor(ll,2)+tzx(l)*wnor(ll,3))
-        tw(ll,2)=qa(l,1)*(txy(l)*wnor(ll,1)+tyy(l)*wnor(ll,2)+tyz(l)*wnor(ll,3))
-        tw(ll,3)=qa(l,1)*(tzx(l)*wnor(ll,1)+tyz(l)*wnor(ll,2)+tzz(l)*wnor(ll,3))
-      end do
-      end if
-   end if
-    
- end subroutine gettwrun
 
 !====================================================================================
 !=====COMPUTE WALL SHEAR STRESS FROM WRITTEN DATA
@@ -866,20 +667,7 @@ contains
 
     if (wflag) then
     ! READ VARIABLES
-       selectcase(output)
-       case(0)
-       nread=ngrec+(totVar*nvar)
-       do nn = 1, 5
-        if (tecplot) then
-        nread=nread+1; call tpostread(nread,lsta)
-        else
-        nread=nread+1; call postread(nread)
-        end if
-        qo(:,nn)=varr(:)
-       end do
-       case(1)
-          call p3dread(gsflag=0,nout=nvar)
-       end select
+       call p3dread(gsflag=0,nout=nvar)
        p(:)=qo(:,5)
     if (nviscous==1) then
        de(:,1)=1/qo(:,1)
@@ -928,33 +716,6 @@ contains
     end if
     
  end subroutine gettw
-
-!====================================================================================
-! ====READ DATA FOR POST-PROCESSING FROM TECPLOT FILE
-!====================================================================================
- subroutine tpostread(num,lsta)
- implicit none
- integer(k4), intent (in) :: num,lsta
-  lp=lpos(myid)+lsta
-     lq=(num-1)*ltomb
-     do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-        read(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi)
-     end do; end do
- end subroutine tpostread
-
-!====================================================================================
-! ====READ DATA FOR POST-PROCESSING
-!====================================================================================
- subroutine postread(num)
- implicit none
- integer(k4), intent (in) :: num
- integer(k4) :: lp,lq,l,k,j
-  lp=lpos(myid)
-     lq=(num-1)*ltomb
-     do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-        read(8,pos=k8*(lp+lq+lio(j,k))+1) varr(l:l+lxi)
-     end do; end do
- end subroutine postread
 
 !====================================================================================
 !=====READ RESULTS PLOT3D

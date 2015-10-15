@@ -172,6 +172,8 @@
  integer :: q4arr,q4fh,qarr,qfh
  logical :: qflag=.false.,gflag=.false.,q4flag=.false.
  logical :: wrsfg=.false.,wrrfg=.false.
+ real(k8), dimension(:,:), allocatable :: q8
+ real(k4), dimension(:,:), allocatable :: fout,xyz4,q4
 !===== VARIABLES FOR WALL OPERATIONS BY RPT
  integer(k4) :: lcwall
  integer(k4), dimension(:), allocatable ::lwall
@@ -186,10 +188,8 @@
  integer(k4) :: lsta
  logical :: tecplot,ispost
  real(k8), dimension(:,:), allocatable :: wplus
- real(k4), dimension(:,:), allocatable :: fout,xyz4,q4
  real(k8), dimension(:), allocatable :: wvarr
  character(18),dimension(:),allocatable :: ofiles 
-
  real(k8), dimension(2,2) :: cl
 
 !===== ADITIONAL INPUTO VARIABLES BY RPT
