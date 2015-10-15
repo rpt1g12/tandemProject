@@ -406,9 +406,9 @@ contains
      real(k8) :: rbuf
      integer(k4) :: ibuf
 
-      if (myid==0) then
-         write(*,"('Reading restart file..')") 
- end if
+     if (myid==0) then
+        write(*,"('Reading restart file..')") 
+     end if
           
      wrlen=5*(lmx+1)
      amode=MPI_MODE_RDONLY
@@ -426,13 +426,10 @@ contains
 
          offset=lh*iolen ! Iteration Number
          CALL MPI_FILE_READ_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1; n=ibuf
-         if(myid==0) write(*,*) ibuf,n
          offset=lh*iolen ! 10*(n/10)+1
          CALL MPI_FILE_READ_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1; ndt=ibuf
-         if(myid==0) write(*,*) ibuf,ndt
          offset=lh*iolen ! Timestep
          CALL MPI_FILE_READ_AT(fh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1; dt=rbuf
-         if(myid==0) write(*,*) rbuf,dt
          offset=lh*iolen ! ?
          CALL MPI_FILE_READ_AT(fh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1; dts=rbuf
          offset=lh*iolen ! ?
