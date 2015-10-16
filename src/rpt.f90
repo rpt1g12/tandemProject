@@ -471,7 +471,7 @@ contains
      CALL MPI_FILE_CLOSE(fh,ierr)
      CALL MPI_TYPE_FREE(garr,ierr)
 
-     if(myid==0) CALL MPI_FILE_DELETE(cgrid,info,ierr)
+     if(myid==mo(mb)) CALL MPI_FILE_DELETE(cgrid,info,ierr)
   end subroutine rdGrid
 
 !====================================================================================
