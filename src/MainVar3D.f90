@@ -181,7 +181,7 @@
  real(k8), dimension(:,:), allocatable ::wnor,wtan,tw
  logical :: wflag
  real(k8), dimension(:,:), allocatable,target :: xyz
- integer(k4) :: wcom
+ integer(k4) :: wcom,bwcom
 
 !===== POST-PROCESSING VARIABLES BY RPT
 
@@ -189,8 +189,16 @@
  logical :: tecplot,ispost
  real(k8), dimension(:,:), allocatable :: wplus
  real(k8), dimension(:), allocatable :: wvarr
- character(18),dimension(:),allocatable :: ofiles 
+ character(:),dimension(:),allocatable :: ofiles 
  real(k8), dimension(2,2) :: cl
+
+ integer :: fparallel,fmblk
+ integer :: favg,fwavg,favgu,fcoef,fcf,fcp,floc,fwplus,fqcrit,fwss,fcurl,frms,fwrms
+ integer :: fstrip
+ real(k8),dimension(:),allocatable :: delt
+ real(k8), dimension (:,:), allocatable :: svarr
+! real(k8), dimension (:,:,:,:), allocatable :: qxyz
+ logical :: fflag
 
 !===== ADITIONAL INPUTO VARIABLES BY RPT
  integer(k4)  :: nto,iwrec

@@ -11,8 +11,6 @@ use problemcase
 use mpi
 use rpt
 
-integer :: favg,fwavg,favgu,fcoef,fcf,fcp,floc,fwplus,fqcrit,fwss,fcurl,frms,fwrms
-
 contains
 
 !====================================================================================
@@ -46,6 +44,7 @@ contains
 
 !===== INPUT PARAMETERS POSTPROCESS
     open(9,file='ipost.dat',shared)
+    read(9,*) cinput,fparallel,fmblk
     read(9,*) cinput,favg,fwavg,favgu
     read(9,*) cinput,fcoef,fcf,fcp
     read(9,*) cinput,floc
@@ -53,6 +52,7 @@ contains
     read(9,*) cinput,fqcrit,fwss
     read(9,*) cinput,fcurl
     read(9,*) cinput,frms,fwrms
+    read(9,*) cinput,fstrip
     close(9)
 
     cinput=cinput; fltk=pi*fltk; fltkbc=pi*fltkbc
@@ -69,7 +69,8 @@ contains
     allocate(lximb(0:mbk),letmb(0:mbk),lzemb(0:mbk),lhmb(0:mbk),mo(0:mbk),npc(0:mbk,3))
 
     call inputext
-    npc(:,:)=1
+    if(fparallel==0) npc(:,:)=1
+
 !===== DOMAIN DECOMPOSITION & BOUNDARY INFORMATION
 
 
@@ -489,13 +490,52 @@ contains
  end subroutine wavg
  
 !====================================================================================
+!===== SUBROUTINE FOR CALCULATING VORTICITY
+!====================================================================================
+ subroutine getCurl(nvar)
+
+        implicit none
+        integer, intent(in) :: nvar
+
+        !call rdP3dS(nvar,fmblk)
+        !p(:)=qo(:,5)
+        de(:,1:3)=0
+
+        rr(:,1)=qo(:,2)
+        m=1; call mpigo(ntdrv,nrone,n45no,m);
+        call deriv(3,1); call deriv(2,1); call deriv(1,1)
+        de(:,2)=de(:,2)+rr(:,1)*xim(:,3)+rr(:,2)*etm(:,3)+rr(:,3)*zem(:,3)
+        de(:,3)=de(:,3)-rr(:,1)*xim(:,2)-rr(:,2)*etm(:,2)-rr(:,3)*zem(:,2)
+
+        rr(:,1)=qo(:,3)
+        m=2; call mpigo(ntdrv,nrone,n45no,m);
+        call deriv(3,1); call deriv(2,1); call deriv(1,1)
+        de(:,3)=de(:,3)+rr(:,1)*xim(:,1)+rr(:,2)*etm(:,1)+rr(:,3)*zem(:,1)
+        de(:,1)=de(:,1)-rr(:,1)*xim(:,3)-rr(:,2)*etm(:,3)-rr(:,3)*zem(:,3)
+
+        rr(:,1)=qo(:,4)
+        m=3; call mpigo(ntdrv,nrone,n45no,m);
+        call deriv(3,1); call deriv(2,1); call deriv(1,1)
+        de(:,1)=de(:,1)+rr(:,1)*xim(:,2)+rr(:,2)*etm(:,2)+rr(:,3)*zem(:,2)
+        de(:,2)=de(:,2)-rr(:,1)*xim(:,1)-rr(:,2)*etm(:,1)-rr(:,3)*zem(:,1)
+
+        qo(:,2)=de(:,1)*yaco(:);
+        qo(:,3)=de(:,2)*yaco(:);
+        qo(:,4)=de(:,3)*yaco(:)
+        !ra0=aoa*pi/180;ra1=cos(ra0);ra2=sin(ra0)
+        !ss(:,1)=de(:,1)!*ra1+de(:,2)*ra2
+        !ss(:,2)=de(:,2)!*ra1-de(:,1)*ra2
+        !ss(:,3)=de(:,3)
+
+ end subroutine getCurl
+!====================================================================================
 !=====COMPUTE Q-CRITERION
 !====================================================================================
  subroutine qcriterion(nvar)
     implicit none
     integer, intent(in) :: nvar
 
-    call p3dread(0,nvar)
+    call rdP3dS(nvar,fmblk)
     p(:)=qo(:,5)
     if (nviscous==1) then
      de(:,2)=qo(:,2)
@@ -520,7 +560,7 @@ contains
      tyz(:)=yaco(:)*(xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3))
      tzz(:)=yaco(:)*(xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3))
 
-     varr(:)=2*(half*(hzz(:)-txy(:)))**2 + 2*(half*(tzx(:)-tzz(:)))**2 + &
+     qo(:,1)=2*(half*(hzz(:)-txy(:)))**2 + 2*(half*(tzx(:)-tzz(:)))**2 + &
      2*(half*(hxx(:)-tyz(:)))**2 - txx(:)**2 - tyy(:)**2 - tzz(:)**2 -   &
      2*(half*(hzz(:)+txy(:)))**2 - 2*(half*(tzx(:)+hyy(:)))**2 -         &
      2*(half*(hxx(:)+tyz(:)))**2
@@ -555,7 +595,8 @@ contains
     implicit none
     integer, intent(in) :: nvar
 
-    call p3dread(0,nvar)
+    call rdP3dS(nvar,fmblk)
+    !call p3dread(0,nvar)
     p(:)=qo(:,5)
     
  end subroutine fillqo
@@ -563,44 +604,101 @@ contains
 !====================================================================================
 !=====WRITE LIST OF SOLUTION FILES
 !====================================================================================
-subroutine flst()
+subroutine flst(mblkin)
    implicit none
-   character(18) :: ofile
+   integer, intent(in),optional :: mblkin
    character(10)  :: ctime
-   integer :: lmt,stat,i
+   character(3) :: cout
+   character(*), parameter :: cs1='ls out/*'
+   character(:), allocatable :: cflst,rcout,ofile
+   integer :: lmt,stat,i,mblk,foper,wrcom,err
    real(4) :: res
 
-   if (myid==0) then
-      call system('rm out/filelist')
-      call system('ls out/*.q -1 > out/filelist')
+   if(present(mblkin)) then
+      mblk=mblkin
+   else
+      mblk=1
+   end if
+
+   selectcase(mblk);
+   case(1)
+      cout=''
+      foper=0
+      wrcom=icom
+   case(0)
+      write(cout,"(a,i2)") 'b',mb
+      do i = 0, 1
+         l=scan(cout,' ')
+         if (l==0) exit
+         cout(l:l)='0'
+      end do
+      foper=mo(mb)
+      wrcom=bcom
+   case default
+      if(myid==0) write(*,*) 'Wrong multiblock option! Aborting...'
+      CALL MPI_ABORT(icom,err,ierr)
+   end select
+   l=len(trim(cout))
+   allocate(character(l) :: rcout)
+   rcout=trim(cout)
+
+   if (myid==foper) then
+      write(*,*) 'Delete previous filelist '//rcout
+      open(90,file='out/filelist'//rcout); close(90,status='delete')
+      call system('ls out/*'//rcout//'.q -1 > out/filelist'//rcout)
    end if
    CALL MPI_BARRIER(icom,ierr)
-   open(90,file='out/filelist',shared)
-   lmt=-2
-   do while (stat.ge.0)
-      read(90,*,IOSTAT=stat) 
-      lmt=lmt+1
-   end do
-   close(90)
-   ndata=lmt
-
-   allocate(ofiles(0:lmt),times(0:ndata))
-
-   open(90,file='out/filelist',shared)
-   do i = 0, lmt
-      read(90,"(18a)") ofile
-      ofiles(i)=ofile
-      ctime=(ofile(9:16)//'e0')
-      read(ctime,*) times(i)
-   end do
-   close(90)
+   if (myid==foper) then
+      open(90,file='out/filelist'//rcout)
+      inquire(unit=90,size=l)
+      if (l.le.1) then
+         close(90,status='delete')
+      else
+         close(90)
+      end if   
+   end if
+   CALL MPI_BARRIER(icom,ierr)
    
-   !do i = 0, lmt
-   !   open(91,file=ofiles(i),access='stream',shared)
-   !       lh=1+(mbk+1)*3+3
-   !       read(91,pos=4*lh+1) res; times(i)=res
-   !   close(91)
-   !end do
+   inquire(file='out/filelist'//rcout,exist=fflag)
+   if (fflag) then
+      open(90,file='out/filelist'//rcout,shared)
+      lmt=-2
+      do while (stat.ge.0)
+         read(90,*,IOSTAT=stat) 
+         lmt=lmt+1
+      end do
+      close(90)
+      ndata=lmt
+
+      l=len('out/sotT')+8+len(trim(rcout))+len('.q')
+      allocate(character(l) :: ofiles(0:lmt))
+      allocate(character(l) :: ofile)
+      allocate(times(0:ndata))
+
+      open(90,file='out/filelist'//rcout,shared)
+      do i = 0, lmt
+         read(90,"(a)") ofile
+         ofiles(i)=ofile
+         ctime=(ofile(9:16)//'e0')
+         read(ctime,*) times(i)
+      end do
+      close(90)
+      
+      !do i = 0, lmt
+      !   open(91,file=ofiles(i),access='stream',shared)
+      !       lh=1+(mbk+1)*3+3
+      !       read(91,pos=4*lh+1) res; times(i)=res
+      !   close(91)
+      !end do
+   else
+      l=1
+      ndata=0
+      allocate(character(l) :: ofiles(0:ndata))
+      allocate(character(l) :: ofile)
+      allocate(times(0:ndata))
+      times=0
+      ndata=-1
+   end if
 
 end subroutine flst
 
@@ -609,30 +707,99 @@ end subroutine flst
 !====================================================================================
  subroutine p3daverage
     implicit none
-    integer :: totVar
+    integer :: foper
     real(k8),dimension(:),allocatable :: delt
+    character(3) :: cout
 
-    if (myid==0) then
-       write(*,"('Total amout of data: ',i3)") ndata
+    selectcase(fmblk)
+    case(0)
+       write(cout,"(a,i2)") 'b',mb
+       do i = 0, 1
+          l=scan(cout,' ')
+          if (l==0) exit
+          cout(l:l)='0'
+       end do
+       foper=mo(mb)
+    case(1)
+       cout=''
+       foper=0
+    end select
+
+    if (fflag) then
+       if (myid==foper) then
+          write(*,"('Total amout of data: ',i3,a)") ndata,cout
+       end if
+       ! CONSTRUCT THE COEFFICIENTS ARRAY
+          ns=0; ne=ndata; allocate(delt(ns:ne))
+          fctr=half/(times(ne)-times(ns))
+          delt(ns)=fctr*(times(ns+1)-times(ns)); 
+          delt(ne)=fctr*(times(ne)-times(ne-1))
+       do n=ns+1,ne-1
+          delt(n)=fctr*(times(n+1)-times(n-1))
+       end do
+          qa(:,:)=0
+       do n=0,ndata
+       if (myid==foper) then
+          write(*,"(f5.1,'% Averaged',a)") real(n)*100.0e0/real(ndata),cout
+       end if
+          call rdP3dS(n,fmblk)
+          !call p3dread(gsflag=0,nout=n)
+          qa(:,:)=qa(:,:)+delt(n)*qo(:,:)
+       end do
     end if
-    ! CONSTRUCT THE COEFFICIENTS ARRAY
-       ns=0; ne=ndata; allocate(delt(ns:ne))
-       fctr=half/(times(ne)-times(ns))
-       delt(ns)=fctr*(times(ns+1)-times(ns)); 
-       delt(ne)=fctr*(times(ne)-times(ne-1))
-    do n=ns+1,ne-1
-       delt(n)=fctr*(times(n+1)-times(n-1))
-    end do
-       qa(:,:)=0
-    do n=0,ndata
-    if (myid==0) then
-       write(*,"(f5.1,'% Averaged')") real(n)*100.0e0/real(ndata)
-    end if
-       call p3dread(gsflag=0,nout=n)
-       qa(:,:)=qa(:,:)+delt(n)*qo(:,:)
-    end do
  end subroutine p3daverage
 
+!====================================================================================
+!=====RMS OF RESULTS IN TIME PLOT3D
+!====================================================================================
+ subroutine p3drms
+    implicit none
+    integer :: foper
+    real(k8),dimension(:),allocatable :: delt
+    character(3) :: cout
+
+    selectcase(fmblk)
+    case(0)
+       write(cout,"(a,i2)") 'b',mb
+       do i = 0, 1
+          l=scan(cout,' ')
+          if (l==0) exit
+          cout(l:l)='0'
+       end do
+       foper=mo(mb)
+    case(1)
+       cout=''
+       foper=0
+    end select
+
+    if (fflag) then
+       if (myid==foper) then
+          write(*,"('Total amout of data: ',i3,a)") ndata,cout
+       end if
+       ! CONSTRUCT THE COEFFICIENTS ARRAY
+          ns=0; ne=ndata; allocate(delt(ns:ne))
+          fctr=half/(times(ne)-times(ns))
+          delt(ns)=fctr*(times(ns+1)-times(ns)); 
+          delt(ne)=fctr*(times(ne)-times(ne-1))
+       do n=ns+1,ne-1
+          delt(n)=fctr*(times(n+1)-times(n-1))
+       end do
+          call rdP3dS(ndata+1,fmblk)
+          !call p3dread(gsflag=0,nout=ndata+1)
+          qa(:,:)=qo(:,:)
+          qb(:,:)=0
+       do n=0,ndata
+          if (myid==foper) then
+             write(*,"(f5.1,'% Done',a)") real(n)*100.0e0/real(ndata),cout
+          end if
+          !call p3dread(gsflag=0,nout=n)
+          call rdP3dS(n,fmblk)
+          de(:,:)=(qo(:,:)-qa(:,:))
+          qb(:,:)=qb(:,:)+delt(n)*de(:,:)*de(:,:)
+       end do
+       qb(:,:)=sqrt(qb(:,:))
+    end if
+ end subroutine p3drms
 !====================================================================================
 !=====WRITE AVERAGE RESULTS IN TIME PLOT3D
 !====================================================================================
@@ -683,35 +850,6 @@ end subroutine flst
         end if
  end subroutine p3dwaverage
 
-!====================================================================================
-!=====RMS OF RESULTS IN TIME PLOT3D
-!====================================================================================
- subroutine p3drms
-    implicit none
-    integer :: totVar
-    real(k8),dimension(:),allocatable :: delt
-
-    if (myid==0) then
-       write(*,"('Total amout of data: ',i3)") ndata
-    end if
-    ! CONSTRUCT THE COEFFICIENTS ARRAY
-       ns=0; ne=ndata; allocate(delt(ns:ne))
-       fctr=half/(times(ne)-times(ns))
-       delt(ns)=fctr*(times(ns+1)-times(ns)); 
-       delt(ne)=fctr*(times(ne)-times(ne-1))
-    do n=ns+1,ne-1
-       delt(n)=fctr*(times(n+1)-times(n-1))
-    end do
-       qa(:,:)=0
-    do n=0,ndata
-    if (myid==0) then
-       write(*,"(f5.1,'% done')") real(n)*100.0e0/real(ndata)
-    end if
-       call p3dread(gsflag=0,nout=n)
-       qa(:,:)=qa(:,:)+delt(n)*qo(:,:)*qo(:,:)
-    end do
-    qa(:,:)=sqrt(qa(:,:))
- end subroutine p3drms
 
 !====================================================================================
 !=====WRITE RMS RESULTS IN TIME PLOT3D
@@ -749,8 +887,8 @@ end subroutine flst
         ns=1; ne=5
         do n=ns,ne; lq=(n-ns)*ltomb
            selectcase(n)
-           case(1,5); varr(:)=qa(:,n)
-           case(2,3,4); varr(:)=qa(:,n)!*qa(:,1)
+           case(1,5); varr(:)=qb(:,n)
+           case(2,3,4); varr(:)=qb(:,n)!*qa(:,1)
            end select
         do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
           write(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
@@ -780,6 +918,8 @@ end subroutine flst
 
    if (nout==(ndata+1)) then
       cout='AVG'
+   elseif (nout==(ndata+2)) then
+      cout='RMS'
    end if
 
    if (myid==0) then
@@ -816,6 +956,174 @@ end subroutine flst
       write(*,"(a,' funtion written!')") trim(fname)//cout
    end if
  end subroutine wffile
+
+!====================================================================================
+!=====  PLOT3D Q FILES WRITE POST
+!====================================================================================
+  subroutine wrP3dP(nout,mblkin,cname)
+     integer, intent(in),optional :: mblkin
+     integer, intent(in) :: nout
+     character(*), intent(in),optional :: cname
+     character(*),parameter :: fname='sol'
+     character(:),allocatable :: lfname
+     character(3) :: cout,ncout
+     character(8) :: ctime
+     character(len=*),parameter :: cext='.qa',cpath='out/'
+     integer :: n,l,i,lh,iolen,foper,wrcom,nbk,err,mblk
+     integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
+     integer :: amode
+     integer, dimension (4) :: gsizes,lsizes,starts
+     integer(k4) :: ibuf
+     real   (k4) :: rbuf
+
+        ! rpt- Set default option to Multiblock
+        if(present(mblkin)) then
+           mblk=mblkin
+        else
+           mblk=1
+        end if
+
+        selectcase(mblk);
+        case(1)
+           cout=''
+           foper=0
+           wrcom=icom
+           nbk=mbk
+        case(0)
+           write(cout,"(a,i2)") 'b',mb
+           do i = 0, 1
+              l=scan(cout,' ')
+              if (l==0) exit
+              cout(l:l)='0'
+           end do
+           foper=mo(mb)
+           wrcom=bcom
+           nbk=0
+        case default
+           if(myid==0) write(*,*) 'Wrong multiblock option! Aborting...'
+           CALL MPI_ABORT(icom,err,ierr)
+        end select
+
+
+        ! rpt- Set default option to Multiblock
+        if(present(cname)) then
+           write(ncout,"(i3)") nout
+           do i = 0, 2
+              l=scan(ncout,' ')
+              if (l==0) exit
+              ncout(l:l)='0'
+           end do
+           ctime=trim(cname)//ncout
+        else
+           if (nout.le.ndata) then
+              write(ctime,"(f8.4)") times(nout)
+              do i = 0, 8
+                 l=scan(ctime,' ')
+                 if (l==0) exit
+                 ctime(l:l)='0'
+              end do
+           else if (nout==ndata+1) then
+              ctime='A'
+           else if (nout==ndata+2) then
+              ctime='RMS'
+           end if
+        end if
+
+        l=len(cpath)+len(fname)+len(trim(adjustl(ctime)))+len(trim(cout))+len(cext)
+        allocate(character(len=l) :: lfname)
+        lfname=cpath//trim(fname)//trim(adjustl(ctime))//trim(cout)//cext
+        if(myid==foper) CALL MPI_FILE_DELETE(lfname,info,ierr)
+
+        wrlen=5*(lmx+1)
+        if(.not.allocated(q4)) allocate(q4(0:lmx,5))
+
+           q4(:,:)=qo(:,:)
+
+     if (fflag) then
+        amode=IOR(MPI_MODE_WRONLY,MPI_MODE_CREATE)
+
+        CALL MPI_TYPE_EXTENT(MPI_INTEGER4,iolen,ierr)
+        if (.not.q4flag) then
+           gsizes(:)=(/mbijkl(:),5/)
+           lsizes(:)=(/mpijkl(:),5/)
+           starts(:)=(/mpijks(:),0/)
+           CALL MPI_TYPE_CREATE_SUBARRAY(4,gsizes,lsizes,starts,&
+                           MPI_ORDER_FORTRAN,MPI_REAL4,q4arr,ierr) 
+           CALL MPI_TYPE_COMMIT(q4arr,ierr)
+           q4flag=.true.
+        end if
+
+        CALL MPI_FILE_OPEN(wrcom,lfname ,amode ,info ,q4fh,ierr)
+
+       lh=0
+        if (myid==foper) then
+         ibuf=nbk+1; offset=lh*iolen          ! Number of blocks
+         CALL MPI_FILE_WRITE_AT(q4fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+         do l = 0, nbk
+            mm=l+(1-mblk)*mb
+            ibuf=lximb(mm)+1; offset=lh*iolen ! IMax
+            CALL MPI_FILE_WRITE_AT(q4fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+            ibuf=letmb(mm)+1; offset=lh*iolen ! JMax
+            CALL MPI_FILE_WRITE_AT(q4fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+            ibuf=lzemb(mm)+1; offset=lh*iolen ! KMax
+            CALL MPI_FILE_WRITE_AT(q4fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+         end do
+        end if
+        l=(1-mblk)*mb
+        lhmb(l)=1+(nbk+1)*3
+        do mm = 0, nbk-1
+           lhmb(mm+1)=lhmb(mm)+4+5*(lximb(mm)+1)*(letmb(mm)+1)*(lzemb(mm)+1)
+        end do
+        if (myid==mo(mb)) then
+           lh=lhmb(mb)
+            rbuf=amachoo; offset=lh*iolen ! Mach Number
+            CALL MPI_FILE_WRITE_AT(q4fh,offset,rbuf,1,MPI_REAL4,ista,ierr); lh=lh+1
+            rbuf=aoa    ; offset=lh*iolen ! AoA
+            CALL MPI_FILE_WRITE_AT(q4fh,offset,rbuf,1,MPI_REAL4,ista,ierr); lh=lh+1
+            rbuf=reoo   ; offset=lh*iolen ! Reynolds Number
+            CALL MPI_FILE_WRITE_AT(q4fh,offset,rbuf,1,MPI_REAL4,ista,ierr); lh=lh+1
+            rbuf=timo   ; offset=lh*iolen ! Time
+            CALL MPI_FILE_WRITE_AT(q4fh,offset,rbuf,1,MPI_REAL4,ista,ierr); lh=lh+1
+        end if
+        disp=(lhmb(mb)+4)*iolen
+        CALL MPI_FILE_SET_VIEW(q4fh,disp,MPI_REAL4,q4arr,'native',info,ierr)
+        CALL MPI_FILE_WRITE_ALL(q4fh,q4,wrlen,MPI_REAL4,ista,ierr)
+        if (myid==foper) then
+           write(*,"('Solution written! T= ',a)") trim(ctime)//trim(cout)
+        end if
+        CALL MPI_FILE_CLOSE(q4fh,ierr)
+
+     end if
+
+  end subroutine wrP3dP
+!====================================================================================
+!===== CONSTRUCT THE COEFFICIENTS ARRAY FOR INTEGRATION
+!====================================================================================
+ subroutine integCoef()
+
+    if (myid==0) then
+       write(*,"('Total amout of data: ',i3)") ndata
+    end if
+       ns=0; ne=ndata; if(.not.allocated(delt)) allocate(delt(ns:ne))
+       fctr=half/(times(ne)-times(ns))
+       delt(ns)=fctr*(times(ns+1)-times(ns)); 
+       delt(ne)=fctr*(times(ne)-times(ne-1))
+    do n=ns+1,ne-1
+       delt(n)=fctr*(times(n+1)-times(n-1))
+    end do
+    
+ end subroutine integCoef
+!====================================================================================
+!=====WRITE FUNCTION FILE PLOT3D
+!====================================================================================
+ subroutine getCp(n)
+    integer(k4), intent(in) :: n
+
+    call fillqo(n)
+    ra0=two/(amachoo**2)
+    qo(:,1)=(p(:)-poo)*ra0
+
+ end subroutine getCp
 !*****
 
 end module rptpost

@@ -3,12 +3,12 @@ let0		210     90
 lze0		100
 nbody-nthick	2	2
 ngridv		1
-npbxi0-to-5	1	1	1	1	1	1
-npbxi6-to-11	1	1	1	1	1	1
-npbze0-to-5	1	1	1	1	1	1
-npbze6-to-11	1	1	1	1	1	1
-npbet0-to-5	2	2	2	2	2	2     
-npbet6-to-11	2	2	2	2	2	2	
+npbxi0-to-5	1	6	1	1	6	1
+npbxi6-to-11	1	6	1	1	6	1
+npbet0-to-5	1	1	1	1	1	1
+npbet6-to-11	1	1	1	1	1	1
+npbze0-to-5	1	1	1	1	1	1     
+npbze6-to-11	1	1	1	1	1	1	
 nito-nits-litr	0	1	10
 smgrid-domlen	0.0075e0	10.0e0
 ximod-etamod	0.3e0		0.05e0
@@ -37,5 +37,5 @@ npbxi0-to-5	6	9	6	6	9	6
 npbxi6-to-11	6	9	6	6	9	6
 npbze0-to-5	7	7	7	3	3	3
 npbze6-to-11	3	3	3	7	7	7
-npbet0-to-5	1	1	1	1	1	1     
-npbet6-to-11	1	1	1	1	1	1	
+npbze0-to-5	1	1	1	1	1	1     
+npbze6-to-11	1	1	1	1	1	1	
