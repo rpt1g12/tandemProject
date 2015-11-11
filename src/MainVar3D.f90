@@ -191,6 +191,7 @@
  real(k8), dimension(:), allocatable :: wvarr
  character(:),dimension(:),allocatable :: ofiles 
  real(k8), dimension(2,2) :: cl
+ real(k8), dimension(2,2,2) :: clh
 
  integer :: fparallel,fmblk
  integer :: favg,fwavg,favgu,fcoef,fcf,fcp,floc,fwplus,fqcrit,fwss,fcurl,frms,fwrms
@@ -199,6 +200,14 @@
  real(k8), dimension (:,:), allocatable :: svarr
 ! real(k8), dimension (:,:,:,:), allocatable :: qxyz
  logical :: fflag
+
+ logical :: intgflag
+ integer :: intgcom
+ integer(k4) :: lcintg
+ real(k8),dimension(:),allocatable :: vintg,aintg
+ integer(k4),dimension(:),allocatable :: lintg
+ real :: rdis,xpos,ypos
+ integer :: fintg,atk
 
 !===== ADITIONAL INPUTO VARIABLES BY RPT
  integer(k4)  :: nto,iwrec
