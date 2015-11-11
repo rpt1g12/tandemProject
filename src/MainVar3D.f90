@@ -172,6 +172,8 @@
  integer :: q4arr,q4fh,qarr,qfh
  logical :: qflag=.false.,gflag=.false.,q4flag=.false.
  logical :: wrsfg=.false.,wrrfg=.false.
+ real(k8), dimension(:,:), allocatable :: q8
+ real(k4), dimension(:,:), allocatable :: fout,xyz4,q4
 !===== VARIABLES FOR WALL OPERATIONS BY RPT
  integer(k4) :: lcwall
  integer(k4), dimension(:), allocatable ::lwall
@@ -179,18 +181,33 @@
  real(k8), dimension(:,:), allocatable ::wnor,wtan,tw
  logical :: wflag
  real(k8), dimension(:,:), allocatable,target :: xyz
- integer(k4) :: wcom
+ integer(k4) :: wcom,bwcom
 
 !===== POST-PROCESSING VARIABLES BY RPT
 
  integer(k4) :: lsta
  logical :: tecplot,ispost
  real(k8), dimension(:,:), allocatable :: wplus
- real(k4), dimension(:,:), allocatable :: fout,xyz4,q4
  real(k8), dimension(:), allocatable :: wvarr
- character(18),dimension(:),allocatable :: ofiles 
-
+ character(:),dimension(:),allocatable :: ofiles 
  real(k8), dimension(2,2) :: cl
+ real(k8), dimension(2,2,2) :: clh
+
+ integer :: fparallel,fmblk
+ integer :: favg,fwavg,favgu,fcoef,fcf,fcp,floc,fwplus,fqcrit,fwss,fcurl,frms,fwrms
+ integer :: fstrip
+ real(k8),dimension(:),allocatable :: delt
+ real(k8), dimension (:,:), allocatable :: svarr
+! real(k8), dimension (:,:,:,:), allocatable :: qxyz
+ logical :: fflag
+
+ logical :: intgflag
+ integer :: intgcom
+ integer(k4) :: lcintg
+ real(k8),dimension(:),allocatable :: vintg,aintg
+ integer(k4),dimension(:),allocatable :: lintg
+ real :: rdis,xpos,ypos
+ integer :: fintg,atk
 
 !===== ADITIONAL INPUTO VARIABLES BY RPT
  integer(k4)  :: nto,iwrec

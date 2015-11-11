@@ -85,7 +85,7 @@
     mo(mm)=mo(mm-1)+npc(mm-1,1)*npc(mm-1,2)*npc(mm-1,3)
  end do
  do mm=0,mbk
- if(myid>=mo(mm)) then; mb=mm; end if
+    if(myid>=mo(mm)) mb=mm 
  end do
     lxio=lximb(mb); leto=letmb(mb); lzeo=lzemb(mb)
      ! rpt- Create communicator per block
@@ -112,7 +112,6 @@
     coutput='out/output'//cnzone//'.plt'
     cgrid='misc/grid'//cnzone//'.dat';
     crestart='rsta/restart'//cnzone//'.dat'
-    cpostdat='data/postdat'//cnzone//'.dat'
 
     no(4)=myid/10000; no(3)=mod(myid,10000)/1000;
     no(2)=mod(myid,1000)/100; no(1)=mod(myid,100)/10; no(0)=mod(myid,10)
@@ -192,29 +191,29 @@
 
  do mm=0,mbk
     lpos(mo(mm))=0
- do i=1,npc(mm,1)-1
-    mp=mo(mm)+i
-    lpos(mp)=lpos(mp-1)+lxim(mp-1)+1
- end do
+    do i=1,npc(mm,1)-1
+       mp=mo(mm)+i
+       lpos(mp)=lpos(mp-1)+lxim(mp-1)+1
+    end do
     jp=npc(mm,1)
        do j=1,npc(mm,2)-1;
           do i=0,npc(mm,1)-1
-    mp=mo(mm)+j*jp+i
-    lpos(mp)=lpos(mp-jp)+(lximb(mm)+1)*(letm(mp-jp)+1)
+             mp=mo(mm)+j*jp+i
+             lpos(mp)=lpos(mp-jp)+(lximb(mm)+1)*(letm(mp-jp)+1)
            end do;
        end do
     kp=npc(mm,1)*npc(mm,2)
        do k=1,npc(mm,3)-1;
           do j=0,npc(mm,2)-1;
              do i=0,npc(mm,1)-1
-    mp=mo(mm)+k*kp+j*jp+i
-    lpos(mp)=lpos(mp-kp)+(lximb(mm)+1)*(letmb(mm)+1)*(lzem(mp-kp)+1)
+                mp=mo(mm)+k*kp+j*jp+i
+                lpos(mp)=lpos(mp-kp)+(lximb(mm)+1)*(letmb(mm)+1)*(lzem(mp-kp)+1)
              end do;
           end do;
        end do
  end do
 
-    ! rpt- Find out start indices depending on proc coordinates
+    ! rpt- Find start indices depending on proc coordinates
     allocate(ibegin(0:npc(mb,1)))
     allocate(jbegin(0:npc(mb,2)))
     allocate(kbegin(0:npc(mb,3)))
@@ -224,18 +223,18 @@
     kbegin(0)=0
     ! setup i-start indices
     do i=1,npc(mb,1)
-    mp=mo(mb)+i
-    ibegin(i)=ibegin(i-1)+lxim(mp-1)+1
+       mp=mo(mb)+i
+       ibegin(i)=ibegin(i-1)+lxim(mp-1)+1
     end do
     ! setup j-start indices
     do j=1,npc(mb,2)
-    mp=mo(mb)+j*npc(mb,1)
-    jbegin(j)=jbegin(j-1)+letm(mp-1)+1
+       mp=mo(mb)+j*npc(mb,1)
+       jbegin(j)=jbegin(j-1)+letm(mp-1)+1
     end do
     ! setup k-start indices
     do k=1,npc(mb,3)
-    mp=mo(mb)+k*npc(mb,1)*npc(mb,2)
-    kbegin(k)=kbegin(k-1)+lzem(mp-1)+1
+       mp=mo(mb)+k*npc(mb,1)*npc(mb,2)
+       kbegin(k)=kbegin(k-1)+lzem(mp-1)+1
     end do
 
     ! rpt- #Points in block per direction
@@ -244,8 +243,8 @@
     mpijkl=(/lxi,let,lze/)+1
     ! rpt- Starts in proccessor per direction
     mpijks=(/ibegin(mpc(1)),jbegin(mpc(2)),kbegin(mpc(3))/)
-!===== ALLOCATION OF MAIN ARRAYS
 
+!===== ALLOCATION OF MAIN ARRAYS
     if (output==2) then
       allocate(qb(0:lmx,5))
     end if
@@ -253,11 +252,11 @@
     allocate(xim(0:lmx,3),etm(0:lmx,3),zem(0:lmx,3),rr(0:lmx,3),ss(0:lmx,3))
     allocate(p(0:lmx),yaco(0:lmx),varr(0:lmx))
 
- if(nviscous==1) then
-    allocate(txx(0:lmx),tyy(0:lmx),tzz(0:lmx))
-    allocate(txy(0:lmx),tyz(0:lmx),tzx(0:lmx))
-    allocate(hxx(0:lmx),hyy(0:lmx),hzz(0:lmx))
- end if
+    if(nviscous==1) then
+       allocate(txx(0:lmx),tyy(0:lmx),tzz(0:lmx))
+       allocate(txy(0:lmx),tyz(0:lmx),tzx(0:lmx))
+       allocate(hxx(0:lmx),hyy(0:lmx),hzz(0:lmx))
+    end if
 
     ii=nbsize(1)-1; jj=nbsize(2)-1; kk=nbsize(3)-1
     allocate(drva1(0:ii,5,0:1),drva2(0:jj,5,0:1),drva3(0:kk,5,0:1))
@@ -285,48 +284,52 @@
     albef(-2:2,2,1)=(/betf,alphf,one,alphf,betf/)
 
     pbco(:,:,:)=0; pbci(:,:,:)=0; call sbcco
- do nt=0,1; do j=0,1; ii=lmd+nt*(lmf-lmd)
-    pbcot(j,nt)=sum(pbco(0:ii,j,nt))
- end do; end do
+    do nt=0,1; do j=0,1; ii=lmd+nt*(lmf-lmd)
+       pbcot(j,nt)=sum(pbco(0:ii,j,nt))
+    end do; end do
 
 !===== EXTRA COEFFICIENTS FOR GCBC/GCIC
 
-    cbca(:,:)=0; cbca(1,1:2)=albed(1:2,0,0); cbca(2,1:3)=albed(0:2,1,0); cbca(3,1:3)=albed(-1:1,2,0)
- if(mbci>=4) then
-    cbca(3,4)=albed(2,2,0)
- do i=4,mbci
-    cbca(i,i-3:i)=(/beta,alpha,one,alpha/); if(i<mbci) then; cbca(i,i+1)=beta; end if
- end do
- end if
+    cbca(:,:)=0;                cbca(1,1:2)=albed(1:2,0,0);
+    cbca(2,1:3)=albed(0:2,1,0); cbca(3,1:3)=albed(-1:1,2,0)
+    if(mbci>=4) then
+       cbca(3,4)=albed(2,2,0)
+       do i=4,mbci
+          cbca(i,i-3:i)=(/beta,alpha,one,alpha/);
+          if(i<mbci) cbca(i,i+1)=beta
+       end do
+    end if
     rbci(:)=0; rbci(1:3)=(/one,albed(-1,1,0),albed(-2,2,0)/)
     call mtrxi(cbca,cbcs,1,mbci); sbci(:)=-matmul(cbcs(:,:),rbci(:))
 
 !===== PENTADIAGONAL MATRICES FOR DIFFERENCING & FILETERING
 
- do nn=1,3
- select case(nn)
- case(1); is=0; ie=is+lxi; case(2); is=lxi+1; ie=is+let; case(3); is=lxi+let+2; ie=is+lze
- end select
- do ip=0,1; np=nbc(ip,nn)
- select case(np)
- case(10,20,25,30); ndf(ip,0,nn)=0; ndf(ip,1,nn)=0
- case(35,40,45); ndf(ip,0,nn)=1; ndf(ip,1,nn)=1
- end select
- end do
-    ns=ndf(0,0,nn); ne=ndf(1,0,nn)
-    call penta(xu(:,:),xl(:,:),albed(:,:,ns),albed(:,:,ne),alpha,beta,is,ie)
-    ns=ndf(0,1,nn); ne=ndf(1,1,nn)
-    call penta(yu(:,:),yl(:,:),albef(:,:,ns),albef(:,:,ne),alphf,betf,is,ie)
- end do
+    do nn=1,3
+       select case(nn)
+       case(1); is=0; ie=is+lxi;
+       case(2); is=lxi+1; ie=is+let; 
+       case(3); is=lxi+let+2; ie=is+lze
+       end select
+       do ip=0,1; np=nbc(ip,nn)
+          select case(np)
+          case(10,20,25,30); ndf(ip,0,nn)=0; ndf(ip,1,nn)=0
+          case(35,40,45); ndf(ip,0,nn)=1; ndf(ip,1,nn)=1
+          end select
+       end do
+       ns=ndf(0,0,nn); ne=ndf(1,0,nn)
+       call penta(xu(:,:),xl(:,:),albed(:,:,ns),albed(:,:,ne),alpha,beta,is,ie)
+       ns=ndf(0,1,nn); ne=ndf(1,1,nn)
+       call penta(yu(:,:),yl(:,:),albef(:,:,ns),albef(:,:,ne),alphf,betf,is,ie)
+    end do
 
 !===== GRID INPUT & CALCULATION OF GRID METRICS
 
     allocate(lio(0:let,0:lze))
- do k=0,lze; kp=k*(leto+1)*(lxio+1)
- do j=0,let; jp=j*(lxio+1)
-    lio(j,k)=jp+kp
- end do
- end do
+    do k=0,lze; kp=k*(leto+1)*(lxio+1)
+    do j=0,let; jp=j*(lxio+1)
+       lio(j,k)=jp+kp
+    end do
+    end do
     call makegrid
     call MPI_BARRIER(icom,ierr)
 
@@ -334,7 +337,7 @@
     if (output==1) then
        allocate(xyz4(0:lmx,3))
        xyz4(:,:)=ss(:,:)
- end if
+    end if
 
     !RPT-FIND POSITION FOR SIGNAL SAMPLING
     !idsignal=-1
@@ -411,68 +414,35 @@
     call walldir
 
 
- do nn=1,3; do ip=0,1; i=ip*ijk(1,nn)
- do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
- do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
- select case(nn)
- case(1); rv(:)=yaco(l)*xim(l,:); fctr=1/sqrt(rv(1)**2+rv(2)**2+rv(3)**2); cm1(jk,:,ip)=fctr*rv(:)
- case(2); rv(:)=yaco(l)*etm(l,:); fctr=1/sqrt(rv(1)**2+rv(2)**2+rv(3)**2); cm2(jk,:,ip)=fctr*rv(:)
- case(3); rv(:)=yaco(l)*zem(l,:); fctr=1/sqrt(rv(1)**2+rv(2)**2+rv(3)**2); cm3(jk,:,ip)=fctr*rv(:)
- end select
- end do
- end do
- end do; end do
+    do nn=1,3; do ip=0,1; i=ip*ijk(1,nn)
+    do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
+    do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
+    select case(nn)
+    case(1); rv(:)=yaco(l)*xim(l,:); fctr=1/sqrt(rv(1)**2+rv(2)**2+rv(3)**2); cm1(jk,:,ip)=fctr*rv(:)
+    case(2); rv(:)=yaco(l)*etm(l,:); fctr=1/sqrt(rv(1)**2+rv(2)**2+rv(3)**2); cm2(jk,:,ip)=fctr*rv(:)
+    case(3); rv(:)=yaco(l)*zem(l,:); fctr=1/sqrt(rv(1)**2+rv(2)**2+rv(3)**2); cm3(jk,:,ip)=fctr*rv(:)
+    end select
+    end do
+    end do
+    end do; end do
 
 !===== SETTING UP OUTPUT FILE & STORING GRID DATA
 
- selectcase(output)
- case(2)
-    if(myid==0) then
-    do n=-1,ndata
-           open(0,file=ctecplt(n)); close(0,status='delete')
-    end do
-    end if
-       open(0,file=cdata,access='direct',form='unformatted',recl=nrec*(lmx+1))
-    do nn=1,3
-       varr(:)=ss(:,nn); write(0,rec=nn) varr(:); call vminmax(nn)
-    end do
- case(0)
-       inquire(iolength=lp) varr
-       open(0,file=cdata,access='direct',recl=lp)
-    if ((1-nto)*nts*nto==0) then
-       do nn=1,3
-       ! rpt-Increasigng the record count
-       nwrec=nwrec+1
-          varr(:)=ss(:,nn); write(0,rec=nwrec) varr(:)
-       end do
-       ! rpt-Store the grid metrics and increase the record count
-       if (ngridv==1) then
-          do nn=1,3
-          nwrec=nwrec+1
-             varr(:)=xim(:,nn); write(0,rec=nwrec) varr(:)
-          end do
-          do nn=1,3
-          nwrec=nwrec+1
-             varr(:)=etm(:,nn); write(0,rec=nwrec) varr(:)
-          end do
-          nwrec=nwrec+1
-             varr(:)=-1/yaco(:); write(0,rec=nwrec) varr(:)
-          do nn=2,3
-          nwrec=nwrec+1
-             varr(:)=zem(:,nn); write(0,rec=nwrec) varr(:)
+    selectcase(output)
+    case(2)
+       if(myid==0) then
+          do n=-1,ndata
+                 open(0,file=ctecplt(n)); close(0,status='delete')
           end do
        end if
-    ngrec=nwrec
-    else
-    ngrec=3+9*ngridv
-    if (nto==2) then
-       nwrec=iwrec
-    end if
-    end if
- case(1)
-   call wrP3dG
-   deallocate(xyz4)
- end select
+          open(0,file=cdata,access='direct',form='unformatted',recl=nrec*(lmx+1))
+       do nn=1,3
+          varr(:)=ss(:,nn); write(0,rec=nn) varr(:); call vminmax(nn)
+       end do
+    case(1)
+      call wrP3dG
+      deallocate(xyz4)
+    end select
 
 
 !===== SETTING UP SPONGE ZONE PARAMETERS
@@ -481,21 +451,19 @@
 
 !===== SETTING UP FORCING PARAMETERS
 
-    if (forcing==1) then
-    call forceup
-    end if
+    if (forcing==1) call forceup
 
 !===== INITIAL CONDITIONS
 
- if(nts==0) then
-    n=0; ndt=0; dt=0; dts=0; dte=0; timo=0
-    call initialo
- else
-    call rdRsta
-    if (tsam<timo) then
-       tsam=timo
+    if(nts==0) then
+       n=0; ndt=0; dt=0; dts=0; dte=0; timo=0
+       call initialo
+    else
+       call rdRsta
+       if (tsam<timo) then
+          tsam=timo
+       end if
     end if
- end if
     if (output==2) then
       qb(:,:)=0
     end if
@@ -503,35 +471,31 @@
  ! START MEASURING WALL TIME
     wts=MPI_WTIME()
 
- if(myid==0) then
-    open(1,file='signal.dat'); close(1,status='delete')
- end if
+    if(myid==0) then
+       open(1,file='signal.dat'); close(1,status='delete')
+    end if
     call MPI_BARRIER(icom,ierr)
     open(1,file='signal.dat',access='direct',form='formatted',recl=16,shared)
 
   ! OUTPUT HEADER
      if (myid==0) then
-     write(*,"(3x,'n',8x,'time',9x,'Cl',9x,'Cd',5x)")  
-     write(*,"('============================================')")
+        write(*,"(3x,'n',8x,'time',9x,'Cl',9x,'Cd',5x)")  
+        write(*,"('============================================')")
      end if
     ndati=-1; nsigi=-1; dtsum=0
-    if ((nto==2).and.(output==0)) then
-       ndati=0
-    end if
+
 !============================================
 !===== BEGINNING OF TIME MARCHING IN SOLUTION
 !============================================
  do while(timo-tmax<0.and.(dt/=0.or.n<=2))
 
-
-
 !----- FILTERING
-
-  do m=1,5
-     rr(:,1)=qa(:,m)
-     call mpigo(ntflt,nrone,n45no,m); call filte(1,1); call filte(2,1); call filte(3,1)
-     qa(:,m)=rr(:,1)
-  end do
+    do m=1,5
+       rr(:,1)=qa(:,m)
+       call mpigo(ntflt,nrone,n45no,m);
+       call filte(1,1); call filte(2,1); call filte(3,1)
+       qa(:,m)=rr(:,1)
+    end do
 
 !-------------------------------------
 !----- BEGINNING OF RUNGE-KUTTA STAGES
@@ -625,19 +589,19 @@
 
      selectcase(LES)
      case(1)
-    ! rpt- SijSij
-    de(:,1)=(txx(:)*txx(:)+tyy(:)*tyy(:)+tzz(:)*tzz(:)+&
-                 (hzz(:)+txy(:))*(hzz(:)+txy(:))+&
-                 (hyy(:)+tzx(:))*(hyy(:)+tzx(:))+&
-                 (hxx(:)+tyz(:))*(hxx(:)+tyz(:)))
-    ! rpt- Volume
-    varr(:)=(-1/yaco(:))**1.5 
-    ! rpt-nuSGS
-    rr(:,3)=qa(:,1)*smago1**2*varr(:)*sqrt(2*(de(:,1))) 
+        ! rpt- SijSij
+        de(:,1)=(txx(:)*txx(:)+tyy(:)*tyy(:)+tzz(:)*tzz(:)+&
+                (hzz(:)+txy(:))*(hzz(:)+txy(:))+&
+                (hyy(:)+tzx(:))*(hyy(:)+tzx(:))+&
+                (hxx(:)+tyz(:))*(hxx(:)+tyz(:)))
+        ! rpt- Volume
+        varr(:)=(-1/yaco(:))**1.5 
+        ! rpt-nuSGS
+        rr(:,3)=qa(:,1)*smago1**2*varr(:)*sqrt(2*(de(:,1))) 
         rr(:,1)=rr(:,1)+rr(:,3)*yaco(:)
         rr(:,2)=rr(:,2)+tgamm1prndtli*rr(:,3)*yaco(:)   
-    ! rpt-2/3*ro*kSGS
-    rr(:,3)=fctr*(qa(:,1)*smago2*varr(:)*de(:,1)) 
+        ! rpt-2/3*ro*kSGS
+        rr(:,3)=fctr*(qa(:,1)*smago2*varr(:)*de(:,1)) 
         de(:,5)=fctr*(txx(:)+tyy(:)+tzz(:))
 
         txx(:)=rr(:,1)*(2*txx(:)-de(:,5))-rr(:,3)
@@ -738,9 +702,7 @@
 
 !----- IMPLEMENTATION OF FORCING
 
-     if (forcing==1) then
-     call forcego
-     end if
+     if (forcing==1) call forcego
 
 !----- PREPARATION FOR GCBC & GCIC
 
@@ -939,19 +901,6 @@
    end do
    case(1)
       call wrP3dS
-   case(0)
-      !==========SAVING INSTANTANEUS DENSITY, VELOCITY AND PRESSURE
-      nwrec=nwrec+1
-         varr(:)=qa(:,1); write(0,rec=nwrec) varr(:)
-      do m = 2, 4
-      nwrec=nwrec+1
-        varr(:)=((qa(:,m)/qa(:,1))+umf(m-1)); write(0,rec=nwrec) varr(:)
-      end do
-      nwrec=nwrec+1
-      varr(:)=p(:); write(0,rec=nwrec) varr(:)
-      if(myid==0) then
-         write(*,"('===>nwrec= ',i8)") nwrec
-      end if
    end select
 
 
@@ -1014,20 +963,6 @@
  else
   if(myid==0) write(*,'("Simulation time was ",f6.2," hours")') wtime/(3600_k8*npro)
   selectcase(output)
-  case(0)
-   if (nto==2) then
-      ndata=ndati+(iwrec-ngrec)/5-1
-      if (myid==0) then
-         write(*,*) ndata
-      end if
-   end if
-     if (output==0) then
-     call post(average=.false.)
-     end if
-   deallocate(qo,qa,de,xim,etm,zem,rr,ss,p,yaco)
-   if(nviscous==1) then
-      deallocate(txx,tyy,tzz,txy,tyz,tzx,hxx,hyy,hzz)
-   end if
   case(2)
    ! rpt-Deallocate Arrays
    deallocate(qo,qa,qb,de,xim,etm,zem,rr,ss,p,yaco)
