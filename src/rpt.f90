@@ -453,8 +453,8 @@ contains
         selectcase(mblk);
         case(1)
            cout=''
-           foper=0
-           wrcom=icom
+           foper=mo(mb)
+           wrcom=bcom
            nbk=mbk
         case(0)
            write(cout,"(a,i2)") 'b',mb
@@ -829,9 +829,54 @@ contains
  
  end subroutine walldir
 
-!====================================================================================
+!===================================================================================
+!=====COMPUTE LIFT COEFFICIENT OVER HALF THE AEROFOILS
+!===================================================================================
+ subroutine clhpost(ele,nvar)
+ 
+ use problemcase, only: span,delt1,delt2
+ implicit none
+    
+    integer(k4), intent(in) :: ele,nvar
+    integer(k4) :: bct,bcb,bcw,m,ll,dir
+    real(k8) :: dynp,clp,clv,tcl,fctr
+    integer(k4) :: ks,ke,i,j,k,l,side,khalf
+ 
+    clp=0;clv=0;;tcl=0;
+    khalf=lze/2
+
+    do dir = 1, 2
+       if (ispost.and.(dir==1)) call gettw(nvar)
+    do side=1,2
+       selectcase(side);case(1);ks=0;ke=khalf;case(2);ks=khalf;ke=lze;end select
+       clp=0;clv=0;tcl=0;
+       if (wflag) then
+         ! Compute Dynamic pressure
+         dynp=two/(amachoo*amachoo*span*half)
+         do k=ks, ke; do i =0, lxi; ll=indx2(i,k,1); l=lwall(ll)
+           fctr=1
+           if(k==khalf) fctr=half
+           clp=clp+(p(l)*wnor(ll,dir)*area(ll)*fctr)
+         end do; end do
+         if (nviscous==1) then
+           do k=ks, ke; do i =0, lxi; ll=indx2(i,k,1); l=lwall(ll)
+             fctr=1
+             if(k==khalf) fctr=half
+             clv=clv+tw(ll,dir)*area(ll)
+           end do; end do
+         end if
+         tcl=(clp+clv)*dynp
+       end if
+       if(wflag.or.(myid==0)) then
+             CALL MPI_REDUCE(tcl,clh(ele,dir,side),1,MPI_REAL8,MPI_SUM,0,wcom,ierr)
+       end if
+    end do
+    end do
+ 
+ end subroutine clhpost
+!===================================================================================
 !=====COMPUTE LIFT COEFFICIENT OVER AEROFOILS
-!====================================================================================
+!===================================================================================
  subroutine clpost(ele,nvar)
  
  use problemcase, only: span,delt1,delt2
@@ -867,30 +912,26 @@ contains
       tcl=(clp+clv)*dynp
     end if
     if(wflag.or.(myid==0)) then
-       if (ispost) then
-          CALL MPI_REDUCE(tcl,cl(ele,dir),1,MPI_REAL8,MPI_SUM,0,bwcom,ierr)
-       else
           CALL MPI_REDUCE(tcl,cl(ele,dir),1,MPI_REAL8,MPI_SUM,0,wcom,ierr)
-       end if
     end if
     end do
  
  end subroutine clpost
 
-!====================================================================================
+!===================================================================================
 !=====COMPUTE WALL SHEAR STRESS FROM WRITTEN DATA
-!====================================================================================
+!===================================================================================
  subroutine gettw(nvar)
  use subroutines3d, only: mpigo,deriv
  implicit none
  integer(k4), intent(in) :: nvar
  integer(k4) :: nn,ll
 
-    if (wflag) then
-    ! READ VARIABLES
        call rdP3dS(nvar,fmblk)
        !call p3dread(gsflag=0,nout=nvar)
        p(:)=qo(:,5)
+    if (wflag) then
+    ! READ VARIABLES
     if (nviscous==1) then
        de(:,1)=1/qo(:,1)
        de(:,2)=qo(:,2)
