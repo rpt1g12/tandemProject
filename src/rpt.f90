@@ -231,7 +231,7 @@ contains
         if (myid==foper) then
            write(*,"('Solution written! T= ',8a)") ctime 
         end if
-        if (ndati==ndata) then
+        if (ndati.ge.ndata) then
            CALL MPI_FILE_WRITE_ALL_END(q4fh,q4,ista,ierr)
            CALL MPI_FILE_CLOSE(q4fh,ierr)
            CALL MPI_TYPE_FREE(q4arr,ierr)
@@ -258,9 +258,9 @@ contains
      ! rpt- Set default option to Multiblock
      if(present(mblkin)) then
         mblk=mblkin
- else
+     else
         mblk=1
-       end if
+     end if
 
      selectcase(mblk);
      case(1)
@@ -328,6 +328,220 @@ contains
         write(*,"('Grid written!')")
      end if
   end subroutine wrP3dG
+
+!===================================================================================
+!=====  PLOT3D XYZ FILES READ
+!===================================================================================
+  subroutine rdP3dG(mblkin)
+     integer, intent(in),optional :: mblkin
+     character(len=*),parameter :: fname='grid'
+     character(len=:),allocatable :: lfname
+     character(2) :: cout
+     character(len=*),parameter :: cext='.xyz',cpath='out/'
+     integer :: n,l,i,lh,iolen,foper,wrcom,nbk,err,mblk
+     integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
+     integer :: fh,amode,garr
+     integer, dimension (4) :: gsizes,lsizes,starts
+     integer(k4) :: ibuf
+
+     ! rpt- Set default option to Multiblock
+     if(present(mblkin)) then
+        mblk=mblkin
+     else
+        mblk=1
+     end if
+
+     selectcase(mblk);
+     case(1)
+        cout=''
+        foper=0
+        wrcom=icom
+        nbk=mbk
+     case(0)
+        write(cout,"(i2)") mb
+        do i = 0, 1
+           l=scan(cout,' ')
+           if (l==0) exit
+           cout(l:l)='0'
+        end do
+        foper=mo(mb)
+        wrcom=bcom
+        nbk=0
+     case default
+        if(myid==0) write(*,*) 'Wrong multiblock option! Aborting...'
+        CALL MPI_ABORT(icom,err,ierr)
+     end select
+     l=len(cpath)+len(fname)+len(trim(cout))+len(cext)
+     allocate(character(len=l) :: lfname)
+     lfname=cpath//trim(fname)//trim(cout)//cext
+
+     wrlen=3*(lmx+1)
+     amode=MPI_MODE_RDONLY
+     allocate(xyz4(0:lmx,3))
+
+     CALL MPI_TYPE_EXTENT(MPI_INTEGER4,iolen,ierr)
+     gsizes(:)=(/mbijkl(:),3/)
+     lsizes(:)=(/mpijkl(:),3/)
+     starts(:)=(/mpijks(:),0/)
+     CALL MPI_TYPE_CREATE_SUBARRAY(4,gsizes,lsizes,starts,MPI_ORDER_FORTRAN,MPI_REAL4,garr,ierr) 
+     CALL MPI_TYPE_COMMIT(garr,ierr)
+     
+     if (fflag) then
+        CALL MPI_FILE_OPEN(wrcom,lfname ,amode ,info ,fh,ierr)
+
+          lh=0
+         ibuf=nbk+1; offset=lh*iolen          ! Number of blocks
+         CALL MPI_FILE_READ_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+         do l = 0, nbk
+            mm=l+(1-mblk)*mb
+            offset=lh*iolen ! IMax
+            CALL MPI_FILE_READ_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+            lximb(mm)=ibuf-1;
+            offset=lh*iolen ! JMax
+            CALL MPI_FILE_READ_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+            letmb(mm)=ibuf-1;
+            offset=lh*iolen ! KMax
+            CALL MPI_FILE_READ_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+            lzemb(mm)=ibuf-1;
+         end do
+        l=(1-mblk)*mb
+        lhmb(l)=1+(nbk+1)*3
+        do mm = 0, nbk-1
+           lhmb(mm+1)=lhmb(mm)+3*(lximb(mm)+1)*(letmb(mm)+1)*(lzemb(mm)+1)
+        end do
+        disp=lhmb(mb)*iolen
+        CALL MPI_FILE_SET_VIEW(fh,disp,MPI_REAL4,garr,'native',info,ierr)
+        CALL MPI_FILE_READ_ALL(fh,xyz4,wrlen,MPI_REAL4,ista,ierr)
+        CALL MPI_FILE_CLOSE(fh,ierr)
+        CALL MPI_TYPE_FREE(garr,ierr)
+        do i = 1, 3
+           ss(:,i)=xyz4(:,i)
+        end do
+        if (myid==foper) then
+           write(*,"('Grid',i3,' Read!')") mb
+        end if
+     else
+        ss(:,:)=0
+     end if
+  end subroutine rdP3dG
+
+!===================================================================================
+!=====  PLOT3D Q FILES READ
+!===================================================================================
+  subroutine rdP3dS(nout,mblkin)
+     integer, intent(in) :: nout
+     integer, intent(in),optional :: mblkin
+     character(len=*),parameter :: fname='solT'
+     character(len=:),allocatable :: lfname
+     character(3) :: cout
+     character(8) :: ctime
+     character(len=*),parameter :: cext='.q',cpath='out/'
+     integer :: n,l,i,lh,iolen,foper,wrcom,nbk,err,mblk
+     integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
+     integer :: amode
+     integer, dimension (4) :: gsizes,lsizes,starts
+     integer(k4) :: ibuf
+     real   (k4) :: rbuf
+
+        ! rpt- Set default option to Multiblock
+        if(present(mblkin)) then
+           mblk=mblkin
+        else
+           mblk=1
+        end if
+
+        selectcase(mblk);
+        case(1)
+           cout=''
+           foper=mo(mb)
+           wrcom=bcom
+           nbk=mbk
+        case(0)
+           write(cout,"(a,i2)") 'b',mb
+           do i = 0, 1
+              l=scan(cout,' ')
+              if (l==0) exit
+              cout(l:l)='0'
+           end do
+           foper=mo(mb)
+           wrcom=bcom
+           nbk=0
+        case default
+           if(myid==0) write(*,*) 'Wrong multiblock option! Aborting...'
+           CALL MPI_ABORT(icom,err,ierr)
+        end select
+
+        if (nout==ndata+1) then
+           l=len('out/solA'//trim(cout)//'.qa')
+           allocate(character(len=l) :: lfname)
+           lfname='out/solA'//trim(cout)//'.qa'
+        elseif (nout==ndata+2) then
+           l=len('out/solRMS'//trim(cout)//'.qa')
+           allocate(character(len=l) :: lfname)
+           lfname='out/solRMS'//trim(cout)//'.qa'
+        else 
+           l=len(ofiles(nout))
+           allocate(character(len=l) :: lfname)
+           lfname=ofiles(nout)
+        end if
+
+        wrlen=5*(lmx+1)
+        if(.not.allocated(q4)) allocate(q4(0:lmx,5))
+
+        amode=MPI_MODE_RDONLY
+
+        CALL MPI_TYPE_EXTENT(MPI_INTEGER4,iolen,ierr)
+        if (.not.q4flag) then
+           gsizes(:)=(/mbijkl(:),5/)
+           lsizes(:)=(/mpijkl(:),5/)
+           starts(:)=(/mpijks(:),0/)
+           CALL MPI_TYPE_CREATE_SUBARRAY(4,gsizes,lsizes,starts,&
+                           MPI_ORDER_FORTRAN,MPI_REAL4,q4arr,ierr) 
+           CALL MPI_TYPE_COMMIT(q4arr,ierr)
+           q4flag=.true.
+        end if
+
+        if (fflag) then
+           CALL MPI_FILE_OPEN(wrcom,trim(lfname) ,amode ,info ,q4fh,ierr)
+
+           l=(1-mblk)*mb
+           lhmb(l)=1+(nbk+1)*3
+           do mm = 0, nbk-1
+              lhmb(mm+1)=lhmb(mm)+4+5*(lximb(mm)+1)*(letmb(mm)+1)*(lzemb(mm)+1)
+           end do
+           lh=lhmb(mb)
+           offset=lh*iolen ! Mach Number
+           CALL MPI_FILE_READ_AT(q4fh,offset,rbuf,1,MPI_REAL4,ista,ierr); lh=lh+1
+           amachoo=rbuf;
+           offset=lh*iolen ! AoA
+           CALL MPI_FILE_READ_AT(q4fh,offset,rbuf,1,MPI_REAL4,ista,ierr); lh=lh+1
+           aoa=rbuf;
+           offset=lh*iolen ! Reynolds Number
+           CALL MPI_FILE_READ_AT(q4fh,offset,rbuf,1,MPI_REAL4,ista,ierr); lh=lh+1
+           reoo=rbuf;
+           offset=lh*iolen ! Time
+           CALL MPI_FILE_READ_AT(q4fh,offset,rbuf,1,MPI_REAL4,ista,ierr); lh=lh+1
+           timo=rbuf;
+
+           disp=(lhmb(mb)+4)*iolen
+           CALL MPI_FILE_SET_VIEW(q4fh,disp,MPI_REAL4,q4arr,'native',info,ierr)
+           CALL MPI_FILE_READ_ALL(q4fh,q4,wrlen,MPI_REAL4,ista,ierr)
+           if (myid==foper) then
+              if (nout==ndata+1) then
+                 write(*,"('AVG Solution read!')") 
+              else if(nout==ndata+2) then
+                 write(*,"('RMS Solution read!')") 
+              else
+                 write(*,"('Solution read! T= ',f8.4)") times(nout)
+              end if
+           end if
+
+           CALL MPI_FILE_CLOSE(q4fh,ierr)
+           qo(:,:)=q4(:,:)
+        else
+           qo(:,:)=0
+        end if
+  end subroutine rdP3dS
 !====================================================================================
 !=====  WRITE RAW RESTART
 !====================================================================================
@@ -573,6 +787,10 @@ contains
     end if
  
     call MPI_COMM_SPLIT(icom,color,myid,wcom,ierr)
+
+    if (color==1) then
+       call MPI_COMM_SPLIT(wcom,mb,myid,bwcom,ierr)
+    end if
  
  end subroutine wallArea
 
@@ -611,9 +829,54 @@ contains
  
  end subroutine walldir
 
-!====================================================================================
+!===================================================================================
+!=====COMPUTE LIFT COEFFICIENT OVER HALF THE AEROFOILS
+!===================================================================================
+ subroutine clhpost(ele,nvar)
+ 
+ use problemcase, only: span,delt1,delt2
+ implicit none
+    
+    integer(k4), intent(in) :: ele,nvar
+    integer(k4) :: bct,bcb,bcw,m,ll,dir
+    real(k8) :: dynp,clp,clv,tcl,fctr
+    integer(k4) :: ks,ke,i,j,k,l,side,khalf
+ 
+    clp=0;clv=0;;tcl=0;
+    khalf=lze/2
+
+    do dir = 1, 2
+       if (ispost.and.(dir==1)) call gettw(nvar)
+    do side=1,2
+       selectcase(side);case(1);ks=0;ke=khalf;case(2);ks=khalf;ke=lze;end select
+       clp=0;clv=0;tcl=0;
+       if (wflag) then
+         ! Compute Dynamic pressure
+         dynp=two/(amachoo*amachoo*span*half)
+         do k=ks, ke; do i =0, lxi; ll=indx2(i,k,1); l=lwall(ll)
+           fctr=1
+           if(k==khalf) fctr=half
+           clp=clp+(p(l)*wnor(ll,dir)*area(ll)*fctr)
+         end do; end do
+         if (nviscous==1) then
+           do k=ks, ke; do i =0, lxi; ll=indx2(i,k,1); l=lwall(ll)
+             fctr=1
+             if(k==khalf) fctr=half
+             clv=clv+tw(ll,dir)*area(ll)
+           end do; end do
+         end if
+         tcl=(clp+clv)*dynp
+       end if
+       if(wflag.or.(myid==0)) then
+             CALL MPI_REDUCE(tcl,clh(ele,dir,side),1,MPI_REAL8,MPI_SUM,0,wcom,ierr)
+       end if
+    end do
+    end do
+ 
+ end subroutine clhpost
+!===================================================================================
 !=====COMPUTE LIFT COEFFICIENT OVER AEROFOILS
-!====================================================================================
+!===================================================================================
  subroutine clpost(ele,nvar)
  
  use problemcase, only: span,delt1,delt2
@@ -648,24 +911,27 @@ contains
       end if
       tcl=(clp+clv)*dynp
     end if
-    if(wflag.or.(myid==0)) CALL MPI_REDUCE(tcl,cl(ele,dir),1,MPI_REAL8,MPI_SUM,0,wcom,ierr)
+    if(wflag.or.(myid==0)) then
+          CALL MPI_REDUCE(tcl,cl(ele,dir),1,MPI_REAL8,MPI_SUM,0,wcom,ierr)
+    end if
     end do
  
  end subroutine clpost
 
-!====================================================================================
+!===================================================================================
 !=====COMPUTE WALL SHEAR STRESS FROM WRITTEN DATA
-!====================================================================================
+!===================================================================================
  subroutine gettw(nvar)
  use subroutines3d, only: mpigo,deriv
  implicit none
  integer(k4), intent(in) :: nvar
  integer(k4) :: nn,ll
 
+       call rdP3dS(nvar,fmblk)
+       !call p3dread(gsflag=0,nout=nvar)
+       p(:)=qo(:,5)
     if (wflag) then
     ! READ VARIABLES
-       call p3dread(gsflag=0,nout=nvar)
-       p(:)=qo(:,5)
     if (nviscous==1) then
        de(:,1)=1/qo(:,1)
        de(:,2)=qo(:,2)
@@ -754,8 +1020,10 @@ nfile=5
        write(*,*) 'Grid read!'
        end if
    case(0)
-      if (nout>ndata) then
+      if (nout==ndata+1) then
          open (unit=nfile, file='out/solA.qa', access='stream',shared)
+      elseif (nout==ndata+2) then
+         open (unit=nfile, file='out/solRMS.qa', access='stream',shared)
       else
          open (unit=nfile, file=ofiles(nout), access='stream',shared)
       end if
