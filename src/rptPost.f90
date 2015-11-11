@@ -53,6 +53,7 @@ contains
     read(9,*) cinput,fcurl
     read(9,*) cinput,frms,fwrms
     read(9,*) cinput,fstrip
+    read(9,*) cinput,fintg,rdis,xpos,ypos,atk
     close(9)
 
     cinput=cinput; fltk=pi*fltk; fltkbc=pi*fltkbc
@@ -348,6 +349,9 @@ contains
 
     call wallArea
     call walldir
+    if (fintg) then
+       call intgUp(rdis,xpos,ypos,atk)
+    end if
 
  do nn=1,3; do ip=0,1; i=ip*ijk(1,nn)
  do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
@@ -536,7 +540,7 @@ contains
     integer, intent(in) :: nvar
 
     call rdP3dS(nvar,fmblk)
-    p(:)=qo(:,5)
+    !p(:)=qo(:,5)
     if (nviscous==1) then
      de(:,2)=qo(:,2)
      de(:,3)=qo(:,3)
@@ -957,9 +961,143 @@ end subroutine flst
    end if
  end subroutine wffile
 
-!====================================================================================
+!===================================================================================
+!=====  PLOT3D Q FILES READ POST
+!===================================================================================
+  subroutine rdP3dP(nout,mblkin,cname)
+     integer, intent(in),optional :: mblkin
+     integer, intent(in) :: nout
+     character(*), intent(in),optional :: cname
+     character(*),parameter :: fname='sol'
+     character(:),allocatable :: lfname
+     character(3) :: cout,ncout
+     character(8) :: ctime
+     character(len=*),parameter :: cext='.qa',cpath='out/'
+     integer :: n,l,i,lh,iolen,foper,wrcom,nbk,err,mblk
+     integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
+     integer :: amode
+     integer, dimension (4) :: gsizes,lsizes,starts
+     integer(k4) :: ibuf
+     real   (k4) :: rbuf
+
+        ! rpt- Set default option to Multiblock
+        if(present(mblkin)) then
+           mblk=mblkin
+        else
+           mblk=1
+        end if
+
+        selectcase(mblk);
+        case(1)
+           cout=''
+           foper=0
+           wrcom=icom
+           nbk=mbk
+        case(0)
+           write(cout,"(a,i2)") 'b',mb
+           do i = 0, 1
+              l=scan(cout,' ')
+              if (l==0) exit
+              cout(l:l)='0'
+           end do
+           foper=mo(mb)
+           wrcom=bcom
+           nbk=0
+        case default
+           if(myid==0) write(*,*) 'Wrong multiblock option! Aborting...'
+           CALL MPI_ABORT(icom,err,ierr)
+        end select
+
+
+        ! rpt- Set default option to Multiblock
+        if(present(cname)) then
+           write(ncout,"(i3)") nout
+           do i = 0, 2
+              l=scan(ncout,' ')
+              if (l==0) exit
+              ncout(l:l)='0'
+           end do
+           ctime=trim(cname)//ncout
+        else
+           if (nout.le.ndata) then
+              write(ctime,"(f8.4)") times(nout)
+              do i = 0, 8
+                 l=scan(ctime,' ')
+                 if (l==0) exit
+                 ctime(l:l)='0'
+              end do
+           else if (nout==ndata+1) then
+              ctime='A'
+           else if (nout==ndata+2) then
+              ctime='RMS'
+           end if
+        end if
+
+        l=len(cpath)+len(fname)+len(trim(adjustl(ctime)))+len(trim(cout))+len(cext)
+        allocate(character(len=l) :: lfname)
+        lfname=cpath//trim(fname)//trim(adjustl(ctime))//trim(cout)//cext
+
+        wrlen=5*(lmx+1)
+        if(.not.allocated(q4)) allocate(q4(0:lmx,5))
+
+        amode=MPI_MODE_RDONLY
+
+        CALL MPI_TYPE_EXTENT(MPI_INTEGER4,iolen,ierr)
+        if (.not.q4flag) then
+           gsizes(:)=(/mbijkl(:),5/)
+           lsizes(:)=(/mpijkl(:),5/)
+           starts(:)=(/mpijks(:),0/)
+           CALL MPI_TYPE_CREATE_SUBARRAY(4,gsizes,lsizes,starts,&
+                           MPI_ORDER_FORTRAN,MPI_REAL4,q4arr,ierr) 
+           CALL MPI_TYPE_COMMIT(q4arr,ierr)
+           q4flag=.true.
+        end if
+
+        if (fflag) then
+           CALL MPI_FILE_OPEN(wrcom,trim(lfname) ,amode ,info ,q4fh,ierr)
+
+           l=(1-mblk)*mb
+           lhmb(l)=1+(nbk+1)*3
+           do mm = 0, nbk-1
+              lhmb(mm+1)=lhmb(mm)+4+5*(lximb(mm)+1)*(letmb(mm)+1)*(lzemb(mm)+1)
+           end do
+           lh=lhmb(mb)
+           offset=lh*iolen ! Mach Number
+           CALL MPI_FILE_READ_AT(q4fh,offset,rbuf,1,MPI_REAL4,ista,ierr); lh=lh+1
+           amachoo=rbuf;
+           offset=lh*iolen ! AoA
+           CALL MPI_FILE_READ_AT(q4fh,offset,rbuf,1,MPI_REAL4,ista,ierr); lh=lh+1
+           aoa=rbuf;
+           offset=lh*iolen ! Reynolds Number
+           CALL MPI_FILE_READ_AT(q4fh,offset,rbuf,1,MPI_REAL4,ista,ierr); lh=lh+1
+           reoo=rbuf;
+           offset=lh*iolen ! Time
+           CALL MPI_FILE_READ_AT(q4fh,offset,rbuf,1,MPI_REAL4,ista,ierr); lh=lh+1
+           timo=rbuf;
+
+           disp=(lhmb(mb)+4)*iolen
+           CALL MPI_FILE_SET_VIEW(q4fh,disp,MPI_REAL4,q4arr,'native',info,ierr)
+           CALL MPI_FILE_READ_ALL(q4fh,q4,wrlen,MPI_REAL4,ista,ierr)
+           if (myid==foper) then
+              if (nout==ndata+1) then
+                 write(*,"('AVG Solution read!')") 
+              else if(nout==ndata+2) then
+                 write(*,"('RMS Solution read!')") 
+              else
+                 write(*,"('Solution read! T= ',f8.4)") times(nout)
+              end if
+           end if
+
+           CALL MPI_FILE_CLOSE(q4fh,ierr)
+           qo(:,:)=q4(:,:)
+        else
+           qo(:,:)=0
+        end if
+  end subroutine rdP3dP
+
+!===================================================================================
 !=====  PLOT3D Q FILES WRITE POST
-!====================================================================================
+!===================================================================================
   subroutine wrP3dP(nout,mblkin,cname)
      integer, intent(in),optional :: mblkin
      integer, intent(in) :: nout
@@ -1113,17 +1251,94 @@ end subroutine flst
     end do
     
  end subroutine integCoef
-!====================================================================================
-!=====WRITE FUNCTION FILE PLOT3D
-!====================================================================================
+!===================================================================================
+!=====COMPUTE CP AND STORE IT IN QO(:,1)
+!===================================================================================
  subroutine getCp(n)
     integer(k4), intent(in) :: n
 
-    call fillqo(n)
-    ra0=two/(amachoo**2)
-    qo(:,1)=(p(:)-poo)*ra0
+    if (fflag) then
+       call fillqo(n)
+       ra0=two/(amachoo**2)
+       qo(:,1)=(p(:)-poo)*ra0
+    end if
 
  end subroutine getCp
+
+!===================================================================================
+!=====SET UP INTEGRAL PARAMETERS
+!===================================================================================
+ subroutine intgUp(rdis,xpos,ypos,k)
+ implicit none
+    real, intent(in) :: rdis,xpos,ypos
+    integer , intent(in) :: k
+    integer(k4) :: color,i,j,l,ll
+    real(k8) :: g11, g22, g12,rdis2,tmp
+
+    ! Initialise values
+    intgflag=.False.
+    g11=0;g22=g11;g12=g22
+    color=MPI_UNDEFINED
+
+    rdis2=rdis**2
+    ll=-1
+    do kk = 35, 39
+    do j = 45, 60
+       do i = 52, 58; l=indx3(i,j,kk,1)
+    !do kk = 0, lze
+    !do j = 0, let
+    !   do i = 0, lxi; l=indx3(i,j,kk,1)
+    !      tmp=(xyz(l,1)-xpos)**2+(xyz(l,2)-ypos)**2
+          if (mb==7) then
+          !if (tmp-rdis2<0) then
+             ll=ll+1; de(ll,5)=l+sml
+          end if
+       end do
+    end do
+    end do
+    lcintg=ll
+    if (lcintg.ne.-1) then
+       color=1
+       intgflag=.True.
+       allocate(lintg(0:lcintg),aintg(0:lcintg),vintg(0:lcintg))
+       do ll = 0, lcintg; l=de(ll,5); lintg(ll)=l
+          g11 = qo(l,1)*qo(l,1)+qa(l,1)*qa(l,1)+de(l,1)*de(l,1)
+          g22 = qo(l,2)*qo(l,2)+qa(l,2)*qa(l,2)+de(l,2)*de(l,2)
+          g12 = qo(l,1)*qo(l,2)+qa(l,1)*qa(l,2)+de(l,1)*de(l,2)
+          aintg(ll)=sqrt(g11*g22-g12*g12)
+       end do
+    end if
+
+    if (myid==0) then
+       color=1
+    end if
+    call MPI_COMM_SPLIT(icom,color,myid,intgcom,ierr)
+
+ end subroutine intgUp
+!===================================================================================
+!=====PERFORM INTEGRAL
+!===================================================================================
+subroutine integrate()
+implicit none
+   integer(k4) :: l,ll
+   
+   if (intgflag) then
+      do ll = 0, lcintg; l=lintg(ll)
+         vintg(ll)=aintg(ll)*varr(l)
+      end do
+      ra0=sum(vintg)/sum(aintg)
+   else 
+      ra0=0
+   end if
+
+   if (fmblk==1) then
+      if (intgflag.or.myid==0) then
+        CALL MPI_REDUCE(ra0,ra1,1,MPI_REAL8,MPI_SUM,0,intgcom,ierr)
+      end if
+      if (myid==0) ra0=ra1
+   end if
+
+end subroutine integrate
 !*****
 
 end module rptpost

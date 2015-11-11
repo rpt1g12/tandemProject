@@ -29,14 +29,16 @@ call setup
 call flst(fmblk)
    
 !! RPT-READ X,Y,Z COORDINATES
-!call rdP3dG(fmblk)
+call rdP3dG(fmblk)
 ispost=.true.
-!nread=0
-!call p3dread(gsflag=1,nout=0)
 !
-!call getMetrics
-!CALL MPI_BARRIER(icom,ierr)
-!!ngridv=1
+call getMetrics
+CALL MPI_BARRIER(icom,ierr)
+if (intgflag) then
+   write(*,"('Node ',i2,' prepared to integrate over an area of',f7.3,&
+              ' using ',i4,' elements')") &
+              myid,sum(aintg),lcintg
+end if
 !if (mb==7) then
 !   if(wflag) then
 !      ra1=sum(area)
@@ -75,22 +77,28 @@ end if
 !===COMPUTE FORCE COEFFICIENT
 if (fcoef==1) then
    if (myid==0) then
-      write(*,"(3x,'n',8x,'time',9x,'Cl',9x,'Cd',5x)")  
-      write(*,"('============================================')")
+      open (unit=17, file='out/signalout0.dat')
+      open (unit=18, file='out/signalout1.dat')
+      write(17,"(3x,'n',8x,'time',9x,'Cl',9x,'Cd',5x)")  
+      write(18,"(3x,'n',8x,'time',9x,'Cl',9x,'Cd',5x)")  
    end if
    do n = 0, ndata+favgu
-      call clpost(ele=1,nvar=n)
-      if (myid==13) then
+      call clhpost(ele=1,nvar=n)
+      if (myid==0) then
          ra0=aoa*pi/180;ra1=cos(ra0);ra2=sin(ra0); 
-         if(n==ndata+favgu) then
+         if(n>ndata) then
             ra3=(-1)
          else
             ra3=times(n)
          end if
-         write(*,"(i8,f12.5,f12.7,f12.7)") &
-         n,ra3,cl(1,2)*ra1-cl(1,1)*ra2,cl(1,2)*ra2+cl(1,1)*ra1
+         write(17,"(i8,f12.5,f12.7,f12.7)") &
+         n,ra3,clh(1,2,1)*ra1-clh(1,1,1)*ra2,clh(1,2,1)*ra2+clh(1,1,1)*ra1
+         write(18,"(i8,f12.5,f12.7,f12.7)") &
+         n,ra3,clh(1,2,2)*ra1-clh(1,1,2)*ra2,clh(1,2,2)*ra2+clh(1,1,2)*ra1
       end if
    end do
+   if(myid==0) close(17)
+   if(myid==0) close(18)
 end if
 
 !===find location
@@ -141,39 +149,74 @@ end if
 
 !==COMUPTE VORTICITY + Q
 if (fcurl==1) then
-   if (allocated(fout)) deallocate(fout)
-   if (.not.allocated(fout)) allocate(fout(0:lmx,1))
-   if (mb==7) then
+   !if (allocated(fout)) deallocate(fout)
+   !if (.not.allocated(fout)) allocate(fout(0:lmx,1))
+   !if (mb==7) then
+   if(myid==7.and.fintg) open (unit=7, file='out/intp1.dat')
+   !if(myid==7) open (unit=17, file='out/p1.dat')
+   !if(myid==7) open (unit=18, file='out/p2.dat')
    do n = 0, ndata
-      call qcriterion(n);
-      call getCurl(n);
-      call wrP3dP(n,fmblk,'Q+W')
+      !call qcriterion(n);
+      !call getCurl(n);
+      call rdP3dS(n,fmblk)
+      !call rdP3dP(n,fmblk,'Q+W')
+      if(intgflag) varr(:)=qo(:,5)
+      call integrate
+      if(myid==7.and.fintg) write(7,"(es15.7,x,es15.7)") times(n),ra0
+      !if (myid==7) then
+      !   ra0=0;ra1=0
+      !   do k = 0, 50
+      !      do i = 0, 100; ll=indx2(i,k,1); l=lwall(ll)
+      !         ra0=ra0+area(ll)
+      !         ra1=ra1+p(l)*wnor(ll,2)*area(ll)
+      !      end do
+      !   end do
+      !   write(17,"(es15.7,x,es15.7)") timo,ra1/ra0
+      !   ra0=0;ra1=0
+      !   do k = 50, 100
+      !      do i = 0, 100; ll=indx2(i,k,1); l=lwall(ll)
+      !         ra0=ra0+area(ll)
+      !         ra1=ra1+p(l)*wnor(ll,2)*area(ll)
+      !      end do
+      !   end do
+      !   write(18,"(es15.7,x,es15.7)") timo,ra1/ra0
+      !end if
       !fout(:,1:3)=qo(:,2:4)
       !call wrP3dF('Omega',n,3,fmblk)
    end do
-   end if
+   if(myid==7.and.fintg) close(7)
+   !if (myid==7) then
+   !   close(17);close(18)
+   !end if
+   !end if
 end if
 
 !==WRITE WSS
 if (fwss==1) then
-   do n = ndata+1, ndata+2
-      call gettw(n)
+   if (allocated(fout)) deallocate(fout)
+   if (.not.allocated(fout)) allocate(fout(0:lmx,5))
+      call gettw(ndata+1)
+      ra0=two/(amachoo**2)
       do i = 1, 3
-         qo(:,i)=0
+         fout(:,i)=0
          if (wflag) then
             do m = 0, lcwall; l=lwall(m)
-               qo(l,i)=tw(m,i)
+               fout(l,i)=tw(m,i)
+               if (i==1) then
+               ra1=DOT_PRODUCT(tw(m,:),wtan(m,:))
+               fout(l,4)=ra1*ra0
+               end if
             end do
          end if
       end do
-     cinput='tw'; call wffile(cinput,n,3)
-   end do
+      fout(:,5)=(p(:)-poo)*ra0
+      call wrP3dF('tw+Cf+Cp',n,5,fmblk)
 end if
 
 !==COMPUTE Cf 
 if (fcf==1) then
-   if (myid==7) then
       call gettw(ndata+1)
+   if (myid==7) then
       open(7,file='data/allCfAVG.dat')
       write(7,"('x cf')") 
       ra0=two/(amachoo**2)
@@ -271,24 +314,24 @@ if (fstrip) then
   if(mb==7) close(7)
 end if
 
-!==== SHIFT RESTART SOLUTION
-fflag=.true.
-call rdRsta
-m=25
-do nn = 1, 5
-   do k = 0, lze
-      kk=k+m
-      if (kk>lze) then
-         kk=k+m-lze-1
-      end if
-      do j = 0, let; l=indx3(0,j,kk,1); ll=indx3(0,j,k,1)
-         qo(ll:ll+lxi,nn)=qa(l:l+lxi,nn)
-      end do
-   end do
-   qa(:,nn)=qo(:,nn)
-end do
-ndati=ndata
-call wrRsta
+!!==== SHIFT RESTART SOLUTION
+!fflag=.true.
+!call rdRsta
+!m=25
+!do nn = 1, 5
+!   do k = 0, lze
+!      kk=k+m
+!      if (kk>lze) then
+!         kk=k+m-lze-1
+!      end if
+!      do j = 0, let; l=indx3(0,j,kk,1); ll=indx3(0,j,k,1)
+!         qo(ll:ll+lxi,nn)=qa(l:l+lxi,nn)
+!      end do
+!   end do
+!   qa(:,nn)=qo(:,nn)
+!end do
+!ndati=ndata
+!call wrRsta
 
 !===== END OF JOB
  CALL MPI_BARRIER(icom,ierr)
