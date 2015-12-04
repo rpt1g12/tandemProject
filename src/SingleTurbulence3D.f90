@@ -125,51 +125,40 @@
 
  subroutine domdcomp
 
- integer(k4) :: ip1,jp1,ip2,jp2
+ integer(k4) :: ll,bcw,bcinout,bcperiod,bcinter
+ bcw=20+5*nviscous
+ bcinout=10
+ bcperiod=45
+ bcinter=30
 
-    !ip=30*nthick+35*(1-nthick); jp=35*(1-nbody)+nbody*(20+5*nviscous)
-
-    select case(nthick)
-    case(0); ip1=35; ip2=35; ip=35; jp=35
-    case(1); ip1=30; ip2=30; ip=30; jp=30
-    case(2); ip1=30; ip2=30; ip=30; jp=30
-    case(3); ip1=30; ip2=30; ip=30; jp=30
-    end select
-
-    select case(nbody)
-    case(0); jp1=35; jp2=35
-    case(1); jp1=20+5*nviscous; jp2=20+5*nviscous
-    case(2); jp1=20+5*nviscous; jp2=30
-    case(3); jp1=30; jp2=20+5*nviscous
-    end select
-
- select case(mb)
- case(0);  nbcs(1)=10;  nbce(1)=ip1; nbcs(2)=10;  nbce(2)=ip1; nbcs(3)=45; nbce(3)=45
- case(1);  nbcs(1)=ip1; nbce(1)=ip1; nbcs(2)=10;  nbce(2)=ip1; nbcs(3)=45; nbce(3)=45
- case(2);  nbcs(1)=ip1; nbce(1)=10;  nbcs(2)=10;  nbce(2)=ip1; nbcs(3)=45; nbce(3)=45
- case(3);  nbcs(1)=10;  nbce(1)=ip1; nbcs(2)=ip1; nbce(2)=ip1; nbcs(3)=45; nbce(3)=45
- case(4);  nbcs(1)=ip1; nbce(1)=ip1; nbcs(2)=ip1; nbce(2)=jp1; nbcs(3)=45; nbce(3)=45
- case(5);  nbcs(1)=ip1; nbce(1)=10;  nbcs(2)=ip1; nbce(2)=ip1; nbcs(3)=45; nbce(3)=45
- case(6);  nbcs(1)=10;  nbce(1)=ip1; nbcs(2)=ip1; nbce(2)=ip1; nbcs(3)=45; nbce(3)=45
- case(7);  nbcs(1)=ip1; nbce(1)=ip1; nbcs(2)=jp1; nbce(2)=ip1; nbcs(3)=45; nbce(3)=45
- case(8);  nbcs(1)=ip1; nbce(1)=10;  nbcs(2)=ip1; nbce(2)=ip1; nbcs(3)=45; nbce(3)=45
- case(9);  nbcs(1)=10;  nbce(1)=ip1; nbcs(2)=ip1; nbce(2)=10;  nbcs(3)=45; nbce(3)=45
- case(10); nbcs(1)=ip1; nbce(1)=ip1; nbcs(2)=ip1; nbce(2)=10;  nbcs(3)=45; nbce(3)=45
- case(11); nbcs(1)=ip1; nbce(1)=10;  nbcs(2)=ip1; nbce(2)=10;  nbcs(3)=45; nbce(3)=45
- end select
-
- ! rpt-setting the neighbouring blocks
- select case(mb)
- case(0,3,6,9); ms(1)=mb+2; me(1)=mb+1;
- case(1,4,7,10); ms(1)=mb-1; me(1)=mb+1;
- case(2,5,8,11); ms(1)=mb-1; me(1)=mb-2
- end select
- select case(mb)
- case(0,1,2); ms(2)=mb+9; me(2)=mb+3;
- case(3,4,5,6,7,8); ms(2)=mb-3; me(2)=mb+3;
- case(9,10,11); ms(2)=mb-3; me(2)=mb-9
- end select
+ ! rpt-setting the neighbouring blocks and BCS
+ 
+ ll=mod(mb,bkx)
+ if (ll==0) then ! rpt-Left boundary blocks
+    ms(1)=mb+(bkx-1); me(1)=mb+1
+    nbcs(1)=bcinout; nbce(1)=bcinter
+ elseif (ll==(bkx-1)) then ! rpt-Right boundary blocks
+    ms(1)=mb-1; me(1)=mb-(bkx-1)
+    nbcs(1)=bcinter; nbce(1)=bcinout
+ else ! rpt-Middle blocks
+    ms(1)=mb-1; me(1)=mb+1
+    nbcs(1)=bcinter; nbce(1)=bcinter
+ end if
+ if (mb<bkx) then ! rpt-Bottom boundary blocks
+    ms(2)=mb+bkx*(bky-1); me(2)=mb+bkx
+    nbcs(2)=bcinout; nbce(2)=bcinter
+ elseif(mb>(mbk-bkx)) then ! rpt-Top boundary blocks
+    ms(2)=mb-bkx; me(2)=mb-(bkx*(bky-1))
+    nbcs(2)=bcinter; nbce(2)=bcinout
+ else ! rpt-Middle blocks
+    ms(2)=mb-bkx; me(2)=mb+bkx
+    nbcs(2)=bcinter; nbce(2)=bcinter
+ end if
+    nbcs(3)=bcperiod; nbce(3)=bcperiod
     ms(3)=mb; me(3)=mb
+
+    if(mb==4) nbce(2)=bcw
+    if(mb==7) nbcs(2)=bcw
 
  end subroutine domdcomp
 
@@ -232,6 +221,7 @@
  end if
  end do
     ltz=ll; ntz=litr*slit/tla
+    ltz=-1
  if(ltz/=-1) then
     allocate(lctz(0:ltz),tt(0:ntz),vit(0:ltz,3),vito(0:ltz,0:ntz,3)); 
     lp=2*nrec*(ltz+1)*(ntz+1)
@@ -261,7 +251,7 @@
           vito(:,ii,3)=vito(:,ii,3)+rr(0:ltz,1)*de(0:ltz,2)-rr(0:ltz,2)*de(0:ltz,1)
        end do
        end do; end do
-       if(myid==mo(9)) then; write(*,"('Vortex',i3,' Done')") nn; end if
+       if(myid==mo(mbk+1-bkx)) then; write(*,"('Vortex',i3,' Done')") nn; end if
        end do
        open(9,file=cturb); close(9,status='delete')
        open(9,file=cturb,access='direct',form='unformatted',recl=lp)
@@ -276,7 +266,7 @@
     end if
  end if
 
- if(myid==mo(9)) then
+ if((myid==mo(mbk+1-bkx)).and.(ltz/=-1)) then
     fctr=one/lzebk(0)
  do l=0,lzebk(0)
     ra1=-domlen; ra2=0; ra3=(-half+l*fctr)*span
