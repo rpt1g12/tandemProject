@@ -15,8 +15,7 @@ OBJP	= MainVar3D.f90 Subroutineso.f90 Subroutines3D.f90 GridTandem.f90 TandemTur
 OBJPS	= MainVar3D.f90 Subroutineso.f90 Subroutines3D.f90 GridSingle.f90 SingleTurbulence3D.f90 rpt.f90 rptPost.f90 MainPost.f90
 OBJI	= MainVar3D.f90 Subroutineso.f90 Subroutines3D.f90 GridSingle.f90 SingleTurbulence3D.f90 rpt.f90 rptInter.f90 Interpolate3D.f90
 all:
-	$(FC) $(FLAGS) $(PGMG) $(OBJG)
-	rm *.mod
+	make general
 run:
 	$(FC) $(FLAGS) $(PGM) $(OBJ)
 	rm *.mod
@@ -33,5 +32,8 @@ inter:
 	$(FC) $(FLAGS) $(PGMI) $(OBJI)
 	rm *.mod
 test:
+	$(FC) $(FLAGS) $(PGMG) $(OBJG)
+	rm *.mod
+general:
 	$(FC) $(FLAGS) $(PGMG) $(OBJG)
 	rm *.mod
