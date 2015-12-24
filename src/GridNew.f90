@@ -30,10 +30,36 @@ module gridgen
  real(k8) :: am,err,tmp,tmpa,tmpb,gf
  real(k8) :: k01,k02,k03,k04,x0,x1
  real(k8) :: deg1,deg2
+ real(k8), dimension(:), allocatable :: degarr
 
  contains
 
 !===== GRID GENERATION
+
+!        <==Grid Sketch==>
+!
+!        0             1         2                        3
+!     yg |----|--------|---------|--------------|---------|5
+!        |    |        |         |              |         |
+!     yf |----|--------|---------|--------------|---------|
+!        |    |        |         |              |         |
+!        |    |        |         |              |         |
+!        |    |        |         |              |         |
+!        |    |        |         |              |         |
+!     ye |----|--------|---------|--------------|---------|4
+!        |    |        |         |              |         |
+!     yd |----|--------|-airfoil-|--------------|---------|2-3
+!        |    |        |         |              |         |
+!     yc |----|--------|---------|--------------|---------|1
+!        |    |        |         |              |         |
+!        |    |        |         |              |         |
+!        |    |        |         |              |         |
+!        |    |        |         |              |         |
+!     yb |----|--------|---------|--------------|---------|
+!        |    |        |         |              |         |
+!     ya |----|--------|---------|--------------|---------|0
+!        xa   xb       xc        xd             xe        xf
+!
 
  subroutine gridaerofoil(ngridv,nthick,litr,smgrid,&
             domlen,span,wlew,wlea,szth1,szth2,szxt,&
@@ -48,10 +74,13 @@ module gridgen
  real(k8) :: lsz1,lsz2
  real(k8) :: lbl,lwle
  real(k8) :: alph
+ real(k8),dimension(0:1,0:1) :: szth,szsh,blth
+ integer(k4),dimension(0:1,0:1) :: szll
  real(k8) :: oxp,oyp
+ real(k8) :: klbl1,klbl2
  real(k8) :: tmps,tmpe,tmpc
- real(k8) :: sha,shb,shc
- integer(k4) :: smod
+ real(k8) :: sha,shb,shc,shsz
+ integer(k4) :: smod,llsz
  logical :: flag
 
     lxit=sum(lxibk(:))+(bkx-1); lett=sum(letbk(:))+(bky-1)
@@ -68,12 +97,17 @@ module gridgen
     end do
 
     shs=smgrid; she=shs
-    shs1=ximod*smgrid; she1=shs1
+    shs1=ximod*smgrid; 
     shs2=etamod*smgrid;
+    she1=1*shs2!shs1
     smod=5
     tmp=(shs2+smod*shs2)*half
-    !lbl=max(tmp*letbk(1)/(sin(pi4)),0.10*c1/(sin(pi4)))
+    smod=2
+    !lbl=max(tmp*let1/(sin(pi4)),0.10*c1/(sin(pi4)))
     lbl=max(tmp*80/(sin(pi4)),0.10*c1/(sin(pi4)))
+    klbl1=2.5_k8; klbl2=2.5_k8
+    if (myid==0) write(*,*) lbl
+    
 
     allocate(xx(0:lxit,0:lett),yy(0:lxit,0:lett),zz(0:lxit,0:lett),zs(0:lzebk(0)))
     allocate(xp(0:lxit,0:5),yp(0:lxit,0:5))
@@ -87,33 +121,61 @@ if(myid==mo(mb)) then
  do k=0,lzebk(0)
     zs(k)=span*(real(lzebk(0)-k,k8)/lzebk(0)-half)
 !---BLOCKS' BOUNDARIES
-    sho=tla/litr; ll=2*litr; lsz1=ll*sho; lsz2=szth1+szxt
+    !sho=tla/litr; ll=2*litr; lsz1=ll*sho; lsz2=szth1+szxt
+    llsz=(szth1/domlen)*lxibk(0); shsz=real(szth1/llsz,k8); lsz1=llsz*shsz; lsz2=szth1+szxt
 !---WAVY LEADING-EDGE PROFILE
     lwle=wlea*sin(2*pi*(zs(k)-zs(0))/wlew)
+!!---HORIZONTAL LINES
+!    xa(:)=-domlen;
+!    xb(:)=xa+lsz1
+!    xc(2:3)=-half*c1+lwle*cos(delt1);
+!    xc(0:1)=xc(2)-klbl1*lbl*cos(pi4-delt1);xc(4:5)=xc(3)-klbl2*lbl*cos(pi4+delt1)
+!    if (nthick*(nthick-3)==0) then
+!       xc(0:1)=xc(2);xc(4:5)=xc(3)
+!    end if
+!    xd(:)=-half*c1+c1*cos(delt1)
+!    xe(:)=domlen-szth1
+!    xf(:)=xe(:)+lsz2
+!!---VERTICAL LINES
+!    ya(:)=-domlen;
+!    yb=ya(:)+lsz1;
+!    yd(0)=zero;
+!    yd(1)=-lwle*sin(delt1)
+!    yd(2)=-c1*sin(delt1)
+!    ye(0:1)=yd(0:1)+klbl2*lbl*sin(pi4+delt1)
+!    ye(2)=yd(2)+1.8_k8*klbl2*lbl*sin(pi4)*cos(delt1)
+!    ye(3)=ye(2)+4*lbl
+!    yc(0)=ye(0)-2*(klbl1+klbl2)*lbl*sin(pi4+delt1)
+!    yc(1)=yd(1)-klbl1*lbl*sin(pi4-delt1)
+!    yc(2)=yd(2)-klbl1*lbl*sin(pi4)*cos(delt1)
+!    yc(3)=yc(2)-2*lbl
+!    yd(3)=yd(2)
+!    yg(:)=domlen
+!    yf(:)=yg(:)-lsz1
 !---HORIZONTAL LINES
+    xc(2:3)=-half*c1+lwle*cos(delt1);
+    xd(:)=-half*c1+c1*cos(delt1)
     xa(:)=-domlen;
     xb(:)=xa+lsz1
-    xc(2:3)=-half*c1+lwle*cos(delt1);
-    xc(0:1)=xc(2)-lbl*cos(pi4-delt1);xc(4:5)=xc(3)-lbl*cos(pi4+delt1)
-    if (nthick*(nthick-3)==0) then
-       xc(0:1)=xc(2);xc(4:5)=xc(3)
-    end if
-    xd(:)=-half*c1+c1*cos(delt1)
+    xc(4:5)=xc(3)-klbl2*lbl*cos(pi4+delt1)
+    xc(0:1)=xc(4:5)
     xe(:)=domlen-szth1
     xf(:)=xe(:)+lsz2
 !---VERTICAL LINES
-    ya(:)=-domlen;
-    yb=ya(:)+lsz1;
-    yd(0)=zero;yd(3)=zero
     yd(1)=-lwle*sin(delt1)
     yd(2)=-c1*sin(delt1)
-    ye(0:1)=yd(0:1)+lbl*sin(pi4+delt1)
-    ye(2)=yd(2)+lbl*sin(pi4)*cos(delt1)
-    ye(3)=ye(0)
-    yc(0)=ye(0)-2*lbl*sin(pi4+delt1)
-    yc(1)=yd(1)-lbl*sin(pi4-delt1)
-    yc(2)=yd(2)-lbl*sin(pi4)*cos(delt1)
-    yc(3)=yc(0)
+    yd(0)=0.25_k8*domlen*sin(delt1);
+    ye(0)=yd(0)+2*klbl2*lbl
+    ya(:)=-domlen;
+    yb=ya(:)+lsz1;
+    ye(1)=yd(1)+klbl2*lbl*sin(pi4+delt1)
+    ye(2)=yd(2)+1.8_k8*klbl2*lbl*sin(pi4)*cos(delt1)
+    ye(3)=ye(2)+4*lbl
+    yc(1)=-0.5_k8*ye(1)
+    yc(0)=-0.5_k8*ye(1)
+    yc(2)=yd(2)-klbl1*lbl*sin(pi4)*cos(delt1)
+    yc(3)=yc(2)-2*lbl
+    yd(3)=yd(2)
     yg(:)=domlen
     yf(:)=yg(:)-lsz1
 
@@ -122,17 +184,23 @@ if(myid==mo(mb)) then
 !----- INITIAL AND END HORIZONTAL SLOPES
     deg1=(25_k8*pi/180_k8)
     deg2=(10_k8*pi/180_k8)
+    if(.not.allocated(degarr)) allocate(degarr(3))
+    degarr(:)=(/25_k8,10_k8,0_k8/); degarr(:)=degarr(:)*pi/180_k8
     hslo(0,:,:)=zero
-    hslo(1,0,:)=(/zero,-tan(delt1)/)
-    hslo(1,1,:)=(/tan(-deg1-delt1),tan(deg2-delt1)/)
-    hslo(1,2,:)=(/-tan(delt1),zero/)
+    !hslo(1,0,:)=(/zero,-tan(delt1)/)
+    hslo(1,0,:)=(/zero,zero/)
+    hslo(1,1,:)=(/tan(-degarr(1)-delt1),zero/)!tan(degarr(2)-delt1)/)
+    hslo(1,2,:)=(/zero,zero/)
+    !hslo(1,2,:)=(/-tan(delt1),zero/)
     hslo(4,0,:)=(/zero,-tan(delt1)/)
-    hslo(4,1,:)=(/tan(deg1-delt1),tan(-deg2-delt1)/)
-    hslo(4,2,:)=(/-tan(delt1),zero/)
+    hslo(4,1,:)=(/tan(degarr(1)-delt1),zero/)!tan(-degarr(2)-delt1)/)
+    hslo(4,2,:)=(/zero,zero/)
+    !hslo(4,2,:)=(/-tan(delt1),zero/)
     hslo(5,:,:)=zero
     hslo(2,0,:)=(/zero,-tan(delt1)/)
     hslo(2,1,:)=(/zero,zero/)
-    hslo(2,2,:)=(/-tan(delt1),zero/)
+    hslo(2,2,:)=(/zero,zero/)
+    !hslo(2,2,:)=(/-tan(delt1),zero/)
     hslo(3,0,:)=hslo(2,0,:)
     hslo(3,1,:)=hslo(2,1,:)
     hslo(3,2,:)=hslo(2,2,:)
@@ -169,7 +237,9 @@ if(myid==mo(mb)) then
 
 !----- AEROFOIL SURFACE GRID POINTS
     m=1
-    tmp=c1-lwle;tmpa=xc(2);tmpb=yd(1);lxis=lxise(1,0);lxie=lxise(1,1);lxib=lxibk(1);alph=delt1
+    tmp=c1-lwle;tmpa=xc(2);tmpb=yd(1);
+    lxis=lxise(1,0);lxie=lxise(1,1);lxib=lxibk(1);
+    alph=delt1
     if (nthick*(nthick-3)==0) then
        flag=.false.
     else
@@ -233,12 +303,12 @@ if(myid==mo(mb)) then
    !--BLOCK0
    !--a-b
       sho=tla/litr; ll=2*litr
-      ip=lxise(0,0); im=ll;
-      tmpa=xa(n);sha=sho;tmpb=xb(n);shb=sho
+      ip=lxise(0,0); im=llsz;
+      tmpa=xa(n);sha=shsz;tmpb=xb(n);shb=shsz
       call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
    !--b-c
-      ip=ip+im; im=lxibk(0)-ll;
-      tmpa=xb(n);sha=sho;tmpb=xc(n);shb=shs1
+      ip=ip+im; im=lxibk(0)-llsz;
+      tmpa=xb(n);sha=shsz;tmpb=xc(n);shb=shs1
       call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
       if(k==0.and.n==0) then
          lxisz=lxibk(2)*(minloc(abs(xa(n)+szth1-xp(0:lxibk(0),n)),1)-1)/lxibk(0)
@@ -258,7 +328,7 @@ if(myid==mo(mb)) then
       call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
    !--e-f
       ip=ip+im; im=lxisz;
-      tmpa=xe(n);sha=pxi(ip);tmpb=xf(n);shb=sho
+      tmpa=xe(n);sha=pxi(ip);tmpb=xf(n);shb=shsz
       call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
    !--COPY ON N+1 INTERFACE
       xp(lxise(0,0):lxise(0,1),n+1)=xp(lxise(0,0):lxise(0,1),n)
@@ -332,12 +402,12 @@ if(myid==mo(mb)) then
       !-BLOCK0
       !-a-b
       sho=tla/litr; ll=lsz1/sho
-      ip=letse(0,0); im=ll;
-      tmpa=ya(n);sha=sho;tmpb=yb(n);shb=sho
+      ip=letse(0,0); im=llsz;
+      tmpa=ya(n);sha=shsz;tmpb=yb(n);shb=shsz
       call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lxit,im,ip)
       !-b-c
       ip=ip+im; im=letbk(0)-im;
-      tmpa=yb(n);sha=sho;tmpb=yc(n);shb=she2
+      tmpa=yb(n);sha=shsz;tmpb=yc(n);shb=she2
       call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lxit,im,ip)
       !-BLOCK2
       !-d-e
@@ -348,12 +418,12 @@ if(myid==mo(mb)) then
       !-BLOCK3
       !-e-f
       sho=tla/litr; ll=lsz1/sho
-      ip=letse(3,0); im=letbk(3)-ll;
-      tmpa=ye(n);sha=she2;tmpb=yf(n);shb=sho
+      ip=letse(3,0); im=letbk(3)-llsz;
+      tmpa=ye(n);sha=she2;tmpb=yf(n);shb=shsz
       call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lxit,im,ip)
       !-f-g
-      ip=ip+im; im=ll;
-      tmpa=yf(n);sha=sho;tmpb=yg(n);shb=sho
+      ip=ip+im; im=llsz;
+      tmpa=yf(n);sha=shsz;tmpb=yg(n);shb=shsz
       call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lxit,im,ip)
    end do
    !-COPY ON N+5

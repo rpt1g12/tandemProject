@@ -192,9 +192,6 @@
  subroutine movef(dtko,dtk)
 
  real(k8),intent(in) :: dtko,dtk
- real(k8) :: alphamax
-
- alphamax=aoa*pi/180_k8
 
  if(nsmf==0) then
     ra0=pi/timf; ra1=ra0*min(timo,timf); ra2=ra0*min(timo+dtko,timf)
@@ -208,68 +205,11 @@
     dfdt=ra0*cos(ra2)
     progmf=half*ra0*(fctr+dtk*dfdt)
     dudtmf(:)=progmf*uoo(:)
-
-    if (talphas>0) then
-       call pich(alphamax)
-    end if
  else
     umf(:)=uoo(:); dudtmf(:)=0
  end if
 
  end subroutine movef
-
-!=== PITCHING REFERENCE FRAME
-subroutine pich(alpha)
-real(k8), intent(in) :: alpha
-
-    if (talphar>0.0e0) then
-       if (timo+dtk>talphas) then
-          ra3=timo-talphas
-          ra0=half*pi/talphar; ra1=ra0*min(ra3,talphar); ra2=ra0*min(ra3+dtk,talphar)   
-
-          fctr=cos(alpha*sin(ra1)**2);
-          dfdt=-sin(alpha*sin(ra2)**2)*alpha*ra0*sin(2*ra2);
-          progmf=(fctr+dtk*dfdt);
-          umf(1)=progmf*amachoo;
-           
-          fctr=-sin(alpha*sin(ra1)**2)*alpha*ra0*sin(2*ra1);
-          dfdt=-cos(alpha*sin(ra2)**2)*alpha**2*ra0**2*sin(2*ra2)**2 &
-               -sin(alpha*sin(ra2)**2)*2*alpha*ra0**2*cos(2*ra2);
-          progmf=(fctr+dtk*dfdt);
-          dudtmf(1)=progmf*amachoo;
-          
-          fctr=sin(alpha*sin(ra1)**2);
-          dfdt=cos(alpha*sin(ra2)**2)*alpha*ra0*sin(2*ra2);
-          progmf=(fctr+dtk*dfdt);
-          umf(2)=progmf*amachoo;
-           
-          fctr=cos(alpha*sin(ra1)**2)*alpha*ra0*sin(2*ra1);
-          dfdt=-sin(alpha*sin(ra2)**2)*alpha**2*ra0**2*sin(2*ra2)**2 &
-               +cos(alpha*sin(ra2)**2)*2*alpha*ra0**2*cos(2*ra2);
-          progmf=(fctr+dtk*dfdt);
-          dudtmf(2)=progmf*amachoo;
-          umf(3)=0;dudtmf(3)=0
-       end if
-    elseif (talphar==0.0e0) then
-       ra0=pi/timf; ra1=ra0*min(timo,timf); ra2=ra0*min(timo+dtko,timf)
-
-       fctr=1-cos(ra1)
-       dfdt=ra0*sin(ra2)
-       progmf=half*(fctr+dtk*dfdt)
-       umf(:)=progmf
-
-       fctr=sin(ra1)
-       dfdt=ra0*cos(ra2)
-       progmf=half*ra0*(fctr+dtk*dfdt)
-       dudtmf(:)=progmf
-
-       umf(1)=umf(1)*amachoo*cos(alpha);dudtmf(1)=dudtmf(1)*amachoo*cos(alpha)
-       umf(2)=umf(2)*amachoo*sin(alpha);dudtmf(2)=dudtmf(2)*amachoo*sin(alpha)
-       umf(3)=umf(3)*uoo(3)            ;dudtmf(3)=dudtmf(3)*uoo(3)            
-    end if
-   
-end subroutine pich
-
 
 !===== SUBROUTINE FOR BLASIUS LAMINAR BOUNDARY LAYER
 
@@ -325,41 +265,6 @@ end subroutine pich
 
  end subroutine gridf
 
-!===== SUBROUTINE FOR GRID LINE GENERATION : OLD VERSION
-!
-! subroutine gridf(x,xxi,xo,xn,dxs,am,ns,lxi,mxic,mxin,ip)
-!
-! integer(k4),intent(in) :: ns,lxi,mxic,mxin,ip
-! real(k8),dimension(0:lxi),intent(inout) :: x,xxi
-! real(k8),intent(in) :: xo,xn,dxs,am
-!
-! integer(k4) :: i,ii
-! real(k8) :: amp0,amm0,alp0,alp1,s0,s1,c0,c1,aa,bb,xi,xic,xin,xii
-!
-!    amp0=am+1; amm0=am-1
-!    xic=mxic; xin=mxin
-!    alp0=xin+amm0*xic; alp1=am*xin-amm0*xic
-! if(ns==0) then
-!    s0=dxs; s1=(amp0*(xn-xo)-alp0*s0)/alp1
-! else
-!    s1=dxs; s0=(amp0*(xn-xo)-alp1*s1)/alp0
-! end if
-!    c0=xo; c1=xn-s1*xin
-!    aa=(s1-s0)*xic/xin; bb=(s1-s0)*(xin-xic)/xin
-! if(mxic/=0) then
-! do i=0,mxic
-!    ii=i+ip; xi=i; xii=xi/xic
-!    x(ii)=s0*xi+aa*xic*xii**amp0/amp0+c0; xxi(ii)=s0+aa*xii**am
-! end do
-! end if
-! if(mxic/=mxin) then
-! do i=mxic,mxin
-!    ii=i+ip; xi=i; xii=(xin-xi)/(xin-xic)
-!    x(ii)=s1*xi+bb*(xin-xic)*xii**amp0/amp0+c1; xxi(ii)=s1-bb*xii**am
-! end do
-! end if
-!
-! end subroutine gridf
 
 !===== SUBROUTINE FOR CHARACTER STRING CONVERSION
 

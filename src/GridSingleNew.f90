@@ -9,7 +9,10 @@ module gridgen
 
  integer(k4),parameter :: lnaca=1000
  real(k8),parameter :: pi4=pi/4.0_k8
+ integer(k4) :: lxi0,lxi1,lxi2,let0,let1,lze0
  integer(k4) :: lxit,lett,lxisz,im,jm
+ integer(k4) :: lxis0,lxie0,lxis1,lxie1,lxis2,lxie2
+ integer(k4) :: lets0,lete0,lets1,lete1,lets2,lete2,lets3,lete3
  integer(k4) :: lxis,lxie,lxib
  integer(k4) :: lets,lete,letb
 
@@ -35,14 +38,9 @@ module gridgen
 
 !===== GRID GENERATION
 
- subroutine gridaerofoil(ngridv,nthick,litr,smgrid,&
-            domlen,span,wlew,wlea,szth1,szth2,szxt,&
-            tla,tlb,cutlb,c1,delt1,ximod,etamod)
+ subroutine gridaerofoil(ngridv,nthick,litr,smgrid,domlen,span,wlew,wlea,szth1,szth2,szxt,tla,tlb,cutlb,c1,delt1,ximod,etamod)
 
  integer(k4),intent(in) :: ngridv,litr,nthick
- integer(k4), dimension(:,:) :: lxise(0:bkx-1,0:1)
- integer(k4), dimension(:,:) :: letse(0:bky-1,0:1)
- integer(k4), dimension(:,:) :: lzese(0:bkz-1,0:1)
  real(k8),intent(in) :: smgrid,domlen,span,wlew,wlea,szth1,szth2,szxt,tla,tlb,c1,delt1
  real(k8),intent(in) :: ximod,etamod,cutlb
  real(k8) :: lsz1,lsz2
@@ -50,44 +48,45 @@ module gridgen
  real(k8) :: alph
  real(k8) :: oxp,oyp
  real(k8) :: tmps,tmpe,tmpc
- real(k8) :: sha,shb,shc
- integer(k4) :: smod
+ real(k8) :: sha,shb,shc,shsz
+ integer(k4) :: smod,llsz
  logical :: flag
 
-    lxit=sum(lxibk(:))+(bkx-1); lett=sum(letbk(:))+(bky-1)
-    lxise(0,0)=0; lxise(0,1)=lxibk(0)
-    letse(0,0)=0; letse(0,1)=letbk(0)
-    lzese(0,0)=0; lzese(0,1)=lzebk(0)
-    do i = 1, bkx-1
-          lxise(i,0)=lxise(i-1,1)+1
-          lxise(i,1)=lxise(i,0)+lxibk(i)
-    end do
-    do j = 1, bky-1
-          letse(j,0)=letse(j-1,1)+1
-          letse(j,1)=letse(j,0)+letbk(j)
-    end do
+    lxit=lxi0+lxi1+lxi2+2; lett=2*(let0+let1)+3
+
+    lxis0=0;lxie0=lxi0;
+    lxis1=lxie0+1;lxie1=lxis1+lxi1;
+    lxis2=lxie1+1;lxie2=lxit;
+
+    lets0=0;lete0=let0;
+    lets1=lete0+1;lete1=lets1+let1
+    lets2=lete1+1;lete2=lets2+let1
+    lets3=lete2+1;lete3=lets3+let0
 
     shs=smgrid; she=shs
-    shs1=ximod*smgrid; she1=shs1
+    shs1=ximod*smgrid; 
     shs2=etamod*smgrid;
+    she1=1*shs2!shs1
     smod=5
     tmp=(shs2+smod*shs2)*half
-    !lbl=max(tmp*letbk(1)/(sin(pi4)),0.10*c1/(sin(pi4)))
+    smod=2
+    !lbl=max(tmp*let1/(sin(pi4)),0.10*c1/(sin(pi4)))
     lbl=max(tmp*80/(sin(pi4)),0.10*c1/(sin(pi4)))
 
-    allocate(xx(0:lxit,0:lett),yy(0:lxit,0:lett),zz(0:lxit,0:lett),zs(0:lzebk(0)))
+    allocate(xx(0:lxit,0:lett),yy(0:lxit,0:lett),zz(0:lxit,0:lett),zs(0:lze0))
     allocate(xp(0:lxit,0:5),yp(0:lxit,0:5))
     allocate(xq(0:lett,0:3),yq(0:lett,0:3))
     allocate(pxi(0:lxit),qet(0:lett))
 
 if(myid==mo(mb)) then
     no(2)=mb/100; no(1)=mod(mb,100)/10; no(0)=mod(mb,10); cno=achar(no+48)
-    open(1,file='misc/grid'//cno(2)//cno(1)//cno(0)//'.dat',access='stream',form='unformatted')
+    open(1,file='misc/grid'//cno(2)//cno(1)//cno(0)//'.dat',access='stream')
 
- do k=0,lzebk(0)
-    zs(k)=span*(real(lzebk(0)-k,k8)/lzebk(0)-half)
+ do k=0,lze0
+    zs(k)=span*(real(lze0-k,k8)/lze0-half)
 !---BLOCKS' BOUNDARIES
-    sho=tla/litr; ll=2*litr; lsz1=ll*sho; lsz2=szth1+szxt
+    !sho=tla/litr; ll=2*litr; lsz1=ll*sho; lsz2=szth1+szxt
+    llsz=(szth1/domlen)*lxi0; shsz=real(szth1/llsz,k8); lsz1=llsz*shsz; lsz2=szth1+szxt
 !---WAVY LEADING-EDGE PROFILE
     lwle=wlea*sin(2*pi*(zs(k)-zs(0))/wlew)
 !---HORIZONTAL LINES
@@ -169,7 +168,7 @@ if(myid==mo(mb)) then
 
 !----- AEROFOIL SURFACE GRID POINTS
     m=1
-    tmp=c1-lwle;tmpa=xc(2);tmpb=yd(1);lxis=lxise(1,0);lxie=lxise(1,1);lxib=lxibk(1);alph=delt1
+    tmp=c1-lwle;tmpa=xc(2);tmpb=yd(1);lxis=lxis1;lxie=lxie1;lxib=lxi1;alph=delt1
     if (nthick*(nthick-3)==0) then
        flag=.false.
     else
@@ -233,38 +232,37 @@ if(myid==mo(mb)) then
    !--BLOCK0
    !--a-b
       sho=tla/litr; ll=2*litr
-      ip=lxise(0,0); im=ll;
-      tmpa=xa(n);sha=sho;tmpb=xb(n);shb=sho
+      ip=lxis0; im=llsz;
+      tmpa=xa(n);sha=shsz;tmpb=xb(n);shb=shsz
       call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
    !--b-c
-      ip=ip+im; im=lxibk(0)-ll;
-      tmpa=xb(n);sha=sho;tmpb=xc(n);shb=shs1
+      ip=ip+im; im=lxi0-llsz;
+      tmpa=xb(n);sha=shsz;tmpb=xc(n);shb=shs1
       call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
       if(k==0.and.n==0) then
-         lxisz=lxibk(2)*(minloc(abs(xa(n)+szth1-xp(0:lxibk(0),n)),1)-1)/lxibk(0)
-         lp=ll     
+         lxisz=lxi2*(minloc(abs(xa(n)+szth1-xp(0:lxi0,n)),1)-1)/lxi0; lp=ll     
       end if
    if (n.ne.2) then
    !--BLOCK1
    !--c-d
-      ip=lxise(1,0); im=lxibk(1);
+      ip=lxis1; im=lxi1;
       tmpa=xc(n);sha=shs1;tmpb=xd(n);shb=she1
       call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
    end if
    !--BLOCK2
    !--d-e
-      ip=lxise(2,0); im=lxibk(2)-lxisz;
+      ip=lxis2; im=lxi2-lxisz;
       tmpa=xd(n);sha=she1;tmpb=xe(n);shb=sml
       call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
    !--e-f
       ip=ip+im; im=lxisz;
-      tmpa=xe(n);sha=pxi(ip);tmpb=xf(n);shb=sho
+      tmpa=xe(n);sha=pxi(ip);tmpb=xf(n);shb=shsz
       call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
    !--COPY ON N+1 INTERFACE
-      xp(lxise(0,0):lxise(0,1),n+1)=xp(lxise(0,0):lxise(0,1),n)
-      xp(lxise(2,0):lxise(2,1),n+1)=xp(lxise(2,0):lxise(2,1),n)
+      xp(lxis0:lxie0,n+1)=xp(lxis0:lxie0,n)
+      xp(lxis2:lxie2,n+1)=xp(lxis2:lxie2,n)
       if (n.ne.2) then
-      xp(lxise(1,0):lxise(1,1),n+1)=xp(lxise(1,0):lxise(1,1),n)
+      xp(lxis1:lxie1,n+1)=xp(lxis1:lxie1,n)
       end if
    end do
 
@@ -277,9 +275,9 @@ if(myid==mo(mb)) then
       case(1); k01=yc(m);k03=yc(m+1)
       end select
       selectcase(m)
-      case(0); is=lxise(0,0);ie=lxise(0,1);x0=xa(n);x1=xc(n)
-      case(1); is=lxise(1,0);ie=lxise(1,1);x0=xc(n);x1=xd(n)
-      case(2); is=lxise(2,0);ie=lxise(2,1);x0=xd(n);x1=xf(n)
+      case(0); is=lxis0;ie=lxie0;x0=xa(n);x1=xc(n)
+      case(1); is=lxis1;ie=lxie1;x0=xc(n);x1=xd(n)
+      case(2); is=lxis2;ie=lxie2;x0=xd(n);x1=xf(n)
       end select     
       k02=hslo(n,m,0);k04=hslo(n,m,1)
       do i = is, ie
@@ -295,9 +293,9 @@ if(myid==mo(mb)) then
       case(5); k01=yg(m);k03=yg(m+1)
       end select
       selectcase(m)
-      case(0); is=lxise(0,0);ie=lxise(0,1);x0=xa(n);x1=xc(n)
-      case(1); is=lxise(1,0);ie=lxise(1,1);x0=xc(n);x1=xd(n)
-      case(2); is=lxise(2,0);ie=lxise(2,1);x0=xd(n);x1=xf(n)
+      case(0); is=lxis0;ie=lxie0;x0=xa(n);x1=xc(n)
+      case(1); is=lxis1;ie=lxie1;x0=xc(n);x1=xd(n)
+      case(2); is=lxis2;ie=lxie2;x0=xd(n);x1=xf(n)
       end select     
       k02=hslo(n,m,0);k04=hslo(n,m,1)
       do i = is, ie
@@ -309,8 +307,8 @@ if(myid==mo(mb)) then
       n=2
       do m = 0,2,2
       selectcase(m)
-      case(0); is=lxise(0,0);ie=lxise(0,1);x0=xa(n);x1=xc(n)
-      case(2); is=lxise(2,0);ie=lxise(2,1);x0=xd(n);x1=xf(n)
+      case(0); is=lxis0;ie=lxie0;x0=xa(n);x1=xc(n)
+      case(2); is=lxis2;ie=lxie2;x0=xd(n);x1=xf(n)
       end select     
       k01=yd(m);k03=yd(m+1);k02=hslo(n,m,0);k04=hslo(n,m,1)
       do i = is, ie
@@ -325,35 +323,35 @@ if(myid==mo(mb)) then
          alph=delt1
       !-BLOCK1
       !-c-d
-      ip=letse(1,0); im=letbk(1);
+      ip=lets1; im=let1;
       tmpa=yc(n);sha=smod*shs2;tmpb=yd(n);shb=shs2*sin(pi4-alph)
       call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lxit,im,ip)
       she2=qet(ip)
       !-BLOCK0
       !-a-b
       sho=tla/litr; ll=lsz1/sho
-      ip=letse(0,0); im=ll;
-      tmpa=ya(n);sha=sho;tmpb=yb(n);shb=sho
+      ip=lets0; im=llsz;
+      tmpa=ya(n);sha=shsz;tmpb=yb(n);shb=shsz
       call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lxit,im,ip)
       !-b-c
-      ip=ip+im; im=letbk(0)-im;
-      tmpa=yb(n);sha=sho;tmpb=yc(n);shb=she2
+      ip=ip+im; im=let0-im;
+      tmpa=yb(n);sha=shsz;tmpb=yc(n);shb=she2
       call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lxit,im,ip)
       !-BLOCK2
       !-d-e
-      ip=letse(2,0); im=letbk(2);
+      ip=lets2; im=let1;
       tmpa=yd(n);sha=shs2*sin(pi4+alph);tmpb=ye(n);shb=smod*shs2
       call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lxit,im,ip)
       she2=qet(ip+im)
       !-BLOCK3
       !-e-f
       sho=tla/litr; ll=lsz1/sho
-      ip=letse(3,0); im=letbk(3)-ll;
-      tmpa=ye(n);sha=she2;tmpb=yf(n);shb=sho
+      ip=lets3; im=let0-llsz;
+      tmpa=ye(n);sha=she2;tmpb=yf(n);shb=shsz
       call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lxit,im,ip)
       !-f-g
-      ip=ip+im; im=ll;
-      tmpa=yf(n);sha=sho;tmpb=yg(n);shb=sho
+      ip=ip+im; im=llsz;
+      tmpa=yf(n);sha=shsz;tmpb=yg(n);shb=shsz
       call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lxit,im,ip)
    end do
    !-COPY ON N+5
@@ -366,13 +364,13 @@ if(myid==mo(mb)) then
    n=1
    do m = 0,3
       selectcase(m)
-      case(0); is=letse(0,0);ie=letse(0,1);x0=ya(n);x1=yc(n)
+      case(0); is=lets0;ie=lete0;x0=ya(n);x1=yc(n)
                k01=xc(m);k03=xc(m+1)
-      case(1); is=letse(1,0);ie=letse(1,1);x0=yc(n);x1=yd(n)
+      case(1); is=lets1;ie=lete1;x0=yc(n);x1=yd(n)
                k01=xc(m);k03=xc(m+1)
-      case(2); is=letse(2,0);ie=letse(2,1);x0=yd(n);x1=ye(n)
+      case(2); is=lets2;ie=lete2;x0=yd(n);x1=ye(n)
                k01=xc(m+1);k03=xc(m+2)
-      case(3); is=letse(3,0);ie=letse(3,1);x0=ye(n);x1=yf(n)
+      case(3); is=lets3;ie=lete3;x0=ye(n);x1=yf(n)
                k01=xc(m+1);k03=xc(m+2)
       end select     
       k02=vslo(n,m,0);k04=vslo(n,m,1)
@@ -388,18 +386,18 @@ if(myid==mo(mb)) then
 !--GRID INTERPOLATION
    do l=0,3
       select case(l);
-      case(0); js=0; je=letse(0,1); n=0; gf=0
-      case(1); js=letse(1,0); je=letse(1,1); n=1; gf=1
-      case(2); js=letse(2,0); je=letse(2,1); n=3; gf=0
-      case(3); js=letse(3,0); je=letse(3,1); n=4; gf=1
+      case(0); js=0; je=lete0; n=0; gf=0
+      case(1); js=lets1; je=lete1; n=1; gf=1
+      case(2); js=lets2; je=lete2; n=3; gf=0
+      case(3); js=lets3; je=lete3; n=4; gf=1
       end select
      do m=0,2
       select case(m)
-      case(0); is=0;     ie=lxise(0,1); nn=1; rs=abs(xa(n+1)-xa(n)); re=abs(xc(n+1)-xc(n))
+      case(0); is=0;     ie=lxie0; nn=1; rs=abs(xa(n+1)-xa(n)); re=abs(xc(n+1)-xc(n))
                tmpa=int(rs/abs(rs-sml)); tmpb=int(re/abs(re-sml))
-      case(1); is=lxise(1,0); ie=lxise(1,1); nn=0; rs=abs(xc(n+1)-xc(n)); re=abs(xd(n+1)-xd(n))
+      case(1); is=lxis1; ie=lxie1; nn=0; rs=abs(xc(n+1)-xc(n)); re=abs(xd(n+1)-xd(n))
                tmpa=int(rs/abs(rs-sml)); tmpb=int(re/abs(re-sml))
-      case(2); is=lxise(2,0); ie=lxise(2,1); nn=1; rs=abs(xd(n+1)-xd(n)); re=abs(xe(n+1)-xe(n))
+      case(2); is=lxis2; ie=lxie2; nn=1; rs=abs(xd(n+1)-xd(n)); re=abs(xe(n+1)-xe(n))
                tmpa=int(rs/abs(rs-sml)); tmpb=int(re/abs(re-sml))
       end select
       do j=js,je; do i=is,ie
@@ -419,20 +417,20 @@ if(myid==mo(mb)) then
 
 !--GRID OUTPUT
    select case(mb); 
-     case(0,1,2); js=letse(0,0); je=letse(0,1); 
-     case(3,4,5); js=letse(1,0); je=letse(1,1);
-     case(6,7,8); js=letse(2,0); je=letse(2,1);
-     case(9,10,11); js=letse(3,0); je=letse(3,1);
+     case(0,1,2); js=lets0; je=lete0; 
+     case(3,4,5); js=lets1; je=lete1;
+     case(6,7,8); js=lets2; je=lete2;
+     case(9,10,11); js=lets3; je=lete3;
    end select
    select case(mb)
-     case(0,3,6,9); is=lxise(0,0); ie=lxise(0,1);
-     case(1,4,7,10); is=lxise(1,0); ie=lxise(1,1);
-     case(2,5,8,11); is=lxise(2,0); ie=lxise(2,1)
+     case(0,3,6,9); is=lxis0; ie=lxie0;
+     case(1,4,7,10); is=lxis1; ie=lxie1;
+     case(2,5,8,11); is=lxis2; ie=lxie2
    end select
    np=k8*(je-js+1)*(ie-is+1)
    write(1,pos=np*k+1) ((xx(i,j),i=is,ie),j=js,je)
-   write(1,pos=np*(k+lzebk(0)+1)+1) ((yy(i,j),i=is,ie),j=js,je)
-   write(1,pos=np*(k+2*lzebk(0)+2)+1) ((zz(i,j),i=is,ie),j=js,je)
+   write(1,pos=np*(k+lze0+1)+1) ((yy(i,j),i=is,ie),j=js,je)
+   write(1,pos=np*(k+2*lze0+2)+1) ((zz(i,j),i=is,ie),j=js,je)
  end do
  close(1)
 
@@ -493,7 +491,7 @@ end if
     *(0.298222773e0*sqrt(xc)-0.127125232e0*xc- 0.357907906e0*xc**2+&
     0.291984971e0*xc**3-0.105174606e0*xc**4)
     if (n==2) then
-       y=-1.0e0*y
+       y=y*-1.0e0
     end if
  end function naca
  

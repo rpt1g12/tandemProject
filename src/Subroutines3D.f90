@@ -77,9 +77,9 @@
 
 !===== SUBROUTINE FOR COMPACT FINITE DIFFERENTIATING
 
- subroutine deriv(nn,nz,m)
+ subroutine deriv(nn,nz)
 
- integer(k4),intent(in) :: nn,nz,m
+ integer(k4),intent(in) :: nn,nz
 
     nt=0; ns=ndf(0,0,nn); ne=ndf(1,0,nn)
 
@@ -204,17 +204,17 @@
     ss(:,1)=1/qa(:,1); de(:,1:3)=0
 
     rr(:,1)=ss(:,1)*qa(:,2)
-    m=1; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+    m=1; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
     de(:,2)=de(:,2)+rr(:,1)*xim(:,3)+rr(:,2)*etm(:,3)+rr(:,3)*zem(:,3)
     de(:,3)=de(:,3)-rr(:,1)*xim(:,2)-rr(:,2)*etm(:,2)-rr(:,3)*zem(:,2)
 
     rr(:,1)=ss(:,1)*qa(:,3)
-    m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+    m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
     de(:,3)=de(:,3)+rr(:,1)*xim(:,1)+rr(:,2)*etm(:,1)+rr(:,3)*zem(:,1)
     de(:,1)=de(:,1)-rr(:,1)*xim(:,3)-rr(:,2)*etm(:,3)-rr(:,3)*zem(:,3)
 
     rr(:,1)=ss(:,1)*qa(:,4)
-    m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+    m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
     de(:,1)=de(:,1)+rr(:,1)*xim(:,2)+rr(:,2)*etm(:,2)+rr(:,3)*zem(:,2)
     de(:,2)=de(:,2)-rr(:,1)*xim(:,1)-rr(:,2)*etm(:,1)-rr(:,3)*zem(:,1)
 

@@ -10,7 +10,7 @@
 
  integer,parameter :: k4=kind(1.0e0),k8=kind(1.0d0)
  integer(k4),parameter :: ntdrv=0,ntflt=1,nrall=0,nrone=1,n45no=0,n45go=1
- integer(k4),parameter :: lmd=11,lmf=8,lmp=max(lmd,lmf),mfbi=2,mbci=3
+ integer(k4),parameter :: lmd=11,lmf=8,lmp=max(lmd,lmf),mfbi=3,mbci=3
  integer(k4),parameter :: liofs=16,liofl=24
 
  character(len=*),parameter :: fmts='es15.8',fmtl='es23.16',fmtsa=fmts//',a',fmtla=fmtl//',a'
@@ -72,7 +72,6 @@
 
  real(k8),dimension(:,:),allocatable :: xim,etm,zem
  real(k8),dimension(:),allocatable :: p,yaco
- real(k8),dimension(:),allocatable :: sbcc
 
  real(k8),dimension(:,:),allocatable :: rr,ss
 
@@ -82,8 +81,9 @@
 
  real(k8),dimension(:,:),allocatable :: ran,sit,ait
  real(k8),dimension(:),allocatable :: xit,yit,zit
- real(k8),dimension(:),allocatable :: asz,bsz,csz
+ real(k8),dimension(:),allocatable :: asz,bsz,csz,dsz
  real(k8),dimension(:),allocatable :: times,vmpi
+! check if this affects, should be k4 kind
  real(4),dimension(:),allocatable :: varr
 
  real(k8),dimension(:,:,:),pointer :: drva,drvb,send,recv,cm
@@ -93,13 +93,14 @@
  real(k8),dimension(:,:,:),allocatable,target :: send1,send2,send3
  real(k8),dimension(:,:,:),allocatable,target :: recv1,recv2,recv3
  real(k8),dimension(:,:,:),allocatable,target :: cm1,cm2,cm3
+ real(k8),dimension(:,:),allocatable,target :: cmm1,cmm2,cmm3
 
  real(k8),dimension(:,:),allocatable :: varm
  real(k8),dimension(:),allocatable :: varmin,varmax
  real(k4),dimension(:),allocatable :: vart,vara,varb,vmean
 
  character(13),dimension(:),allocatable :: ctecplt,cthead
- character(13),dimension(:),allocatable :: cfilet
+ character(4),dimension(:),allocatable :: cfilet
  character(7),dimension(:),allocatable :: czonet
 
 !===== CONSTANT-SIZED MAIN VARIABLES
@@ -150,7 +151,7 @@
 !===== INTEGER VARIABLES FOR MPI COMMANDS
 
  integer(k4),dimension(:,:),allocatable :: ista
- integer(k4),dimension(:),allocatable :: ireq
+ integer(k4),dimension(12) :: ireq
  integer(k4) :: ir,mpro,npro,myid,itag,info,icom,ierr
 
 !===== INTEGER VARIABLES FOR RECORDING BY RPT
@@ -171,6 +172,8 @@
  integer :: q4arr,q4fh,qarr,qfh
  logical :: qflag=.false.,gflag=.false.,q4flag=.false.
  logical :: wrsfg=.false.,wrrfg=.false.
+ real(k8), dimension(:,:), allocatable :: q8
+ real(k4), dimension(:,:), allocatable :: fout,xyz4,q4
 !===== VARIABLES FOR WALL OPERATIONS BY RPT
  integer(k4) :: lcwall
  integer(k4), dimension(:), allocatable ::lwall
@@ -178,19 +181,33 @@
  real(k8), dimension(:,:), allocatable ::wnor,wtan,tw
  logical :: wflag
  real(k8), dimension(:,:), allocatable,target :: xyz
- integer(k4) :: wcom
+ integer(k4) :: wcom,bwcom
 
 !===== POST-PROCESSING VARIABLES BY RPT
 
  integer(k4) :: lsta
  logical :: tecplot,ispost
  real(k8), dimension(:,:), allocatable :: wplus
- real(k4), dimension(:,:), allocatable :: fout,xyz4,q4
  real(k8), dimension(:), allocatable :: wvarr
- character(18),dimension(:),allocatable :: ofiles 
-
-
+ character(:),dimension(:),allocatable :: ofiles 
  real(k8), dimension(2,2) :: cl
+ real(k8), dimension(2,2,2) :: clh
+
+ integer :: fparallel,fmblk
+ integer :: favg,fwavg,favgu,fcoef,fcf,fcp,floc,fwplus,fqcrit,fwss,fcurl,frms,fwrms
+ integer :: fstrip
+ real(k8),dimension(:),allocatable :: delt
+ real(k8), dimension (:,:), allocatable :: svarr
+! real(k8), dimension (:,:,:,:), allocatable :: qxyz
+ logical :: fflag
+
+ logical :: intgflag
+ integer :: intgcom
+ integer(k4) :: lcintg
+ real(k8),dimension(:),allocatable :: vintg,aintg
+ integer(k4),dimension(:),allocatable :: lintg
+ real :: rdis,xpos,ypos
+ integer :: fintg,atk
 
 !===== ADITIONAL INPUTO VARIABLES BY RPT
  integer(k4)  :: nto,iwrec

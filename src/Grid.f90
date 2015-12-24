@@ -112,8 +112,8 @@ if(myid==mo(mb)) then
     open(1,file='misc/grid'//cno(2)//cno(1)//cno(0)//'.dat',access='stream',form='unformatted')
 
 !---Domain Sizes
-    dlth(0,0)=half*domlen; dlth(0,1)=domlen+szxt
-    dlth(1,0)=half*domlen; dlth(1,1)=domlen+szxt
+    dlth(0,0)=0.7e0*domlen; dlth(0,1)=domlen+szxt
+    dlth(1,0)=0.7e0*domlen; dlth(1,1)=domlen+szxt
 !---POINTS IN SPONGE
     szth(0,0)=szth1; szth(0,1)=szth2+szxt
     szth(1,0)=szth1; szth(1,1)=szth2+szxt
@@ -127,9 +127,9 @@ if(myid==mo(mb)) then
        szll(0,0),szll(1,1),szll(0,1),szll(1,0)
     end if
 !---Boundary Layer Refinement
-    blx(0,0)=0.3*c1
+    blx(0,0)=0.4*c1
+    blx(0,1)=0.4*c1
     blx(1,0)=zero
-    blx(0,1)=0.3*c1
     blx(1,1)=zero
     bly(0,0)=0.5e0*c1!thk*0.01*c1
     bly(1,0)=0.5e0*c1!thk*0.01*c1
@@ -203,13 +203,9 @@ if(myid==mo(mb)) then
    !--X-COORDINATE
    do n = 0,npy
    !--BLOCK0
-   !--0-1 Sponge
-      ip=lxise(0,0); im=szll(0,0);
-      tmpa=px(0,n);sha=szsh(0,0);tmpb=px(1,n);shb=wksh(0,0)
-      call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
-   !--1-2
-      ip=ip+im; im=lxibk(0)-im;
-      tmpa=px(1,n);sha=shb;tmpb=px(2,n);shb=shs1
+   !!--0-2 Sponge
+      ip=lxise(0,0); im=lxibk(0);
+      tmpa=px(0,n);sha=sml;tmpb=px(2,n);shb=shs1
       call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
    if ((n.ne.1).or.(n.ne.2)) then
       !--BLOCK1
@@ -219,18 +215,22 @@ if(myid==mo(mb)) then
          call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
    end if
    !--BLOCK2
+   !--3-5 Refinement
+      ip=lxise(2,0); im=lxibk(2)
+      tmpa=px(3,n);sha=she1;tmpb=px(5,n);shb=sml
+      call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
    !--3-bl Refinement
-      ip=lxise(2,0); im=blll(1)
-      tmpa=px(3,n);sha=she1;tmpb=px(3,n)+bly(0,1);shb=sml
-      call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
+   !  ip=lxise(2,0); im=blll(1)
+   !  tmpa=px(3,n);sha=she1;tmpb=px(3,n)+bly(0,1);shb=sml
+   !  call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
    !--bl-4 Wake
-      ip=lxise(2,0)+im; im=lxibk(2)-szll(0,1)-blll(1);
-      tmpa=tmpb;sha=pxi(ip);tmpb=px(4,n);shb=wksh(0,1)
-      call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
+   !  ip=lxise(2,0)+im; im=lxibk(2)-szll(0,1)-blll(1);
+   !  tmpa=tmpb;sha=pxi(ip);tmpb=px(4,n);shb=sml!wksh(0,1)
+   !  call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
    !--4-5 Sponge
-      ip=ip+im; im=szll(0,1);
-      tmpa=px(4,n);sha=shb;tmpb=px(5,n);shb=szsh(0,1)
-      call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
+   !  ip=ip+im; im=szll(0,1);
+   !  tmpa=px(4,n);sha=pxi(ip);tmpb=px(5,n);shb=szsh(0,1)
+   !  call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
    end do
 
    !--Y-COORDINATE
@@ -304,31 +304,39 @@ if(myid==mo(mb)) then
    !-Y-COORDINATE
    do n = 0, bkx
       !-BLOCK0
-      !-0-1
-      ip=letse(0,0); im=szll(1,0);
-      tmpa=py(0,n);sha=szsh(1,0);tmpb=py(1,n);shb=wksh(1,0)
+      !-0-2
+      ip=letse(0,0); im=letbk(0)
+      tmpa=py(0,n);sha=sml;tmpb=py(2,n);shb=shs2*cos(pi4+delt1)
       call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lett,im,ip)
-      !-1-bl0
-      ip=ip+im; im=letbk(0)-(szll(1,0)+blll(0));
-      tmpa=py(1,n);sha=shb;tmpb=py(2,n)-bly(0,0);shb=blsh(0)
-      call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lett,im,ip)
-      !-bl0-2 refinement
-      ip=ip+im; im=blll(0);
-      tmpa=tmpb;sha=shb;tmpb=py(2,n);shb=shs2*cos(pi4+delt1)
-      call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lett,im,ip)
+      !!-0-1
+      !ip=letse(0,0); im=szll(1,0);
+      !tmpa=py(0,n);sha=szsh(1,0);tmpb=py(1,n);shb=wksh(1,0)
+      !call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lett,im,ip)
+      !!-1-bl0
+      !ip=ip+im; im=letbk(0)-(szll(1,0)+blll(0));
+      !tmpa=py(1,n);sha=shb;tmpb=py(2,n)-bly(0,0);shb=blsh(0)
+      !call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lett,im,ip)
+      !!-bl0-2 refinement
+      !ip=ip+im; im=blll(0);
+      !tmpa=tmpb;sha=shb;tmpb=py(2,n);shb=shs2*cos(pi4+delt1)
+      !call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lett,im,ip)
       !-BLOCK1
-      !-3-bl1 refinement
-      ip=letse(1,0); im=blll(1);
-      tmpa=py(2,n);sha=shs2*cos(pi4-delt1);tmpb=py(2,n)+bly(0,1);shb=sml
+      !-3-5
+      ip=letse(1,0); im=letbk(1)
+      tmpa=py(2,n);sha=shs2*cos(pi4-delt1);tmpb=py(5,n);shb=sml
       call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lett,im,ip)
-      !-bl1-4
-      ip=ip+im; im=letbk(1)-(szll(1,1)+blll(1));
-      tmpa=tmpb;sha=qet(ip);tmpb=py(4,n);shb=wksh(1,1)
-      call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lett,im,ip)   
-      !-4-5
-      ip=ip+im; im=szll(1,1)
-      tmpa=py(4,n);sha=shb;tmpb=py(5,n);shb=szsh(1,1)
-      call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lett,im,ip)
+      !!-3-bl1 refinement
+      !ip=letse(1,0); im=blll(1);
+      !tmpa=py(2,n);sha=shs2*cos(pi4-delt1);tmpb=py(2,n)+bly(0,1);shb=sml
+      !call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lett,im,ip)
+      !!-bl1-4
+      !ip=ip+im; im=letbk(1)-(szll(1,1)+blll(1));
+      !tmpa=tmpb;sha=qet(ip);tmpb=py(4,n);shb=wksh(1,1)
+      !call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lett,im,ip)   
+      !!-4-5
+      !ip=ip+im; im=szll(1,1)
+      !tmpa=py(4,n);sha=shb;tmpb=py(5,n);shb=szsh(1,1)
+      !call gridf(yq(:,n),qet,tmpa,tmpb,sha,shb,lett,im,ip)
    end do
 
    !--X-COORDINATE
@@ -337,37 +345,38 @@ if(myid==mo(mb)) then
    !--Interface 1
       !-BLOCK0
       !-0-bl0
-      is=letse(0,0);ie=letbk(0)-blll(0)
+      is=letse(0,0);ie=letse(0,1)
       xq(is:ie,1)=px(2,0)
       !-bl0-1
+      is=letbk(0)-blll(0);ie=letse(0,1);
       k01=px(2,0);k03=px(2,1)
       k02=vslo(1,0,0);k04=vslo(1,0,1)
-      x0=py(2,1)-bly(0,0);x1=py(2,1)
-      is=ie;ie=letse(0,1);
+      x0=yq(is,1);x1=yq(ie,1)
       do i = is, ie
          xq(i,1)=inter2(k01,k02,k03,k04,x0,x1,yq(i,1),0)
       end do
       !-BLOCK1
+      !-bl1-3
+      is=letse(1,0);;ie=letse(1,1)
+      xq(is:ie,1)=px(2,3)
       !-2-bl1
+      is=letse(1,0);ie=letse(1,0)+blll(1);
       k01=px(2,2);k03=px(2,3)
       k02=vslo(1,1,0);k04=vslo(1,1,1)
-      x0=py(3,1);x1=py(3,1)+bly(0,1)
+      x0=yq(is,1);x1=yq(ie,1)
       is=letse(1,0);ie=letse(1,0)+blll(1);
       do i = is, ie
          xq(i,1)=inter2(k01,k02,k03,k04,x0,x1,yq(i,1),1)
       end do
-      !-bl1-3
-      is=ie+1;ie=letse(1,1)
-      xq(is:ie,1)=px(2,3)
    !--Interface 2
       xq(:,2)=px(3,0)
    !--Right Boundary
       xq(:,3)=px(5,0)
 
-      is=letse(1,0);ie=letse(1,1);n=0
-      call writeLine(xq(is:ie,n),yq(is:ie,n),is,ie,'3w')
-      is=letse(1,0);ie=letse(1,1);n=1
-      call writeLine(xq(is:ie,n),yq(is:ie,n),is,ie,'3e')
+      is=letse(0,0);ie=letse(0,1);n=1
+      call writeLine(xq(is:ie,n),yq(is:ie,n),is,ie,'2w')
+      is=letse(0,0);ie=letse(0,1);n=2
+      call writeLine(xq(is:ie,n),yq(is:ie,n),is,ie,'2e')
 
 !--GRID INTERPOLATION
    allocate(linesy(0:bky-1)); linesy=(/0,2/)
