@@ -7,19 +7,29 @@
  implicit none
 
 !===== CONSTANT PARAMETERS
+!
+ !integer,parameter :: k4=kind(1.0e0),k8=kind(1.0d0)
+ integer,parameter :: icray=1
 
- integer,parameter :: k4=kind(1.0e0),k8=kind(1.0d0)
+ integer,parameter :: int32=selected_int_kind(9),int64=selected_int_kind(18)
+ integer,parameter :: ieee32=selected_real_kind(6,37),ieee64=selected_real_kind(15,307)
+ integer,parameter :: ni=int32,nr=ieee64
+ integer,parameter :: k4=ni,k8=nr
+
  integer(k4),parameter :: ntdrv=0,ntflt=1,nrall=0,nrone=1,n45no=0,n45go=1
  integer(k4),parameter :: lmd=11,lmf=8,lmp=max(lmd,lmf),mfbi=3,mbci=3
  integer(k4),parameter :: liofs=16,liofl=24
 
  character(len=*),parameter :: fmts='es15.8',fmtl='es23.16',fmtsa=fmts//',a',fmtla=fmtl//',a'
 
- real(k8),parameter :: pi=3.141592653589793_k8
- real(k8),parameter :: zero=0,one=1,half=0.5_k8,sqrt2=sqrt(2.0_k8),sqrt2i=1/sqrt2,sml=1.0e-6_k8,free=1.0d+6
- real(k8),parameter :: two=2,quarter=0.25_k8
- real(k8),parameter :: gam=1.4_k8,gamm1=gam-1,ham=1/gam,hamm1=1/gamm1
- real(k8),parameter :: prndtl=0.71_k8,gamm1prndtli=1/(gamm1*prndtl)
+ real(kind=nr),parameter :: half=0.5_nr,zero=0,one=1,two=2,three=3,four=4,five=5, &
+                            quarter=0.25_k8
+ real(kind=nr),parameter :: one_three=one/three,two_three=two/three
+ real(kind=nr),parameter :: pi=acos(-one),halfpi=pi/two,twopi=two*pi,&
+                            sqrt2=sqrt(two),sqrt2i=one/sqrt2
+ real(kind=nr),parameter :: sml=1.0e-6_nr,free=1.0e+6_nr
+ real(kind=nr),parameter :: gam=1.4_nr,gamm1=gam-one,ham=one/gam,hamm1=one/gamm1
+ real(kind=nr),parameter :: prndtl=0.71_nr,gamm1prndtli=one/(gamm1*prndtl)
  real(k8),parameter :: tprndtl=0.99_k8,tgamm1prndtli=1/(gamm1*tprndtl)
 
  real(k8),parameter :: alpha=0.5862704032801503_k8
@@ -65,13 +75,15 @@
  integer(k4),dimension(:,:),allocatable :: npc,lio
  integer(k4),dimension(:),allocatable :: li,lcsz,lctz,mxc
  integer(k4),dimension(:),allocatable :: lxim,letm,lzem,lpos
- integer(k4),dimension(:),allocatable :: lximb,letmb,lzemb,lhmb,mo
+ integer(k4),dimension(:),allocatable :: lximb,letmb,lzemb,mo
+ integer(kind=int64),dimension(:),allocatable :: lhmb
 
  real(k8),dimension(:,:),allocatable :: qo,qa,qb,de
  real(k8),dimension(:),allocatable :: txx,tyy,tzz,txy,tyz,tzx,hxx,hyy,hzz
 
  real(k8),dimension(:,:),allocatable :: xim,etm,zem
  real(k8),dimension(:),allocatable :: p,yaco
+ real(kind=k8),dimension(:),allocatable :: sbcc
 
  real(k8),dimension(:,:),allocatable :: rr,ss
 
@@ -81,10 +93,8 @@
 
  real(k8),dimension(:,:),allocatable :: ran,sit,ait
  real(k8),dimension(:),allocatable :: xit,yit,zit
- real(k8),dimension(:),allocatable :: asz,bsz,csz,dsz
- real(k8),dimension(:),allocatable :: times,vmpi
-! check if this affects, should be k4 kind
- real(4),dimension(:),allocatable :: varr
+ real(k8),dimension(:),allocatable :: asz,bsz,atz
+ real(k8),dimension(:),allocatable :: times,vmpi,rpex
 
  real(k8),dimension(:,:,:),pointer :: drva,drvb,send,recv,cm
 
@@ -93,11 +103,11 @@
  real(k8),dimension(:,:,:),allocatable,target :: send1,send2,send3
  real(k8),dimension(:,:,:),allocatable,target :: recv1,recv2,recv3
  real(k8),dimension(:,:,:),allocatable,target :: cm1,cm2,cm3
- real(k8),dimension(:,:),allocatable,target :: cmm1,cmm2,cmm3
 
- real(k8),dimension(:,:),allocatable :: varm
- real(k8),dimension(:),allocatable :: varmin,varmax
- real(k4),dimension(:),allocatable :: vart,vara,varb,vmean
+! check if this affects, should be k4 kind
+ !real(4),dimension(:),allocatable :: varr
+ real(kind=ieee32),dimension(:,:),allocatable :: varm
+ real(kind=ieee32),dimension(:),allocatable :: varr,vart,vara,varb,vmean,varmin,varmax
 
  character(13),dimension(:),allocatable :: ctecplt,cthead
  character(4),dimension(:),allocatable :: cfilet
@@ -111,12 +121,11 @@
  integer(k4),dimension(0:4) :: no
  integer(k4),dimension(-2:2) :: ilag
  integer(k4),dimension(3) :: nbsize,nbcs,nbce,ncds,ncde,ms,me
- integer(8) :: lp,lq,ltomb
- integer(k4) :: lxio,leto,lzeo,lxi,let,lze,lmx,lim,nrec
- integer(k4) :: i,ii,is,ie,ip,iq,j,jj,js,je,jp,jq,jk,k,kk,kp,l,lh,ll
+ integer(k4) :: lxio,leto,lzeo,lxi,let,lze,lmx,lim,nrecs,nrecd
+ integer(k4) :: i,ii,is,ie,ip,iq,j,jj,js,je,jp,jq,jk,k,kk,kp,l,lh,ll,lp,lq,ltomb
  integer(k4) :: m,ma,mb,mm,mp,mq,mbk,mps,mpe,n,ndt,nn,nk,ns,ne,np,nt,nz,ndati,nsigi,nout,nfile
- integer(k4) :: nts,nscrn,nsgnl,ndata,nviscous,nkrk,nsmf,nfskp,nrestart
- integer(k8) :: nlmx,llmb,llmo,lis,lie,ljs,lje
+ integer(k4) :: nts,nscrn,nsgnl,ndata,nviscous,nkrk,nsmf,nfskp,nrestart,nextrabc,nextgcic
+ integer(kind=int64) :: nlmx,llmb,llmo,lis,lie,ljs,lje
 
  real(k8),dimension(0:lmp,0:1,0:1) :: pbci,pbco
  real(k8),dimension(-2:2,0:2,0:1) :: albed,albef
@@ -151,7 +160,7 @@
 !===== INTEGER VARIABLES FOR MPI COMMANDS
 
  integer(k4),dimension(:,:),allocatable :: ista
- integer(k4),dimension(12) :: ireq
+ integer(kind=k4),dimension(:),allocatable :: ireq
  integer(k4) :: ir,mpro,npro,myid,itag,info,icom,ierr
 
 !===== INTEGER VARIABLES FOR RECORDING BY RPT

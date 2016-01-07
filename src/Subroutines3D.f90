@@ -77,16 +77,16 @@
 
 !===== SUBROUTINE FOR COMPACT FINITE DIFFERENTIATING
 
- subroutine deriv(nn,nz)
+ subroutine deriv(nn,nz,m)
 
- integer(k4),intent(in) :: nn,nz
+ integer(kind=k4),intent(in) :: nn,nz,m
 
     nt=0; ns=ndf(0,0,nn); ne=ndf(1,0,nn)
 
  select case(nn)
- case(1); is=0; ie=is+lxi; recv=>recv1
- case(2); is=lxi+1; ie=is+let; recv=>recv2
- case(3); is=lxi+let+2; ie=is+lze; recv=>recv3
+ case(1); is=0; ie=is+lxi; recv=>recv1; drva=>drva1
+ case(2); is=lxi+1; ie=is+let; recv=>recv2; drva=>drva2
+ case(3); is=lxi+let+2; ie=is+lze; recv=>recv3; drva=>drva3
  end select
 
  do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
@@ -96,9 +96,9 @@
  end do
  select case(ns)
  case(0)
-    sb(is)=dot_product(abc(:,0),(/sa(is+1),sa(is+2),sa(is+3),sa(is+4),sa(is+5),sa(is+6)/)-sa(is))
-    sb(is+1)=dot_product(abc(:,1),(/sa(is),sa(is+2),sa(is+3),sa(is+4),sa(is+5),sa(is+6)/)-sa(is+1))
-    sb(is+2)=dot_product(abc(:,2),(/sa(is),sa(is+1),sa(is+3),sa(is+4),sa(is+5),sa(is+6)/)-sa(is+2))
+    sb(is)=sum(abc(:,0)*(sa(is+(/1,2,3,4,5,6/))-sa(is)))
+    sb(is+1)=sum(abc(:,1)*(sa(is+(/0,2,3,4,5,6/))-sa(is+1)))
+    sb(is+2)=sum(abc(:,2)*(sa(is+(/0,1,3,4,5,6/))-sa(is+2)))
  case(1)
     sb(is)=sum(pbci(0:lmd,0,nt)*sa(is:is+lmd))+recv(jk,0,0)
     sb(is+1)=sum(pbci(0:lmd,1,nt)*sa(is:is+lmd))+recv(jk,1,0)
@@ -109,9 +109,9 @@
  end do
  select case(ne)
  case(0)
-    sb(ie)=dot_product(abc(:,0),sa(ie)-(/sa(ie-1),sa(ie-2),sa(ie-3),sa(ie-4),sa(ie-5),sa(ie-6)/))
-    sb(ie-1)=dot_product(abc(:,1),sa(ie-1)-(/sa(ie),sa(ie-2),sa(ie-3),sa(ie-4),sa(ie-5),sa(ie-6)/))
-    sb(ie-2)=dot_product(abc(:,2),sa(ie-2)-(/sa(ie),sa(ie-1),sa(ie-3),sa(ie-4),sa(ie-5),sa(ie-6)/))
+    sb(ie)=sum(abc(:,0)*(sa(ie)-sa(ie-(/1,2,3,4,5,6/))))
+    sb(ie-1)=sum(abc(:,1)*(sa(ie-1)-sa(ie-(/0,2,3,4,5,6/))))
+    sb(ie-2)=sum(abc(:,2)*(sa(ie-2)-sa(ie-(/0,1,3,4,5,6/))))
  case(1)
     sb(ie)=-sum(pbci(0:lmd,0,nt)*sa(ie:ie-lmd:-1))-recv(jk,0,1)
     sb(ie-1)=-sum(pbci(0:lmd,1,nt)*sa(ie:ie-lmd:-1))-recv(jk,1,1)
@@ -130,6 +130,7 @@
  do i=is,ie
     l=li(i); rr(l,nn)=sb(i)
  end do
+    drva(jk,m,0)=sb(is); drva(jk,m,1)=sb(ie)
  end do
  end do
 
@@ -140,6 +141,8 @@
  subroutine filte(nn,nz)
 
  integer(k4),intent(in) :: nn,nz
+ integer(kind=k4),parameter :: mfbi=1
+ real(kind=k8),parameter,dimension(3) :: fex=(/45,-9,1/)/(mfbi*30.0_k8),ffx=(/4,6,7/)/(8*log(two))
 
     nt=1; ns=ndf(0,1,nn); ne=ndf(1,1,nn)
 
@@ -155,26 +158,26 @@
     li(i)=l; sa(i)=rr(l,nz)
  end do
  select case(ns)
- case(0); ra0=2*sa(is); ra1=2*sa(is+1); ra2=2*sa(is+2)
-    res=sum(fex(:)*(sa(is+mfbi*(/1,2,3/))-sa(is))); rv(:)=sa(is)-res*(/1,2,3/)
+ case(0); ra0=two*sa(is); ra1=two*sa(is+1); ra2=two*sa(is+2)
+    res=sum(fex(:)*(sa(is+mfbi*(/1,2,3/))-sa(is))); rv(:)=sa(is)-res*ffx(:)
     sb(is)=fam(0)*(rv(1)+sa(is+1)-ra0)+fbm(0)*(rv(2)+sa(is+2)-ra0)+fcm(0)*(rv(3)+sa(is+3)-ra0)
     sb(is+1)=fam(1)*(sa(is)+sa(is+2)-ra1)+fbm(1)*(rv(1)+sa(is+3)-ra1)+fcm(1)*(rv(2)+sa(is+4)-ra1)
     sb(is+2)=fam(2)*(sa(is+1)+sa(is+3)-ra2)+fbm(2)*(sa(is)+sa(is+4)-ra2)+fcm(2)*(rv(1)+sa(is+5)-ra2)
- case(1); ra2=2*sa(is+2)
+ case(1); ra2=two*sa(is+2)
     sb(is)=sum(pbci(0:lmf,0,nt)*sa(is:is+lmf))+recv(jk,0,0)
     sb(is+1)=sum(pbci(0:lmf,1,nt)*sa(is:is+lmf))+recv(jk,1,0)
     sb(is+2)=fa*(sa(is+1)+sa(is+3)-ra2)+fb*(sa(is)+sa(is+4)-ra2)+fc*(recv(jk,2,0)+sa(is+5)-ra2)
  end select
  do i=is+3,ie-3
-    res=2*sa(i); sb(i)=fa*(sa(i-1)+sa(i+1)-res)+fb*(sa(i-2)+sa(i+2)-res)+fc*(sa(i-3)+sa(i+3)-res)
+    res=two*sa(i); sb(i)=fa*(sa(i-1)+sa(i+1)-res)+fb*(sa(i-2)+sa(i+2)-res)+fc*(sa(i-3)+sa(i+3)-res)
  end do
  select case(ne)
- case(0); ra0=2*sa(ie); ra1=2*sa(ie-1); ra2=2*sa(ie-2)
-    res=sum(fex(:)*(sa(ie)-sa(ie-mfbi*(/1,2,3/)))); rv(:)=sa(ie)+res*(/1,2,3/)
+ case(0); ra0=two*sa(ie); ra1=two*sa(ie-1); ra2=two*sa(ie-2)
+    res=sum(fex(:)*(sa(ie)-sa(ie-mfbi*(/1,2,3/)))); rv(:)=sa(ie)+res*ffx(:)
     sb(ie)=fam(0)*(sa(ie-1)+rv(1)-ra0)+fbm(0)*(sa(ie-2)+rv(2)-ra0)+fcm(0)*(sa(ie-3)+rv(3)-ra0)
     sb(ie-1)=fam(1)*(sa(ie-2)+sa(ie)-ra1)+fbm(1)*(sa(ie-3)+rv(1)-ra1)+fcm(1)*(sa(ie-4)+rv(2)-ra1)
     sb(ie-2)=fam(2)*(sa(ie-3)+sa(ie-1)-ra2)+fbm(2)*(sa(ie-4)+sa(ie)-ra2)+fcm(2)*(sa(ie-5)+rv(1)-ra2)
- case(1); ra2=2*sa(ie-2)
+ case(1); ra2=two*sa(ie-2)
     sb(ie)=sum(pbci(0:lmf,0,nt)*sa(ie:ie-lmf:-1))+recv(jk,0,1)
     sb(ie-1)=sum(pbci(0:lmf,1,nt)*sa(ie:ie-lmf:-1))+recv(jk,1,1)
     sb(ie-2)=fa*(sa(ie-3)+sa(ie-1)-ra2)+fb*(sa(ie-4)+sa(ie)-ra2)+fc*(sa(ie-5)+recv(jk,2,1)-ra2)
@@ -204,17 +207,17 @@
     ss(:,1)=1/qa(:,1); de(:,1:3)=0
 
     rr(:,1)=ss(:,1)*qa(:,2)
-    m=1; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+    m=1; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
     de(:,2)=de(:,2)+rr(:,1)*xim(:,3)+rr(:,2)*etm(:,3)+rr(:,3)*zem(:,3)
     de(:,3)=de(:,3)-rr(:,1)*xim(:,2)-rr(:,2)*etm(:,2)-rr(:,3)*zem(:,2)
 
     rr(:,1)=ss(:,1)*qa(:,3)
-    m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+    m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
     de(:,3)=de(:,3)+rr(:,1)*xim(:,1)+rr(:,2)*etm(:,1)+rr(:,3)*zem(:,1)
     de(:,1)=de(:,1)-rr(:,1)*xim(:,3)-rr(:,2)*etm(:,3)-rr(:,3)*zem(:,3)
 
     rr(:,1)=ss(:,1)*qa(:,4)
-    m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+    m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
     de(:,1)=de(:,1)+rr(:,1)*xim(:,2)+rr(:,2)*etm(:,2)+rr(:,3)*zem(:,2)
     de(:,2)=de(:,2)-rr(:,1)*xim(:,1)-rr(:,2)*etm(:,1)-rr(:,3)*zem(:,1)
 

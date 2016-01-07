@@ -21,45 +21,45 @@
  real(k8),intent(in) :: alpha,beta
 
  do i=is,ie
-    xl(i,:)=1; xu(i,:)=1
+    xl(i,:)=one; xu(i,:)=one
  end do
     i=is
-    xu(i,1)=1
+    xu(i,1)=one
     xu(i,2)=albes(1,0)
     xu(i,3)=albes(2,0)
     i=is+1
     xl(i,2)=albes(-1,1)*xu(i-1,1)
-    xu(i,1)=1/(1-xu(i-1,2)*xl(i,2))
+    xu(i,1)=one/(one-xu(i-1,2)*xl(i,2))
     xu(i,2)=albes(1,1)-xu(i-1,3)*xl(i,2)
     xu(i,3)=albes(2,1)
     i=is+2
     xl(i,1)=albes(-2,2)*xu(i-2,1)
     xl(i,2)=(albes(-1,2)-xu(i-2,2)*xl(i,1))*xu(i-1,1)
-    xu(i,1)=1/(1-xu(i-2,3)*xl(i,1)-xu(i-1,2)*xl(i,2))
+    xu(i,1)=one/(one-xu(i-2,3)*xl(i,1)-xu(i-1,2)*xl(i,2))
     xu(i,2)=albes(1,2)-xu(i-1,3)*xl(i,2)
     xu(i,3)=albes(2,2)
  do i=is+3,ie-3
     xl(i,1)=beta*xu(i-2,1)
     xl(i,2)=(alpha-xu(i-2,2)*xl(i,1))*xu(i-1,1)
-    xu(i,1)=1/(1-xu(i-2,3)*xl(i,1)-xu(i-1,2)*xl(i,2))
+    xu(i,1)=one/(one-xu(i-2,3)*xl(i,1)-xu(i-1,2)*xl(i,2))
     xu(i,2)=alpha-xu(i-1,3)*xl(i,2)
     xu(i,3)=beta
  end do
     i=ie-2
     xl(i,1)=albee(2,2)*xu(i-2,1)
     xl(i,2)=(albee(1,2)-xu(i-2,2)*xl(i,1))*xu(i-1,1)
-    xu(i,1)=1/(1-xu(i-2,3)*xl(i,1)-xu(i-1,2)*xl(i,2))
+    xu(i,1)=one/(one-xu(i-2,3)*xl(i,1)-xu(i-1,2)*xl(i,2))
     xu(i,2)=albee(-1,2)-xu(i-1,3)*xl(i,2)
     xu(i,3)=albee(-2,2)
     i=ie-1
     xl(i,1)=albee(2,1)*xu(i-2,1)
     xl(i,2)=(albee(1,1)-xu(i-2,2)*xl(i,1))*xu(i-1,1)
-    xu(i,1)=1/(1-xu(i-2,3)*xl(i,1)-xu(i-1,2)*xl(i,2))
+    xu(i,1)=one/(one-xu(i-2,3)*xl(i,1)-xu(i-1,2)*xl(i,2))
     xu(i,2)=albee(-1,1)-xu(i-1,3)*xl(i,2)
     i=ie
     xl(i,1)=albee(2,0)*xu(i-2,1)
     xl(i,2)=(albee(1,0)-xu(i-2,2)*xl(i,1))*xu(i-1,1)
-    xu(i,1)=1/(1-xu(i-2,3)*xl(i,1)-xu(i-1,2)*xl(i,2))
+    xu(i,1)=one/(one-xu(i-2,3)*xl(i,1)-xu(i-1,2)*xl(i,2))
  do i=is,ie
     xu(i,2:3)=xu(i,2:3)*xu(i,1)
  end do
@@ -75,12 +75,12 @@
  real(k8),dimension(0:2),intent(inout) :: fa,fb,fc
  real(k8) :: alphz,betz,za,zb,zc
 
-    res=(fltk-fltkbc)/3; ra0=fltkbc; ra1=ra0+res; ra2=ra1+res
+    res=(fltkbc-fltk)/9; ra2=fltk+res; ra1=fltk+4*res; ra0=fltk+9*res
 
-    call fcint(ra0,half,alphz,betz,za,zb,zc)
-    albef(:,0)=(/zero,zero,one,alphz,betz/); fa(0)=za; fb(0)=zb; fc(0)=zc
+    call fcint(ra0,half,alphz,betz,za,zb,zc); fctr=one/(one+alphz/2+betz/4)
+    albef(:,0)=(/zero,zero,one,alphz*fctr,betz*fctr/); fa(0)=za*fctr; fb(0)=zb*fctr; fc(0)=zc*fctr
     call fcint(ra1,half,alphz,betz,za,zb,zc)
-    albef(:,1)=(/zero,alphz,one,alphz,betz/); fa(1)=za; fb(1)=zb; fc(1)=zc
+    albef(:,1)=(/zero,alphz+betz/2,one,alphz,betz/); fa(1)=za; fb(1)=zb; fc(1)=zc
     call fcint(ra2,half,alphz,betz,za,zb,zc)
     albef(:,2)=(/betz,alphz,one,alphz,betz/); fa(2)=za; fb(2)=zb; fc(2)=zc
 
@@ -96,9 +96,9 @@
 
     cosf(1)=cos(fltk); cosf(2)=cos(2*fltk); cosf(3)=cos(3*fltk)
     fctr=1/(30+5*(7-16*fltr)*cosf(1)+2*(1+8*fltr)*cosf(2)-3*cosf(3))
-    alphz=(20*(2*fltr-1)-30*cosf(1)+12*(2*fltr-1)*cosf(2)-2*cosf(3))*fctr
-    betz=(2*(13-8*fltr)+(33-48*fltr)*cosf(1)+6*cosf(2)-cosf(3))*half*fctr
-    za=60*(1-fltr)*cos(half*fltk)**4*fctr; zb=-0.4_k8*za; zc=za/15
+    alphz=fctr*(20*(2*fltr-1)-30*cosf(1)+12*(2*fltr-1)*cosf(2)-2*cosf(3))
+    betz=half*fctr*(2*(13-8*fltr)+(33-48*fltr)*cosf(1)+6*cosf(2)-cosf(3))
+    za=60*(1-fltr)*cos(half*fltk)**4*fctr; zb=-2*za/5; zc=za/15
 
  end subroutine fcint
 
@@ -177,7 +177,7 @@
  if(m/=i) then
     ipvt((/m,i/))=ipvt((/i,m/)); rx((/m,i/),:)=rx((/i,m/),:)
  end if
-    ra0=1/rx(i,i); temp(:)=rx(:,i)
+    ra0=one/rx(i,i); temp(:)=rx(:,i)
  do j=is,ie
     ra1=ra0*rx(i,j); rx(:,j)=rx(:,j)-ra1*temp(:); rx(i,j)=ra1
  end do
@@ -196,7 +196,7 @@
  if(nsmf==0) then
     ra0=pi/timf; ra1=ra0*min(timo,timf); ra2=ra0*min(timo+dtko,timf)
 
-    fctr=1-cos(ra1)
+    fctr=one-cos(ra1)
     dfdt=ra0*sin(ra2)
     progmf=half*(fctr+dtk*dfdt)
     umf(:)=progmf*uoo(:)
@@ -206,7 +206,7 @@
     progmf=half*ra0*(fctr+dtk*dfdt)
     dudtmf(:)=progmf*uoo(:)
  else
-    umf(:)=uoo(:); dudtmf(:)=0
+    umf(:)=uoo(:); dudtmf(:)=zero
  end if
 
  end subroutine movef

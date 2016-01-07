@@ -25,6 +25,7 @@
  real(k8) :: ximod,etamod
  real(k8) :: tgusto,eps,ck1,ck2,ck3,amp1,amp2,amp3,vk1,vk2,slit,gaus,cfit,tla,tlb,cutlb
  real(k8) :: denxit
+ integer(k4) :: lze0
 
  contains
 
@@ -86,6 +87,7 @@
        end do
     end do
 
+    lze0=lzemb(0)
 
     allocate(mxc(nits),ran(nits,3),sit(nits,3),ait(nits,3),xit(nits),yit(nits),zit(nits))
     allocate(iit(0:lzebk(0)),idsgnl(0:lzebk(0)),lsgnl(0:lzebk(0)))
@@ -183,6 +185,36 @@
 
  end subroutine makegrid
 
+!===== INITIAL CONDITIONS
+
+ subroutine initialo
+
+    itag=1; fctr=one/lze0
+ do l=0,lze0
+ if(l==0) then
+    ra1=zero; ra2=domlen-szth2; ra3=zero
+ else
+    ra1=-half; ra2=zero; ra3=(-half+l*fctr)*span
+ end if
+    rr(:,1)=(ss(:,1)-ra1)**two+(ss(:,2)-ra2)**two+(ss(:,3)-ra3)**two; vmpi(myid)=minval(rr(:,1))
+ if(myid==0) then
+ do mp=1,mpro
+    ir=mp; call MPI_IRECV(vmpi(mp),1,MPI_REAL8,mp,itag,icom,ireq(ir),ierr)
+ end do
+ if(ir/=0) then
+    call MPI_WAITALL(ir,ireq,ista,ierr)
+ end if
+ else
+    call MPI_SEND(vmpi(myid),1,MPI_REAL8,0,itag,icom,ierr)
+ end if
+    call MPI_BCAST(vmpi(:),npro,MPI_REAL8,0,icom,ierr)
+    idsgnl(l)=minloc(vmpi,1)-1; lsgnl(l)=minloc(rr(:,1),1)-1
+ end do
+
+    qa(:,1)=rhooo; qa(:,2:4)=zero; qa(:,5)=hamm1*poo
+
+ end subroutine initialo
+
 !===== SETTING UP SPONGE ZONE PARAMETERS
 
  subroutine spongeup
@@ -200,23 +232,20 @@
  end select
  end do
 
-    ll=-1; ra0=half*szco; ra1=1+min(2*amach1/(1+amach1),one)
+    ll=-1; ra1=0.25_k8; ra2=pi/(two*domlen)
  do l=0,lmx
     rr(l,:)=nsz(0,:)*szr(0,:)*max(szp(0,:)-ss(l,:),zero)+nsz(1,:)*szr(1,:)*max(ss(l,:)-szp(1,:),zero)
-    ! rpt-this is sigma(x,y,z)
-    de(l,1)=ra0*(1+cos(pi*(1-rr(l,1))*(1-rr(l,2))*(1-rr(l,3)))) 
-    ! rpt-this is lambda(x)
-    de(l,2)=ra1*(1-tanh(ss(l,1)))+1
- if(de(l,1)-sml>0) then
-    ll=ll+1; de(ll,5)=l+sml ! rpt-this gives the l's containing sponge points
+    de(l,1)=szco*(one-0.125_k8*(one+cos(pi*rr(l,1)))*(one+cos(pi*rr(l,2)))*(one+cos(pi*rr(l,3))))
+    de(l,2)=ra1+half*(one-ra1)*(one+cos(ra2*(min(ss(l,1),domlen)+domlen)))
+ if(de(l,1)>zero) then
+    ll=ll+1; de(ll,5)=l+sml
  end if
  end do
     lsz=ll ! rpt-total number of points in sponge zone
  if(lsz/=-1) then
     allocate(lcsz(0:lsz),asz(0:lsz),bsz(0:lsz))
-    do ll=0,lsz; l=de(ll,5); lcsz(ll)=l
-       ! rpt-asz=sigma(x,y,z) and bsc=sigma(x,y,z)*lambda(x)
-    asz(ll)=de(l,1)/yaco(l); bsz(ll)=asz(ll)*de(l,2)
+ do ll=0,lsz; l=de(ll,5); lcsz(ll)=l; res=one/yaco(l)
+    asz(ll)=res*de(l,1)*de(l,2); bsz(ll)=res*hamm1*de(l,1)
     end do
  end if
 
@@ -224,17 +253,17 @@
     ll=-1; ra0=tlb*(2.5_k8-cutlb)
  do lh=0,lsz; l=lcsz(lh)
  ! rpt-mark points where the gust is going to happen
- if(ss(l,1)-szp(0,1)<0.and.abs(ss(l,2))-ra0<0) then
+ if(ss(l,1)<szp(0,1).and.abs(ss(l,2))<ra0) then
     ll=ll+1; de(ll,5)=l+sml
  end if
  end do
-    ltz=ll; ntz=litr*slit/tla
+    ltz=ll; ntz=litr*slit/tla; ra0=pi/szth1
     ltz=-1
  if(ltz/=-1) then
-     allocate(lctz(0:ltz),tt(0:ntz),vit(0:ltz,3),vito(0:ltz,0:ntz,3));
-     inquire(iolength=lp) vito
+    allocate(lctz(0:ltz),atz(0:ltz),tt(0:ntz),vit(0:ltz,3),vito(0:ltz,0:ntz,3)); 
+    lp=nrecd*(ltz+1)*(ntz+1)
     do ll=0,ltz; l=de(ll,5); lctz(ll)=l
-       vit(ll,:)=ss(l,:)
+    vit(ll,:)=ss(l,:); atz(ll)=sin(min(ra0*(ss(l,1)+domlen),halfpi))**two
     end do
        fctr=slit/(ntz*uoo(1)); tt(:)=fctr*(/(i,i=0,ntz)/); vito(:,:,:)=0
     if(nito==0) then
@@ -262,33 +291,33 @@
        if(myid==mo(mbk+1-bkx)) then; write(*,"('Vortex',i3,' Done')") nn; end if
        end do
        open(9,file=cturb); close(9,status='delete')
-      open(9,file=cturb,access='direct',recl=lp/3)
+    open(9,file=cturb,access='direct',form='unformatted',recl=lp)
        write(9,rec=1) vito(:,:,1); write(9,rec=2) vito(:,:,2); write(9,rec=3) vito(:,:,3)
        close(9)
        vito(:,:,:)=cfit*vito(:,:,:)
     else
-      open(9,file=cturb,access='direct',recl=lp/3)
+    open(9,file=cturb,access='direct',form='unformatted',recl=lp)
        read(9,rec=1) vito(:,:,1); read(9,rec=2) vito(:,:,2); read(9,rec=3) vito(:,:,3)
        close(9)
        vito(:,:,:)=cfit*vito(:,:,:)
     end if
  end if
 
- if((myid==mo(mbk+1-bkx)).and.(ltz/=-1)) then
-     inquire(iolength=l) iit; ll=l-1; fctr=one/ll
-  do l=0,ll-1
-    ra1=-domlen; ra2=0; ra3=(-half+l*fctr)*span
-    iit(l)=minloc((vit(:,1)-ra1)**2+(vit(:,2)-ra2)**2+(vit(:,3)-ra3)**2,1)-1
+ if(myid==mo(3)) then
+    fctr=one/lze0
+ do l=0,lze0
+    ra1=-domlen; ra2=zero; ra3=(-half+l*fctr)*span
+    iit(l)=minloc((vit(:,1)-ra1)**two+(vit(:,2)-ra2)**two+(vit(:,3)-ra3)**two,1)-1
  end do
     open(9,file='inflowsignal.dat',status='replace',access='direct',form='formatted',recl=16)
-  do ii=0,ntz; lp=(1+3*ll)*ii
+ do ii=0,ntz; lp=(1+3*lze0)*ii
     write(9,'(es15.7)',rec=lp+1) tt(ii)
-  do l=0,ll-2; i=iit(l)
+ do l=0,lze0-2; i=iit(l)
     write(9,'(es15.7)',rec=lp+3*l+2) vito(i,ii,1)
     write(9,'(es15.7)',rec=lp+3*l+3) vito(i,ii,2)
     write(9,'(es15.7)',rec=lp+3*l+4) vito(i,ii,3)
  end do
-     l=ll-1; i=iit(l)
+    l=lze0-1; i=iit(l)
     write(9,'(es15.7)',rec=lp+3*l+2) vito(i,ii,1)
     write(9,'(es15.7)',rec=lp+3*l+3) vito(i,ii,2)
     write(9,'(es15.7,a)',rec=lp+3*l+4) vito(i,ii,3),achar(10)
@@ -298,55 +327,13 @@
 
  end subroutine spongeup
 
-!===== INITIAL CONDITIONS
-
- subroutine initialo
-
-    !inquire(iolength=l) idsgnl; l=l/k4; ll=l-1; fctr=one/ll
-    inquire(iolength=l) idsgnl; ll=l-1; fctr=one/ll
- 
- do l=0,ll
- if(l==0) then
-    ra1=0; ra2=domlen-szth2; ra3=0
- else
-    ra1=-half; ra2=0; ra3=(-half+(l-1)*fctr)*span
- end if
-    rr(:,1)=(ss(:,1)-ra1)**2+(ss(:,2)-ra2)**2+(ss(:,3)-ra3)**2; vmpi(myid)=minval(rr(:,1))
- do mp=0,mpro
-    call MPI_BCAST(vmpi(mp),1,MPI_REAL8,mp,icom,ierr)
- end do
-    idsgnl(l)=minloc(vmpi,1)-1; lsgnl(l)=minloc(rr(:,1),1)-1
- end do
-
-    ra1=1/vk1; ra2=-half*ra1**2
- do m=0,1
-    mm=m*domlen-half*domlen
-
-    de(:,2)=ra1*ss(:,2)
-    de(:,3)=-ra1*(ss(:,1)+mm)
-    de(:,4)=vk2*exp(ra2*((ss(:,1)+mm)**2+ss(:,2)**2))
-    de(:,5)=m*de(:,5)+de(:,4)
-
-    qa(:,2)=m*qa(:,2)+de(:,2)*de(:,4)
-    qa(:,3)=m*qa(:,3)+de(:,3)*de(:,4)
- end do
-    p(:)=poo*(1-half*gamm1*de(:,5)**2)**(gam*hamm1)
-
-    qa(:,1)=rhooo*(p(:)/poo)**ham
-    qa(:,2)=qa(:,2)*qa(:,1)
-    qa(:,3)=qa(:,3)*qa(:,1)
-    qa(:,4)=0
-    qa(:,5)=hamm1*p(:)+half*(qa(:,2)**2+qa(:,3)**2+qa(:,4)**2)/qa(:,1)
-
- end subroutine initialo
-
 !===== SPONGE IMPLEMENTATION
 
  subroutine spongego
 
  if(ltz/=-1) then ! rpt-ltz=# of points involved in inflow gust
     vit(:,:)=0
- if(timo-tgusto+dtk>0) then
+ if(timo>tgusto) then
     ra0=timo-tgusto+dtk; ra1=slit/uoo(1); ra2=ra0/ra1; ra3=ra0-ra1*int(ra2)
     is=0; ie=ntz; ii=minloc(abs(tt(:)-ra3),1)-1
  do jj=-2,2
@@ -356,9 +343,9 @@
  if(ii-is==1) then; ilag(-2)=ie-1; tlag(-2)=tt(ilag(-2))-ra1; end if
  if(ie-ii==1) then; ilag(2)=is+1; tlag(2)=tt(ilag(2))+ra1; end if
  if(ie-ii==0) then; ilag(1:2)=(/is+1,is+2/); tlag(1:2)=tt(ilag(1:2))+ra1; end if
-    alag(:)=ra3-tlag(:); fctr=sin(pi*min(0.1_k8*ra0,half))**2
+    alag(:)=ra3-tlag(:)
  do jj=-2,2
-    blag(:)=tlag(jj)-tlag(:); ao=fctr; bo=1
+    blag(:)=tlag(jj)-tlag(:); ao=one; bo=one
  do ii=-2,2
  if(ii/=jj) then
     ao=ao*alag(ii); bo=bo*blag(ii)
@@ -371,17 +358,17 @@
  end if
 
  do ll=0,lsz; l=lcsz(ll)
-    rr(l,:)=0; ss(l,1)=gamm1*asz(ll)*yaco(l)
+    rr(l,1)=one; ss(l,:)=zero
  end do
+    fctr=half*gamm1
  do ll=0,ltz; l=lctz(ll)
-    rr(l,:)=vit(ll,:)
+    rr(l,1)=(one-fctr*(vit(ll,1)*vit(ll,1)+vit(ll,2)*vit(ll,2)+vit(ll,3)*vit(ll,3)))**hamm1
+    ss(l,:)=atz(ll)*rr(l,1)*vit(ll,:)
  end do
-!    fctr=half*gamm1
  do ll=0,lsz; l=lcsz(ll)
-!    res=(1-fctr*(rr(l,1)**2+rr(l,2)**2+rr(l,3)**2))**hamm1
-    de(l,1)=de(l,1)+asz(ll)*(qa(l,1)-rhooo)
-    de(l,2:4)=de(l,2:4)+bsz(ll)*(qa(l,2:4)-qa(l,1)*rr(l,:))
-    de(l,5)=de(l,5)+asz(ll)*(p(l)-poo)
+    de(l,1)=de(l,1)+asz(ll)*(qa(l,1)-rr(l,1))
+    de(l,2:4)=de(l,2:4)+asz(ll)*(qa(l,2:4)-ss(l,:))
+    de(l,5)=de(l,5)+bsz(ll)*(p(l)-ham*rr(l,1)**gam)
  end do
 
  end subroutine spongego
@@ -440,29 +427,60 @@
 
  end subroutine junction
 
+!===== WALL SLOT BOUNDARY IDENTIFICATION
+
+ subroutine extrabcc(flag)
+
+ real(kind=k8),intent(inout) :: flag
+ real(kind=k8) :: slitl,slitw
+
+    flag=zero
+ if(ss(l,1)<ra0) then
+    slitl=wlea; slitw=0.4_k8*slitl
+    ra0=-half+wlea+slitl; ra1=-half*span+0.25_k8*wlew-half*slitw; ra2=ra1+slitw; ie=(span+sml)/wlew-1
+ do ii=0,ie; ra3=ii*wlew
+    res=(ss(l,3)-(ra1+ra3))*(ss(l,3)-(ra2+ra3))
+ if(res<zero.and.nextrabc==1) then
+    flag=one
+ end if
+ end do
+ end if
+
+ end subroutine extrabcc
+
+!===== WALL SLIT BOUNDARY IMPLEMENTATION
+
+ subroutine extrabcs
+
+    if(ra0*(vn+vs)>zero) then; cha(1:3)=dha(1:3); end if
+    if(ra0*(vn+vs+ao)>zero) then; cha(4)=dha(4); end if
+    if(ra0*(vn+vs-ao)>zero) then; cha(5)=dha(5); end if
+
+ end subroutine extrabcs
+
 !===== SIGNAL RECORDING
 
  subroutine signalgo
 
-    inquire(iolength=l) idsgnl; ll=l-1; lp=(2+3*ll)*nsigi
+    lp=(2+3*lze0)*nsigi
 
     m=0; l=lsgnl(m)
  if(myid==idsgnl(m)) then
     write(1,'(es15.7)',rec=lp+1) timo
     write(1,'(es15.7)',rec=lp+2) gam*p(l)-1
  end if
- do m=1,ll-1; l=lsgnl(m)
+ do m=1,lze0-1; l=lsgnl(m)
  if(myid==idsgnl(m)) then; ve(:)=qa(l,2:4)/qa(l,1)
     write(1,'(es15.7)',rec=lp+3*m) ve(1)
     write(1,'(es15.7)',rec=lp+3*m+1) ve(2)
     write(1,'(es15.7)',rec=lp+3*m+2) ve(3)
  end if
  end do
-    m=ll; l=lsgnl(m)
+    m=lze0; l=lsgnl(m)
  if(myid==idsgnl(m)) then; ve(:)=qa(l,2:4)/qa(l,1)
     write(1,'(es15.7)',rec=lp+3*m) ve(1)
     write(1,'(es15.7)',rec=lp+3*m+1) ve(2)
-    write(1,'(es15.7,a)',rec=lp+3*m+2) 8,achar(10)
+    write(1,'(es15.7,a)',rec=lp+3*m+2) ve(3),achar(10)
  end if
 
  end subroutine signalgo
