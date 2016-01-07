@@ -27,7 +27,7 @@
 
 !===== INPUT PARAMETERS
 
-    open(9,file='inputo.dat')
+    open(9,file='inputo.dat',shared)
     read(9,*) cinput,mbk,bkx,bky,bkz
     read(9,*) cinput,nts,nto,iwrec
     read(9,*) cinput,nscrn,nsgnl
@@ -74,11 +74,11 @@
     call inputext
 
     ! rpt-Forcing parameters
-    xfor=-0.5_k8!cos(delt1)-0.5_k8-1.0_k8+(0.1_k8);
-    yfor=-0.7_k8!-sin(delt1)+(0.129_k8);
-    rfor=2.0e-1
+    xfor=-(0.5_k8+3*cos(aoa*pi/180_k8))!cos(delt1)-0.5_k8-1.0_k8+(0.1_k8);
+    yfor=-3*sin(aoa*pi/180_k8)!-sin(delt1)+(0.129_k8);
+    rfor=5.0e-1
     amfor=amfor*amachoo/100.0e0
-    tsfor=20.0e0;tefor=200.000e0
+    tsfor=151.751e0;tefor=200.000e0
 !===== DOMAIN DECOMPOSITION & BOUNDARY INFORMATION
 
     mo(0)=0
@@ -476,7 +476,7 @@
     open(1,file='signal.dat'); close(1,status='delete')
  end if
  call MPI_BARRIER(icom,ierr)
- open(1,file='signal.dat',access='direct',form='formatted',recl=16)
+    open(1,file='signal.dat',access='direct',form='formatted',recl=16,shared)
 
   ! OUTPUT HEADER
   if (myid==0) then
@@ -868,19 +868,19 @@
  !   dtsum=dtsum+dt; qb(:,:)=qb(:,:)+half*dt*(qo(:,:)+qa(:,:))
  !if(nout==1) then
  !   times(ndati)=timo-half*dtsum
- !if(n==1) then
+ !  if(n==1) then
  !   qb(:,:)=qo(:,:)
- !else
+ !  else
  !   fctr=1/dtsum; qb(:,:)=fctr*qb(:,:)
- !end if
+ !  end if
  !   rr(:,1)=1/qb(:,1)
- !do m=1,5
- !select case(m)
- !case(1); varr(:)=qb(:,m); case(2:4); varr(:)=rr(:,1)*qb(:,m)+umf(m-1)
- !case(5); varr(:)=gamm1*(qb(:,m)-half*rr(:,1)*(qb(:,2)*qb(:,2)+qb(:,3)*qb(:,3)+qb(:,4)*qb(:,4)))
- !end select
+ !  do m=1,5
+ !  select case(m)
+ !  case(1); varr(:)=qb(:,m); case(2:4); varr(:)=rr(:,1)*qb(:,m)+umf(m-1)
+ !  case(5); varr(:)=gamm1*(qb(:,m)-half*rr(:,1)*(qb(:,2)*qb(:,2)+qb(:,3)*qb(:,3)+qb(:,4)*qb(:,4)))
+ !  end select
  !   write(0,rec=5*ndati+m+3) varr(:)
- !end do
+ !  end do
  !   dtsum=0; qb(:,:)=0
  !end if
  if(nout==1) then

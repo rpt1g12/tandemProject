@@ -34,7 +34,7 @@
 
  integer(k4), dimension(:) :: npcx(0:bkx-1),npcy(0:bky-1),npcz(0:bkz-1)
 
-    open(9,file='inputp.dat')
+    open(9,file='inputp.dat',shared)
     ! rpt-two extra blocks added
     read(9,*) cinput,lxibk(0:bkx-1)
     read(9,*) cinput,letbk(0:bky-1)
@@ -90,7 +90,7 @@
     allocate(mxc(nits),ran(nits,3),sit(nits,3),ait(nits,3),xit(nits),yit(nits),zit(nits))
     allocate(iit(0:lzebk(0)),idsgnl(0:lzebk(0)),lsgnl(0:lzebk(0)))
 
-    open(9,file='randnum.dat')
+    open(9,file='randnum.dat',shared)
  do m=1,3
     read(9,*) ran(:,m); read(9,*) ait(:,m)
  end do
@@ -192,10 +192,10 @@
  if(nbcs(nn)==10) then; nsz(0,nn)=1; else; nsz(0,nn)=0; end if
  if(nbce(nn)==10) then; nsz(1,nn)=1; else; nsz(1,nn)=0; end if
  select case(nn)
- case(1); szr(0,nn)=1/szth1; szp(0,nn)=-domlen+szth1; szr(1,nn)=1/(szth1+szxt)
- ! rpt-the sponge zone lenght changes due to just one element
- szp(1,nn)=domlen-szth1
- case(2); szr(0,nn)=1/szth2; szp(0,nn)=-domlen+szth2; szr(1,nn)=1/szth2; szp(1,nn)=domlen-szth2
+ case(1); szr(0,nn)=1/szth1;        szp(0,nn)=-0.7e0*domlen+szth1;  
+          szr(1,nn)=1/(szth1+szxt); szp(1,nn)=domlen-szth1
+ case(2); szr(0,nn)=1/szth2;        szp(0,nn)=-0.7e0*domlen+szth2; 
+          szr(1,nn)=1/szth2;        szp(1,nn)=domlen-szth2
  case(3); szr(0,nn)=0; szp(0,nn)=0; szr(1,nn)=0; szp(1,nn)=0
  end select
  end do
@@ -302,7 +302,8 @@
 
  subroutine initialo
 
-    inquire(iolength=l) idsgnl; l=l/k4; ll=l-1; fctr=one/ll
+    !inquire(iolength=l) idsgnl; l=l/k4; ll=l-1; fctr=one/ll
+    inquire(iolength=l) idsgnl; ll=l-1; fctr=one/ll
  
  do l=0,ll
  if(l==0) then

@@ -850,7 +850,6 @@ contains
     do side=1,2
        selectcase(side);case(1);ks=0;ke=khalf;case(2);ks=khalf;ke=lze;end select
     clp=0;clv=0;tcl=0;
-    if (ispost.and.(dir==1)) call gettw(nvar)
         if (wflag) then
         ! Compute Dynamic pressure
          dynp=two/(amachoo*amachoo*span*half)
@@ -981,7 +980,103 @@ contains
     
  end subroutine gettw
 
+!====================================================================================
+!=====READ RESULTS PLOT3D
+!====================================================================================
+subroutine p3dread(gsflag,nout)
 
+integer(k4), intent(in) :: gsflag,nout
+integer(k4) :: n,nfile
+real(4) :: res
+character(8) :: ctime
+
+nfile=5
+
+   selectcase(gsflag)
+   case(1)
+     open (unit=nfile, file='out/grid.xyz', access='stream',shared)
+     lh=0
+      read(nfile,pos=4*lh+1) mbk; mbk=mbk-1; lh=lh+1 ! Number of zones
+      do mm = 0, mbk
+         read(nfile,pos=4*lh+1) lximb(mm);lximb(mm)=lximb(mm)-1; lh=lh+1 ! IMax
+         read(nfile,pos=4*lh+1) letmb(mm);letmb(mm)=letmb(mm)-1; lh=lh+1 ! JMax
+         read(nfile,pos=4*lh+1) lzemb(mm);lzemb(mm)=lzemb(mm)-1; lh=lh+1 ! KMax
+      end do
+      lhmb(0)=lh
+      do mm = 0, mbk-1
+         lhmb(mm+1)=lhmb(mm)+3*(lximb(mm)+1)*(letmb(mm)+1)*(lzemb(mm)+1)
+      end do
+      lp=lpos(myid)+lhmb(mb)
+      ns=1; ne=3
+      do n=ns,ne; lq=(n-1)*ltomb
+      do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+         read(nfile,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
+      end do; end do
+      ss(:,n)=varr(:)
+      end do
+      close(nfile)
+     CALL MPI_BARRIER(icom,ierr)
+       if (myid==0) then
+       write(*,*) 'Grid read!'
+       end if
+   case(0)
+      if (nout==ndata+1) then
+         open (unit=nfile, file='out/solA.qa', access='stream',shared)
+      elseif (nout==ndata+2) then
+         open (unit=nfile, file='out/solRMS.qa', access='stream',shared)
+      else
+         open (unit=nfile, file=ofiles(nout), access='stream',shared)
+      end if
+      lh=0
+      read(nfile,pos=4*lh+1) mbk; mbk=mbk-1; lh=lh+1 ! Number of zones
+      do mm = 0, mbk
+         read(nfile,pos=4*lh+1) lximb(mm);lximb(mm)=lximb(mm)-1; lh=lh+1 ! IMax
+         read(nfile,pos=4*lh+1) letmb(mm);letmb(mm)=letmb(mm)-1; lh=lh+1 ! JMax
+         read(nfile,pos=4*lh+1) lzemb(mm);lzemb(mm)=lzemb(mm)-1; lh=lh+1 ! KMax
+      end do
+      lhmb(0)=lh
+       do mm = 0, mbk-1
+          lhmb(mm+1)=lhmb(mm)+4+5*(lximb(mm)+1)*(letmb(mm)+1)*(lzemb(mm)+1)
+       end do
+          lh=lhmb(mb)
+          read(nfile,pos=4*lh+1) res; amachoo=res; lh=lh+1 ! Mach Number
+          read(nfile,pos=4*lh+1) res; aoa=res; lh=lh+1  
+          read(nfile,pos=4*lh+1) res; reoo=res; lh=lh+1 ! Reynolds Number
+          read(nfile,pos=4*lh+1) res; timo=res; lh=lh+1 ! Time
+       lp=lpos(myid)+lhmb(mb)+4
+       ns=1; ne=5
+       do n=ns,ne; lq=(n-ns)*ltomb
+       do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+         read(nfile,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
+       end do; end do
+       if (nout>ndata) then
+       selectcase(n)
+          case(1); qo(:,n)=varr(:)
+          case(2,3,4); qo(:,n)=varr(:)
+          case(5); qo(:,n)=varr(:)
+       end select
+       else
+       selectcase(n)
+          case(1); qo(:,n)=varr(:)
+          ! If the data was written in conservatives variables change this
+          case(2,3,4); qo(:,n)=varr(:)!/qo(:,1)
+          case(5); qo(:,n)=varr(:)!&
+          !gamm1*(varr(:)-half*qo(:,1)*(qo(:,2)*qo(:,2)+qo(:,3)*qo(:,3)+qo(:,4)*qo(:,4)))
+       end select
+       end if
+       end do
+       close(nfile)
+       write(ctime,"(f8.4)") times(min(nout,ndata))
+       if (myid==0) then
+          if (nout>ndata) then
+          write(*,"('Averaged Solution read! T= ',8a)") ctime 
+          else
+          write(*,"('Solution read! T= ',8a)") ctime 
+          end if
+       end if
+   end select
+
+end subroutine p3dread
 
 !====================================================================================
 ! ====CROSS PRODUCT OF TWO VECTORS 

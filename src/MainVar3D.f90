@@ -222,13 +222,6 @@
 
 
 !=====
-contains
-function int4(x) result(res)
-integer :: x
-integer(k4) :: res
-res=int(x,k4)
-end function int4
-
 
  end module mainvar3d
 

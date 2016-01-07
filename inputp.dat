@@ -1,19 +1,19 @@
-lxi0-to-bkx	105	315	345   !lxit=765
-let0-to-bky	105	345           !lett=450
-lze0-to-bkz	15                    !pts x plane = 334250
+lxi0-to-bkx	120	320	360   !lxit=800	
+let0-to-bky	120	360           !lett=480
+lze0-to-bkz	100                    !pts x plane = 384k
 nbody-nthick	2	2
 ngridv		1
-npcx		1	1	1
-npcy		1	1	1	1
-npcz		1
+npcx		3	8	9
+npcy		3	9
+npcz		2
 nito-nits-litr	0	1	10
 smgrid-domlen	0.0075e0 		10.0e0
 ximod-etamod	0.3e0		0.05e0
-span-wlew-wlea	0.1e0		0.11e0		0.0e0
+span-wlew-wlea	0.22e0		0.11e0		0.015e0
 gap-chord1-2	1.0e0		1.0e0		1.0e0
 delt1-2(deg)	00.0e0		0.0e0		
 szth1-th2-xt-co	2.0e0		2.0e0		4.0e0		12.0e0
-tgusto		5.0e0
+tgusto		500.0e0
 ck1-2-3		0.001e0		0.0e0		0.0e0
 amp2-3		0.0e0		0.0e0
 vk1-2		0.5e0		0.0e0
@@ -23,3 +23,7 @@ tlm0-m1-mw	0.1e0		0.19319688e0	2.12404140e0
 tamg1-2-3	0.0e0		0.0e0		0.0e0
 tamm1-2-3	0.0e0		0.0e0		0.0e0
 cutlb		0.5e0
+
+!lxi0-to-bkx	120	320	360   !lxit=800	
+!let0-to-bky	120	360           !lett=480
+!lze0-to-bkz	100                    !pts x plane = 384k
