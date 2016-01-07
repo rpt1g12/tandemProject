@@ -258,7 +258,7 @@
  end if
  end do
     ltz=ll; ntz=litr*slit/tla; ra0=pi/szth1
-    ltz=-1
+    !!ltz=-1
  if(ltz/=-1) then
     allocate(lctz(0:ltz),atz(0:ltz),tt(0:ntz),vit(0:ltz,3),vito(0:ltz,0:ntz,3)); 
     lp=nrecd*(ltz+1)*(ntz+1)
