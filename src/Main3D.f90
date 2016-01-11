@@ -95,21 +95,21 @@
      ! rpt- Create communicator per block
      CALL MPI_COMM_SPLIT(icom,mb,myid,bcom,ierr)   
 
-    if (output==2) then
-    cfilet(-1)='grid'
- do n=0,ndata
-    no(2)=n/100; no(1)=mod(n,100)/10; no(0)=mod(n,10)
-    cno=achar(no+48); cfilet(n)='n'//cno(2)//cno(1)//cno(0)
- end do
- do n=-1,ndata
-            ctecplt(n)='out/'//cfilet(n)//'.plt'
- end do
- do mm=0,mbk
-    no(2)=mm/100; no(1)=mod(mm,100)/10; no(0)=mod(mm,10)
-    cno=achar(no+48); czonet(mm)='z'//cno(2)//cno(1)//cno(0)
-	cthead(mm)='data/'//czonet(mm)//'.plt'
- end do
-    end if
+ if (output==2) then
+     cfilet(-1)='grid'
+  do n=0,ndata
+     no(2)=n/100; no(1)=mod(n,100)/10; no(0)=mod(n,10)
+     cno=achar(no+48); cfilet(n)='n'//cno(2)//cno(1)//cno(0)
+  end do
+  do n=-1,ndata
+             ctecplt(n)='out/'//cfilet(n)//'.plt'
+  end do
+  do mm=0,mbk
+     no(2)=mm/100; no(1)=mod(mm,100)/10; no(0)=mod(mm,10)
+     cno=achar(no+48); czonet(mm)='z'//cno(2)//cno(1)//cno(0)
+ 	cthead(mm)='data/'//czonet(mm)//'.plt'
+  end do
+ end if
     no(2)=mb/100; no(1)=mod(mb,100)/10; no(0)=mod(mb,10)
     cno=achar(no+48); cnzone=cno(2)//cno(1)//cno(0)
     czone='zone'//cnzone;
@@ -258,10 +258,12 @@
     mpijks=(/ibegin(mpc(1)),jbegin(mpc(2)),kbegin(mpc(3))/)
 
 !===== ALLOCATION OF MAIN ARRAYS
+
     if (output==2) then
-      allocate(qb(0:lmx,5))
+      allocate(qo(0:lmx,5),qa(0:lmx,5),qb(0:lmx,5),de(0:lmx,5))
+    else
+      allocate(qo(0:lmx,5),qa(0:lmx,5),de(0:lmx,5))
     end if
-    allocate(qo(0:lmx,5),qa(0:lmx,5),de(0:lmx,5))
     allocate(xim(0:lmx,3),etm(0:lmx,3),zem(0:lmx,3),rr(0:lmx,3),ss(0:lmx,3))
     allocate(p(0:lmx),yaco(0:lmx),varr(0:lmx))
 
@@ -338,20 +340,6 @@
        xyz4(:,:)=ss(:,:)
     end if
 
-    !RPT-FIND POSITION FOR SIGNAL SAMPLING
-    !idsignal=-1
-    !varr(:)=sqrt((ss(:,1)-sxpos)**2+(ss(:,2)-sypos)**2+(ss(:,3)-szpos)**2)
-    !lsignal=minloc(varr(:),1)-1
-    !ra0=varr(lsignal)
-    !CALL MPI_ALLREDUCE(ra0,ra1,1,MPI_REAL8,MPI_MIN,icom,ierr)
-    !if (abs(ra0-ra1)/ra0<sml) then
-    !   idsignal=myid
-    !end if
-    !if (myid==idsignal) then
-    !open(6,file='data/signal.dat')
-    !end if
-
-
     rr(:,1)=ss(:,1)
     m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
     qo(:,1)=rr(:,1); qo(:,2)=rr(:,2); qo(:,3)=rr(:,3)
@@ -395,7 +383,7 @@
 !    rr(:,2)=qo(:,1)*ss(:,2); rr(:,1)=qo(:,2)*ss(:,2)
 !    m=3; call mpigo(ntdrv,nrall,n45go,m); call deriv(2,2,m); call deriv(1,1,m); zem(:,m)=rr(:,2)-rr(:,1)
 
-    yaco(:)=3/(qo(:,1)*xim(:,1)+qo(:,2)*etm(:,1)+qo(:,3)*zem(:,1)&
+    yaco(:)=three/(qo(:,1)*xim(:,1)+qo(:,2)*etm(:,1)+qo(:,3)*zem(:,1)&
               +qa(:,1)*xim(:,2)+qa(:,2)*etm(:,2)+qa(:,3)*zem(:,2)&
               +de(:,1)*xim(:,3)+de(:,2)*etm(:,3)+de(:,3)*zem(:,3))
 
@@ -468,7 +456,7 @@
  case(2)
  if(myid==0) then
  do n=-1,ndata
-	open(0,file=ctecplt(n)); close(0,status='delete')
+    open(0,file=ctecplt(n)); close(0,status='delete')
  end do
  end if
     open(0,file=cdata,access='direct',form='unformatted',recl=nrecs*(lmx+1))
@@ -500,9 +488,18 @@
        tsam=timo
     end if
  end if
-    if (output==2) then
-      qb(:,:)=0
-    end if
+
+!============================================
+!===== BEGINNING OF TIME MARCHING IN SOLUTION
+!============================================
+  if (output==2) then
+    qb(:,:)=0
+  end if
+  ! OUTPUT HEADER
+  if (myid==0) then
+     write(*,"(3x,'n',8x,'time',9x,'Cl',9x,'Cd',5x)")  
+     write(*,"('============================================')")
+  end if
 
  ! START MEASURING WALL TIME
  wts=MPI_WTIME()
@@ -514,22 +511,13 @@
     open(1,file='signal.dat',access='direct',form='formatted',recl=16)
 
     ndati=-1; nsigi=-1; dtsum=zero
-  ! OUTPUT HEADER
-  if (myid==0) then
-  write(*,"(3x,'n',8x,'time',9x,'Cl',9x,'Cd',5x)")  
-  write(*,"('============================================')")
-  end if
-
-!============================================
-!===== BEGINNING OF TIME MARCHING IN SOLUTION
-!============================================
- do while(timo-tmax<0.and.(dt/=0.or.n<=2))
+ do while(timo<tmax.and.(dt/=zero.or.n<=2))
 
 !----- FILTERING & RE-INITIALISING
+
  do m=1,5
     rr(:,1)=qa(:,m)
-       call mpigo(ntflt,nrone,n45no,m);
-       call filte(1,1); call filte(2,1); call filte(3,1)
+    call mpigo(ntflt,nrone,n45no,m); call filte(1,1); call filte(2,1); call filte(3,1)
     qa(:,m)=rr(:,1)
  end do
     qo(:,:)=qa(:,:)
@@ -581,7 +569,7 @@
     dte=dto
  end if
  end if
-    dt=dts+(dte-dts)*sin(0.05_k8*pi*(n-ndt))**2
+    dt=dts+(dte-dts)*sin(0.05_k8*pi*(n-ndt))**two
 
     nout=0; res=tsam+(ndati+1)*(tmax-tsam)/ndata
  if((timo-res)*(timo+dt-res)<=zero) then
@@ -618,7 +606,6 @@
     ss(:,2)=xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3)
     ss(:,3)=xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3)
 
-    fctr=2.0_k8/3
     rr(:,1)=de(:,1)*yaco(:)
     rr(:,2)=gamm1prndtli*rr(:,1)
 
@@ -636,8 +623,8 @@
     rr(:,1)=rr(:,1)+rr(:,3)*yaco(:)
     rr(:,2)=rr(:,2)+tgamm1prndtli*rr(:,3)*yaco(:)   
     ! rpt-2/3*ro*kSGS
-    rr(:,3)=fctr*(qa(:,1)*smago2*varr(:)*de(:,1)) 
-    de(:,5)=fctr*(txx(:)+tyy(:)+tzz(:))
+    rr(:,3)=two_three*(qa(:,1)*smago2*varr(:)*de(:,1)) 
+    de(:,5)=two_three*(txx(:)+tyy(:)+tzz(:))
 
     txx(:)=rr(:,1)*(2*txx(:)-de(:,5))-rr(:,3)
     tyy(:)=rr(:,1)*(2*tyy(:)-de(:,5))-rr(:,3)
@@ -646,7 +633,7 @@
     tyz(:)=rr(:,1)*(tyz(:)+hxx(:))
     tzx(:)=rr(:,1)*(tzx(:)+hyy(:))
     case(0)
-    de(:,5)=fctr*(txx(:)+tyy(:)+tzz(:))
+    de(:,5)=two_three*(txx(:)+tyy(:)+tzz(:))
 
     txx(:)=rr(:,1)*(2*txx(:)-de(:,5))
     tyy(:)=rr(:,1)*(2*tyy(:)-de(:,5))
