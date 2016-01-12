@@ -765,56 +765,58 @@
 
 !----- IMPLEMENTATION OF GCBC & GCIC
 
+    lp=-1; ll=-1
  do nn=1,3
- select case(nn)
- case(1); drva=>drva1; drvb=>drvb1; cm=>cm1
- case(2); drva=>drva2; drvb=>drvb2; cm=>cm2
- case(3); drva=>drva3; drvb=>drvb3; cm=>cm3
- end select
- do ip=0,1; np=nbc(ip,nn); i=ip*ijk(1,nn); iq=1-2*ip; ra0=iq
- select case(np)
- case(10)
- do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
- do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
-    call eleme(l,cm(jk,:,ip)); cha(:)=drva(jk,:,ip); dha(:)=drvb(jk,:,ip)
-    if(ra0*(vn+vs+ao)>zero) then; cha(4)=zero; end if
-    if(ra0*(vn+vs-ao)>zero) then; cha(5)=zero; end if
-    call xtr2q(cm(jk,:,ip)); dha(:)=matmul(xt(:,:),(cha(:)-drva(jk,:,ip)))
- do ii=0,mbci; l=indx3(i+iq*ii,j,k,nn)
-    ll=ll+1; de(l,:)=de(l,:)+sbcc(ll)*dha(:)
- end do
- end do
- end do
- case(20,25)
- do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
- do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn); lp=lp+1
-    call eleme(l,cm(jk,:,ip)); cha(:)=drva(jk,:,ip); dha(:)=drvb(jk,:,ip)
- if(rpex(lp)==zero) then
-    cha(4+ip)=cha(5-ip)+two*ra0*aoi*qa(l,1)*(sum(cm(jk,:,ip)*dudtmf(:))+50.0_nr*(vn+vs))
- else
-    call extrabcs
- end if
-    call xtr2q(cm(jk,:,ip)); dha(:)=matmul(xt(:,:),(cha(:)-drva(jk,:,ip)))
- do ii=0,mbci; l=indx3(i+iq*ii,j,k,nn)
-    ll=ll+1; de(l,:)=de(l,:)+sbcc(ll)*dha(:)
- end do
- end do
- end do
- case(30)
- do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
- do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
-    call eleme(l,cm(jk,:,ip)); cha(:)=drva(jk,:,ip); dha(:)=drvb(jk,:,ip)
-    if(ra0*(vn+vs)>zero) then; cha(1:3)=dha(1:3); end if
-    if(ra0*(vn+vs+ao)>zero) then; cha(4)=dha(4); end if
-    if(ra0*(vn+vs-ao)>zero) then; cha(5)=dha(5); end if
-    call xtr2q(cm(jk,:,ip)); dha(:)=matmul(xt(:,:),(cha(:)-drva(jk,:,ip)))
- do ii=0,mbci; l=indx3(i+iq*ii,j,k,nn)
-    ll=ll+1; de(l,:)=de(l,:)+sbcc(ll)*dha(:)
- end do
- end do
- end do
- end select
- end do
+   select case(nn)
+      case(1); drva=>drva1; drvb=>drvb1; cm=>cm1
+      case(2); drva=>drva2; drvb=>drvb2; cm=>cm2
+      case(3); drva=>drva3; drvb=>drvb3; cm=>cm3
+   end select
+   do ip=0,1; np=nbc(ip,nn); i=ip*ijk(1,nn); iq=1-2*ip; ra0=iq
+     select case(np)
+        case(10)
+           do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
+           do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
+              call eleme(l,cm(jk,:,ip)); cha(:)=drva(jk,:,ip); dha(:)=drvb(jk,:,ip)
+              if(ra0*(vn+vs+ao)>zero) then; cha(4)=zero; end if
+              if(ra0*(vn+vs-ao)>zero) then; cha(5)=zero; end if
+              call xtr2q(cm(jk,:,ip)); dha(:)=matmul(xt(:,:),(cha(:)-drva(jk,:,ip)))
+              do ii=0,mbci; l=indx3(i+iq*ii,j,k,nn)
+                 ll=ll+1; de(l,:)=de(l,:)+sbcc(ll)*dha(:)
+              end do
+           end do
+           end do
+        case(20,25)
+           do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
+           do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn); lp=lp+1
+              call eleme(l,cm(jk,:,ip)); cha(:)=drva(jk,:,ip); dha(:)=drvb(jk,:,ip)
+              if(rpex(lp)==zero) then
+                 cha(4+ip)=cha(5-ip)+two*ra0*aoi*qa(l,1)&
+                           *(sum(cm(jk,:,ip)*dudtmf(:))+50.0_k8*(vn+vs))
+              else
+              call extrabcs
+           end if
+              call xtr2q(cm(jk,:,ip)); dha(:)=matmul(xt(:,:),(cha(:)-drva(jk,:,ip)))
+           do ii=0,mbci; l=indx3(i+iq*ii,j,k,nn)
+              ll=ll+1; de(l,:)=de(l,:)+sbcc(ll)*dha(:)
+           end do
+           end do
+           end do
+        case(30)
+        do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
+        do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
+           call eleme(l,cm(jk,:,ip)); cha(:)=drva(jk,:,ip); dha(:)=drvb(jk,:,ip)
+           if(ra0*(vn+vs)>zero) then; cha(1:3)=dha(1:3); end if
+           if(ra0*(vn+vs+ao)>zero) then; cha(4)=dha(4); end if
+           if(ra0*(vn+vs-ao)>zero) then; cha(5)=dha(5); end if
+           call xtr2q(cm(jk,:,ip)); dha(:)=matmul(xt(:,:),(cha(:)-drva(jk,:,ip)))
+        do ii=0,mbci; l=indx3(i+iq*ii,j,k,nn)
+           ll=ll+1; de(l,:)=de(l,:)+sbcc(ll)*dha(:)
+        end do
+        end do
+        end do
+     end select
+   end do
  end do
 
 !----- UPDATING CONSERVATIVE VARIABLES
