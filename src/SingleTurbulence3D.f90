@@ -35,7 +35,7 @@
 
  integer(k4), dimension(:) :: npcx(0:bkx-1),npcy(0:bky-1),npcz(0:bkz-1)
 
-    open(9,file='inputp.dat',shared)
+    open(9,file='inputp.dat')
     ! rpt-two extra blocks added
     read(9,*) cinput,lxibk(0:bkx-1)
     read(9,*) cinput,letbk(0:bky-1)
@@ -92,7 +92,7 @@
     allocate(mxc(nits),ran(nits,3),sit(nits,3),ait(nits,3),xit(nits),yit(nits),zit(nits))
     allocate(iit(0:lzebk(0)),idsgnl(0:lzebk(0)),lsgnl(0:lzebk(0)))
 
-    open(9,file='randnum.dat',shared)
+    open(9,file='randnum.dat')
  do m=1,3
     read(9,*) ran(:,m); read(9,*) ait(:,m)
  end do

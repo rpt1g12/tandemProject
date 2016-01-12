@@ -331,7 +331,7 @@
     write(nf,pos=4*lh+1) 1; lh=lh+1 ! Header Section
     write(nf,pos=4*lh+1) int(min(n+2,2),k4); lh=lh+1 ! File Type (0 = Full / 1 = Grid / 2 = Solution)
     cinput=cfilet(n); call strio(nf,lh,cinput) ! File Title
-    write(nf,pos=4*lh+1) int4(mq); lh=lh+1 ! Number of Variables
+    write(nf,pos=4*lh+1) int(mq,kind=k4); lh=lh+1 ! Number of Variables
  if(n==-1) then
     cinput='x'; call strio(nf,lh,cinput)
     cinput='y'; call strio(nf,lh,cinput)
@@ -347,16 +347,16 @@
     write(nf,pos=4*lh+1) 299.0; lh=lh+1 ! Zone Marker
     cinput=czonet(mm); call strio(nf,lh,cinput) ! Zone Name
     write(nf,pos=4*lh+1) -1; lh=lh+1 ! Parent Zone
-    write(nf,pos=4*lh+1) int4(n+1); lh=lh+1 ! Strand ID
+    write(nf,pos=4*lh+1) int(n+1,kind=k4); lh=lh+1 ! Strand ID
     write(nf,pos=4*lh+1) dble(times(max(n,0))); lh=lh+2 ! Solution Time (Double)
     write(nf,pos=4*lh+1) -1; lh=lh+1 ! (Not used. Set to -1.)
     write(nf,pos=4*lh+1) 0; lh=lh+1 ! Zone Type
     write(nf,pos=4*lh+1) 0; lh=lh+1 ! Specify Var Location
     write(nf,pos=4*lh+1) 0; lh=lh+1 ! Raw Local 1-to-1 Face Neighbours Suppliled
     write(nf,pos=4*lh+1) 0; lh=lh+1 ! Number of Miscellaneous Face Neighbour Connections
-    write(nf,pos=4*lh+1) int4(lximb(mm)+1); lh=lh+1 ! IMax
-    write(nf,pos=4*lh+1) int4(letmb(mm)+1); lh=lh+1 ! JMax
-    write(nf,pos=4*lh+1) int4(lzemb(mm)+1); lh=lh+1 ! KMax
+    write(nf,pos=4*lh+1) int(lximb(mm)+1,kind=k4); lh=lh+1 ! IMax
+    write(nf,pos=4*lh+1) int(letmb(mm)+1,kind=k4); lh=lh+1 ! JMax
+    write(nf,pos=4*lh+1) int(lzemb(mm)+1,kind=k4); lh=lh+1 ! KMax
     write(nf,pos=4*lh+1) 0; lh=lh+1 ! No Auxillary Data Pairs
  end do
     write(nf,pos=4*lh+1) 357.0; lh=lh+1 ! End of Header Marker

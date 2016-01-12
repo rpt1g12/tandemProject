@@ -5,7 +5,7 @@ nbody-nthick	2	2
 ngridv		1
 npcx		1	1	1
 npcy		1	1
-npcz		2
+npcz		1
 nito-nits-litr	0	1	10
 smgrid-domlen	0.0075e0 		10.0e0
 ximod-etamod	0.3e0		0.05e0
