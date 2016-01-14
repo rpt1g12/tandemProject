@@ -39,17 +39,11 @@ if (intgflag) then
               ' using ',i4,' elements')") &
               myid,sum(aintg),lcintg
 end if
-!if (mb==7) then
-!   if(wflag) then
-!      ra1=sum(area)
-!      CALL MPI_REDUCE(ra1,ra0,1,MPI_REAL8,MPI_SUM,0,bwcom,ierr)
-!      call MPI_COMM_RANK(bwcom,l,ierr)
-!      if(l==0) then
-!         write(*,*) ra0,myid
-!      end if
-!   end if
-!end if
-
+!call spongeup
+!allocate(fout(0:lmx,2))
+!fout(:,1)=de(:,1); fout(:,2)=de(:,2)*de(:,1)
+!
+!call wrP3dF('sponge',0,2,fmblk)
 !===== COMPUTE AVERAGE VALUES IF NOT AVAILABLE YET
 if (favg==1) then
    call p3daverage
@@ -59,7 +53,6 @@ end if
 if (fwavg==1) then
    qo(:,:)=qa(:,:)
    call wrP3dP(ndata+1,fmblk)
-   !call p3dwaverage
 end if
 
 !===== COMPUTE RMS VALUES IF NOT AVAILABLE YET
@@ -71,7 +64,6 @@ end if
 if (fwrms==1) then
    qo(:,:)=qb(:,:)
    call wrP3dP(ndata+2,fmblk)
-   !call p3dwrms
 end if
 
 !===COMPUTE FORCE COEFFICIENT
@@ -130,20 +122,12 @@ if (fwplus==1) then
       end do
       close(7)
       if(.not.allocated(wvarr)) allocate(wvarr(0:lcwall))
+      wvarr=wplus(:,1)
+      call wavg('x+',dir=2,wall=.true.)
       wvarr=wplus(:,2)
       call wavg('y+',dir=2,wall=.true.)
-   end if
-end if
-
-!==COMUPTE Q-CRITERION
-if (fqcrit==1) then
-!if (allocated(fout)) deallocate(fout)
-!if (.not.allocated(fout)) allocate(fout(0:lmx,1))
-   if (mb==7) then
-      do n = 0, ndata
-         call qcriterion(n); fout(:,1)=varr(:)
-         !call wrP3dF('Q',n,1,fmblk)
-      end do
+      wvarr=wplus(:,3)
+      call wavg('z+',dir=2,wall=.true.)
    end if
 end if
 
@@ -191,7 +175,7 @@ if (fcurl==1) then
    !end if
 end if
 
-!==WRITE WSS
+!==WRITE WSS+Cf+Cp
 if (fwss==1) then
    if (allocated(fout)) deallocate(fout)
    if (.not.allocated(fout)) allocate(fout(0:lmx,5))
@@ -314,6 +298,7 @@ if (fstrip) then
   if(mb==7) close(7)
 end if
 
+!call probCirc
 !!==== SHIFT RESTART SOLUTION
 !fflag=.true.
 !call rdRsta

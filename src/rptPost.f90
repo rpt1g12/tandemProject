@@ -19,7 +19,7 @@ contains
  subroutine setup
 !===== INPUT PARAMETERS
 
-    open(9,file='inputo.dat',shared)
+    open(9,file='inputo.dat')
     read(9,*) cinput,mbk
     read(9,*) cinput,nts,nto,iwrec
     read(9,*) cinput,nscrn,nsgnl
@@ -352,6 +352,8 @@ contains
     if (fintg) then
        call intgUp(rdis,xpos,ypos,atk)
     end if
+    nprob=10
+    call probUp(nprob,(/0.0_k8,0.3_k8/),(/1.0_k8,0.6_k8/))
 
  do nn=1,3; do ip=0,1; i=ip*ijk(1,nn)
  do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
@@ -814,7 +816,7 @@ end subroutine flst
          open(9,file='out/solA.qa'); close(9,status='delete')
        end if
        CALL MPI_BARRIER(icom,ierr)
-       open (unit=9, file='out/solA.qa', access='stream',shared)
+       open (unit=9, file='out/solA.qa', access='stream')
        lh=0
        if (myid==0) then
         write(9,pos=4*lh+1) mbk+1; lh=lh+1 ! Number of zones
@@ -1339,6 +1341,148 @@ implicit none
    end if
 
 end subroutine integrate
+
+!===================================================================================
+!=====SET UP PROBE CYLINDERS
+!===================================================================================
+subroutine probUp(nprob,sprob,eprob,orprob)
+implicit none
+   integer(k4),intent(in) :: nprob
+   real(k8),intent(in), optional :: orprob
+   real(k8),dimension (2),intent(in) :: sprob,eprob
+   real(k8),dimension (2)            :: dirprob
+   integer :: color,err
+   real(k8) :: rprob,r2prob,g11,g22,g12
+
+   allocate(xyprob(2,nprob),nklprob(2,0:lze,nprob),nlprob(2,nprob))
+   allocate(mprob(nprob),probcom(nprob),probflag(nprob))
+
+   dirprob=eprob-sprob
+   if (nprob>1) then
+      ra0=sqrt(dirprob(1)**2+dirprob(2)**2)/(nprob-1)
+      rprob=ra0*half
+      dirprob(:)=dirprob(:)/(nprob-1)
+      if (present(orprob).and.(orprob<0)) then
+         rprob=orprob
+      end if
+   else 
+      if (present(orprob)) then
+         rprob=orprob
+         dirprob(:)=0
+      else
+         if (myid==0) then
+            write(*,"('Must specify probe radius for single probbing!!')") 
+            write(*,"('Aborting..')") 
+         end if
+         CALL MPI_ABORT(icom,err,ierr)
+      end if
+   end if
+
+   do i = 0, nprob-1
+      xyprob(:,i+1)=sprob(:)+i*dirprob(:)
+   end do
+
+   if (rprob<0) then
+   ! in development
+   else
+      r2prob=rprob**2;ll=-1
+      do n = 1, nprob
+         nlprob(1,n)=ll
+         do k = 0, lze
+         nklprob(1,k,n)=ll
+         do j = 0, let
+            do i = 0, lxi; l=indx3(i,j,k,1)
+               tmp=(xyz(l,1)-xyprob(1,n))**2+(xyz(l,2)-xyprob(2,n))**2
+               if (tmp-r2prob<0) then
+                  ll=ll+1; de(ll,5)=l+sml
+               end if
+            end do
+         end do
+         nklprob(2,k,n)=ll
+         end do
+         nlprob(2,n)=ll
+      end do
+      lcprob=ll
+      if(lcprob.ne.-1) then
+         allocate(lprob(0:lcprob),aprob(0:lcprob),&
+                  vprob(0:lcprob))
+         do ll = 0, lcprob; l=de(ll,5); lprob(ll)=l
+            g11 = qo(l,1)*qo(l,1)+qa(l,1)*qa(l,1)+de(l,1)*de(l,1)
+            g22 = qo(l,2)*qo(l,2)+qa(l,2)*qa(l,2)+de(l,2)*de(l,2)
+            g12 = qo(l,1)*qo(l,2)+qa(l,1)*qa(l,2)+de(l,1)*de(l,2)
+            aprob(ll)=sqrt(g11*g22-g12*g12)
+         end do
+      end if
+
+
+      do n = 1, nprob
+         ii=nlprob(2,n)-nlprob(1,n)
+         if (ii.ne.0) then
+            color=n
+            probflag(n)=.true.
+         else
+            color=MPI_UNDEFINED
+            probflag(n)=.false.
+         end if
+         call MPI_COMM_SPLIT(icom,color,myid,probcom(n),ierr)
+         if (probflag(n)) then
+            CALL MPI_ALLREDUCE(myid,mprob(n),1,MPI_INTEGER4,MPI_MIN,probcom(n),ierr)
+            write(*,*)&
+            myid,mprob(n),n,sum(aprob(nlprob(1,n):nlprob(2,n)))/(lze+1)
+         end if
+      end do
+
+
+   end if
+   
+end subroutine probUp
+
+subroutine probCirc()
+implicit none
+   integer :: l,ll,n,m
+   real(k8), dimension (0:lze,0:ndata,nprob) :: probze
+   character(3) :: cprob
+
+   do m = 0, ndata
+      call rdP3dP(m,fmblk,'Q+W')
+      varr(:)=qo(:,5)
+      do n = 1, nprob
+         probze(:,m,n)=0
+         if (probflag(n)) then
+            do k = 0, lze
+            ra0=0
+               do ll = nklprob(1,k,n), nklprob(2,k,n); l=lprob(ll)
+                  ra0=ra0+aprob(ll)*varr(l)
+               end do
+   CALL MPI_REDUCE(ra0,probze(k,m,n),1,MPI_REAL8,MPI_SUM,0,probcom(n),ierr)
+            end do
+         else
+            ra0=0
+         end if
+      end do
+   end do
+
+   do n = 1, nprob
+      write(cprob,"(i3)") n
+      do i = 0, 3
+         l=scan(cprob,' ')
+         if (l==0) exit
+         cprob(l:l)='0'
+      end do
+      if(myid==mprob(n).and.probflag(n)) then
+         write(*,"('Processor ',i2,' writing probe ',i2)") myid,n
+         open (unit=50+n, file='out/circ'//cprob//'.dat')
+         write(50+n,"('t* circ (',f8.4,',',f8.4,')')") xyprob(1,n),xyprob(2,n)
+         do m = 0, ndata
+            write(50+n,"(102(es15.7))") times(m),probze(:,m,n)
+         end do
+         close(50+n)
+         write(*,"('Finished writing probe ',i2)") n
+      end if
+   end do
+   CALL MPI_BARRIER(icom,ierr)
+
+end subroutine probCirc
 !*****
 
 end module rptpost
