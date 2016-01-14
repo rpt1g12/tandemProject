@@ -291,14 +291,14 @@ if(myid==mo(mb)) then
        end do
     end do
 
-      is=lxise(0,0);ie=lxise(0,1);n=1
-      call writeLine(xp(is:ie,n),yp(is:ie,n),is,ie,'0n')
-      is=lxise(0,0);ie=lxise(0,1);n=2
-      call writeLine(xp(is:ie,n),yp(is:ie,n),is,ie,'3s')
-      is=lxise(0,0);ie=lxise(0,1);n=3
-      call writeLine(xp(is:ie,n),yp(is:ie,n),is,ie,'3n')
-      is=lxise(1,0);ie=lxise(1,1);n=2
-      call writeLine(xp(is:ie,n),yp(is:ie,n),is,ie,'4s')
+      !is=lxise(0,0);ie=lxise(0,1);n=1
+      !call writeLine(xp(is:ie,n),yp(is:ie,n),is,ie,'0n')
+      !is=lxise(0,0);ie=lxise(0,1);n=2
+      !call writeLine(xp(is:ie,n),yp(is:ie,n),is,ie,'3s')
+      !is=lxise(0,0);ie=lxise(0,1);n=3
+      !call writeLine(xp(is:ie,n),yp(is:ie,n),is,ie,'3n')
+      !is=lxise(1,0);ie=lxise(1,1);n=2
+      !call writeLine(xp(is:ie,n),yp(is:ie,n),is,ie,'4s')
       
 !--VERICAL END BOUNDARIES
    !-Y-COORDINATE
@@ -373,10 +373,10 @@ if(myid==mo(mb)) then
    !--Right Boundary
       xq(:,3)=px(5,0)
 
-      is=letse(0,0);ie=letse(0,1);n=1
-      call writeLine(xq(is:ie,n),yq(is:ie,n),is,ie,'2w')
-      is=letse(0,0);ie=letse(0,1);n=2
-      call writeLine(xq(is:ie,n),yq(is:ie,n),is,ie,'2e')
+      !is=letse(0,0);ie=letse(0,1);n=1
+      !call writeLine(xq(is:ie,n),yq(is:ie,n),is,ie,'2w')
+      !is=letse(0,0);ie=letse(0,1);n=2
+      !call writeLine(xq(is:ie,n),yq(is:ie,n),is,ie,'2e')
 
 !--GRID INTERPOLATION
    allocate(linesy(0:bky-1)); linesy=(/0,2/)

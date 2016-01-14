@@ -15,41 +15,41 @@
 
  subroutine mpigo(nt,nrt,n45,itag)
 
- integer(k4),intent(in) :: nt,nrt,n45,itag
+ integer(kind=ni),intent(in) :: nt,nrt,n45,itag
 
  select case(nt); case(0); mp=lmd; case(1); mp=lmf; end select
 
     ir=0
  do nn=1,3; nz=(1-nrt)*(nn-1)+1
-   select case(nn)
-    case(1); send=>send1; recv=>recv1;
-    case(2); send=>send2; recv=>recv2;
-    case(3); send=>send3; recv=>recv3
-   end select
-   do ip=0,1; iq=1-ip; is=ip*ijk(1,nn); ie=1-2*ip
-     select case(nbc(ip,nn)); 
-      case(35); np=0; ii=1; 
-      case(40); np=0; ii=0; 
-      case(45); np=n45; ii=1; 
-     end select
-     if(ndf(ip,nt,nn)==1) then
-       do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
-         do j=0,ijk(2,nn); jk=kp+j; l=indx3(is,j,k,nn)
-            res=np*rr(l,nz)
-         do i=0,mp; l=indx3(is+ie*(i+ii),j,k,nn)
-            sap(i)=rr(l,nz)
-         end do
-            send(jk,0,ip)=sum(pbco(0:mp,0,nt)*sap(0:mp))-res*pbcot(0,nt)
-            send(jk,1,ip)=sum(pbco(0:mp,1,nt)*sap(0:mp))-res*pbcot(1,nt)
-            send(jk,2,ip)=sap(0)-res
-         end do
+ select case(nn)
+ case(1); send=>send1; recv=>recv1; 
+ case(2); send=>send2; recv=>recv2; 
+ case(3); send=>send3; recv=>recv3
+ end select
+ do ip=0,1; iq=1-ip; is=ip*ijk(1,nn); ie=1-2*ip
+ select case(nbc(ip,nn)); 
+ case(35); ra0=zero; ii=1; 
+ case(40); ra0=zero; ii=0;
+ case(45); ra0=n45; ii=1;
+ end select
+ if(ndf(ip,nt,nn)==1) then
+    do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
+       do j=0,ijk(2,nn); jk=kp+j; l=indx3(is,j,k,nn)
+          res=ra0*rr(l,nz)
+       do i=0,mp; l=indx3(is+ie*(i+ii),j,k,nn)
+          sap(i)=rr(l,nz)
        end do
-          ir=ir+1; call MPI_ISEND(send(:,:,ip),3*nbsize(nn),MPI_REAL8,&
-                                  ncd(ip,nn),itag+iq,icom,ireq(ir),ierr)
-          ir=ir+1; call MPI_IRECV(recv(:,:,ip),3*nbsize(nn),MPI_REAL8,&
-                                  ncd(ip,nn),itag+ip,icom,ireq(ir),ierr)
-     end if
-   end do
+          send(jk,0,ip)=sum(pbco(0:mp,0,nt)*sap(0:mp))-res*pbcot(0,nt)
+          send(jk,1,ip)=sum(pbco(0:mp,1,nt)*sap(0:mp))-res*pbcot(1,nt)
+          send(jk,2,ip)=sap(0)-res
+       end do
+    end do
+    ir=ir+1; call MPI_ISEND(send(:,:,ip),3*nbsize(nn),MPI_REAL8,&
+                            ncd(ip,nn),itag+iq,icom,ireq(ir),ierr)
+    ir=ir+1; call MPI_IRECV(recv(:,:,ip),3*nbsize(nn),MPI_REAL8,&
+                            ncd(ip,nn),itag+ip,icom,ireq(ir),ierr)
+ end if
+ end do
  end do
 
  if(ir/=0) then
@@ -57,20 +57,24 @@
  end if
 
  if(n45==n45go) then
- do nn=1,3; nz=(1-nrt)*(nn-1)+1
- select case(nn); case(1); recv=>recv1; case(2); recv=>recv2; case(3); recv=>recv3; end select
- do ip=0,1; is=ip*ijk(1,nn)
- if(nbc(ip,nn)==45) then
- do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
- do j=0,ijk(2,nn); jk=kp+j; l=indx3(is,j,k,nn)
-    recv(jk,0,ip)=recv(jk,0,ip)+rr(l,nz)*pbcot(0,nt)
-    recv(jk,1,ip)=recv(jk,1,ip)+rr(l,nz)*pbcot(1,nt)
-    recv(jk,2,ip)=recv(jk,2,ip)+rr(l,nz)
- end do
- end do
- end if
- end do
- end do
+    do nn=1,3; nz=(1-nrt)*(nn-1)+1
+       select case(nn);
+       case(1); recv=>recv1;
+       case(2); recv=>recv2;
+       case(3); recv=>recv3;
+       end select
+       do ip=0,1; is=ip*ijk(1,nn)
+          if(nbc(ip,nn)==45) then
+             do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
+             do j=0,ijk(2,nn); jk=kp+j; l=indx3(is,j,k,nn)
+                recv(jk,0,ip)=recv(jk,0,ip)+rr(l,nz)*pbcot(0,nt)
+                recv(jk,1,ip)=recv(jk,1,ip)+rr(l,nz)*pbcot(1,nt)
+                recv(jk,2,ip)=recv(jk,2,ip)+rr(l,nz)
+             end do
+             end do
+          end if
+       end do
+    end do
  end if
 
  end subroutine mpigo
@@ -79,7 +83,7 @@
 
  subroutine deriv(nn,nz,m)
 
- integer(kind=k4),intent(in) :: nn,nz,m
+ integer(kind=ni),intent(in) :: nn,nz,m
 
     nt=0; ns=ndf(0,0,nn); ne=ndf(1,0,nn)
 
@@ -140,9 +144,10 @@
 
  subroutine filte(nn,nz)
 
- integer(k4),intent(in) :: nn,nz
- integer(kind=k4),parameter :: mfbi=1
- real(kind=k8),parameter,dimension(3) :: fex=(/45,-9,1/)/(mfbi*30.0_k8),ffx=(/4,6,7/)/(8*log(two))
+ integer(kind=ni),intent(in) :: nn,nz
+ integer(kind=ni),parameter :: mfbi=1
+ real(kind=nr),parameter,dimension(3) :: fex=(/45,-9,1/)/(mfbi*30.0_nr),&
+                                         ffx=(/4,6,7/)/(8*log(two))
 
     nt=1; ns=ndf(0,1,nn); ne=ndf(1,1,nn)
 
@@ -204,7 +209,7 @@
 
  subroutine vorti
 
-    ss(:,1)=1/qa(:,1); de(:,1:3)=0
+    ss(:,1)=one/qa(:,1); de(:,1:3)=zero
 
     rr(:,1)=ss(:,1)*qa(:,2)
     m=1; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
@@ -229,10 +234,10 @@
 
  subroutine eleme(l,cm)
 
- integer(k4),intent(in) :: l
- real(k8),dimension(3),intent(in) :: cm
+ integer(kind=ni),intent(in) :: l
+ real(kind=nr),dimension(3),intent(in) :: cm
 
-    rhoi=1/qa(l,1); ao=sqrt(gam*rhoi*p(l)); aoi=1/ao
+    rhoi=one/qa(l,1); ao=sqrt(gam*rhoi*p(l)); aoi=one/ao
     ve(:)=rhoi*qa(l,2:4); hv2=half*(ve(1)*ve(1)+ve(2)*ve(2)+ve(3)*ve(3))
     vn=cm(1)*ve(1)+cm(2)*ve(2)+cm(3)*ve(3); vs=cm(1)*umf(1)+cm(2)*umf(2)+cm(3)*umf(3)
 
@@ -242,7 +247,7 @@
 
  subroutine xtq2r(cm)
 
- real(k8),dimension(3),intent(in) :: cm
+ real(kind=nr),dimension(3),intent(in) :: cm
 
     ho=gamm1*aoi*aoi; bo=1-ho*hv2; co=aoi*vn; dm(:)=aoi*cm(:); rv(:)=ho*ve(:)
 
@@ -264,13 +269,13 @@
     xt(3,4)=cm(3)*rv(3)
     xt(3,5)=-ho*cm(3)
 
-    xt(4,1)=1-bo-co
+    xt(4,1)=one-bo-co
     xt(4,2)=dm(1)-rv(1)
     xt(4,3)=dm(2)-rv(2)
     xt(4,4)=dm(3)-rv(3)
     xt(4,5)=ho
 
-    xt(5,1)=1-bo+co
+    xt(5,1)=one-bo+co
     xt(5,2)=-dm(1)-rv(1)
     xt(5,3)=-dm(2)-rv(2)
     xt(5,4)=-dm(3)-rv(3)
@@ -282,7 +287,7 @@
 
  subroutine xtr2q(cm)
 
- real(k8),dimension(3),intent(in) :: cm
+ real(kind=nr),dimension(3),intent(in) :: cm
 
     bo=hv2+hamm1*ao*ao; co=ao*vn; dm(:)=ao*cm(:)
 
@@ -322,16 +327,16 @@
 
  subroutine techead(nf,n,mb,lh)
 
- integer(k4),intent(in) :: nf,n,mb
- integer(k4),intent(inout) :: lh
+ integer(kind=ni),intent(in) :: nf,n,mb
+ integer(kind=ni),intent(inout) :: lh
 
     lh=0
  if(mb==0) then
     write(nf,pos=4*lh+1) '#!TDV112'; lh=lh+2
     write(nf,pos=4*lh+1) 1; lh=lh+1 ! Header Section
-    write(nf,pos=4*lh+1) int(min(n+2,2),k4); lh=lh+1 ! File Type (0 = Full / 1 = Grid / 2 = Solution)
+    write(nf,pos=4*lh+1) int(min(n+2,2),kind=int32); lh=lh+1 ! File Type (0 = Full / 1 = Grid / 2 = Solution)
     cinput=cfilet(n); call strio(nf,lh,cinput) ! File Title
-    write(nf,pos=4*lh+1) int(mq,kind=k4); lh=lh+1 ! Number of Variables
+    write(nf,pos=4*lh+1) int(mq,kind=int32); lh=lh+1 ! Number of Variables
  if(n==-1) then
     cinput='x'; call strio(nf,lh,cinput)
     cinput='y'; call strio(nf,lh,cinput)
@@ -347,16 +352,16 @@
     write(nf,pos=4*lh+1) 299.0; lh=lh+1 ! Zone Marker
     cinput=czonet(mm); call strio(nf,lh,cinput) ! Zone Name
     write(nf,pos=4*lh+1) -1; lh=lh+1 ! Parent Zone
-    write(nf,pos=4*lh+1) int(n+1,kind=k4); lh=lh+1 ! Strand ID
-    write(nf,pos=4*lh+1) dble(times(max(n,0))); lh=lh+2 ! Solution Time (Double)
+    write(nf,pos=4*lh+1) int(n+1,kind=int32); lh=lh+1 ! Strand ID
+    write(nf,pos=4*lh+1) real(times(max(n,0)),kind=ieee64); lh=lh+2 ! Solution Time (Double)
     write(nf,pos=4*lh+1) -1; lh=lh+1 ! (Not used. Set to -1.)
     write(nf,pos=4*lh+1) 0; lh=lh+1 ! Zone Type
     write(nf,pos=4*lh+1) 0; lh=lh+1 ! Specify Var Location
     write(nf,pos=4*lh+1) 0; lh=lh+1 ! Raw Local 1-to-1 Face Neighbours Suppliled
     write(nf,pos=4*lh+1) 0; lh=lh+1 ! Number of Miscellaneous Face Neighbour Connections
-    write(nf,pos=4*lh+1) int(lximb(mm)+1,kind=k4); lh=lh+1 ! IMax
-    write(nf,pos=4*lh+1) int(letmb(mm)+1,kind=k4); lh=lh+1 ! JMax
-    write(nf,pos=4*lh+1) int(lzemb(mm)+1,kind=k4); lh=lh+1 ! KMax
+    write(nf,pos=4*lh+1) int(lximb(mm)+1,kind=int32); lh=lh+1 ! IMax
+    write(nf,pos=4*lh+1) int(letmb(mm)+1,kind=int32); lh=lh+1 ! JMax
+    write(nf,pos=4*lh+1) int(lzemb(mm)+1,kind=int32); lh=lh+1 ! KMax
     write(nf,pos=4*lh+1) 0; lh=lh+1 ! No Auxillary Data Pairs
  end do
     write(nf,pos=4*lh+1) 357.0; lh=lh+1 ! End of Header Marker
@@ -369,8 +374,8 @@
     write(nf,pos=4*lh+1) 0; lh=lh+1 ! No Variable Sharing
     write(nf,pos=4*lh+1) -1; lh=lh+1 ! Zero Based Zone Number to Share
  do m=1,mq; nn=max(3+5*n,0)+m
-    write(nf,pos=4*lh+1) varmin(nn); lh=lh+2 ! Minimum Value (Double) of Variables
-    write(nf,pos=4*lh+1) varmax(nn); lh=lh+2 ! Maximum Value (Double) of Variables
+    write(nf,pos=4*lh+1) real(varmin(nn),kind=ieee64); lh=lh+2 ! Minimum Value (Double) of Variables
+    write(nf,pos=4*lh+1) real(varmax(nn),kind=ieee64); lh=lh+2 ! Maximum Value (Double) of Variables
  end do
 
  end subroutine techead
@@ -379,22 +384,22 @@
 
  subroutine vminmax(nn)
 
- integer(k4),intent(in) :: nn
+ integer(kind=ni),intent(in) :: nn
 
-	varmin(nn)=minval(varr); varmax(nn)=maxval(varr); varm(0:1,myid)=(/varmin(nn),varmax(nn)/)
+    varmin(nn)=minval(varr); varmax(nn)=maxval(varr); varm(0:1,myid)=(/varmin(nn),varmax(nn)/)
 
-	ir=0; itag=nn
+    ir=0; itag=nn
  if(myid==mo(mb)) then
-	mps=mo(mb); mpe=mps+npc(mb,1)*npc(mb,2)*npc(mb,3)-1
+    mps=mo(mb); mpe=mps+npc(mb,1)*npc(mb,2)*npc(mb,3)-1
  do mp=mps+1,mpe
-	ir=ir+1; call MPI_IRECV(varm(:,mp),2,MPI_REAL8,mp,itag,icom,ireq(ir),ierr)
+    ir=ir+1; call MPI_IRECV(varm(:,mp),2,MPI_REAL4,mp,itag,icom,ireq(ir),ierr)
  end do
  if(ir/=0) then
     call MPI_WAITALL(ir,ireq,ista,ierr)
  end if
-	varmin(nn)=minval(varm(0,mps:mpe)); varmax(nn)=maxval(varm(1,mps:mpe))
+    varmin(nn)=minval(varm(0,mps:mpe)); varmax(nn)=maxval(varm(1,mps:mpe))
  else
-	call MPI_SEND(varm(:,myid),2,MPI_REAL8,mo(mb),itag,icom,ierr)
+    call MPI_SEND(varm(:,myid),2,MPI_REAL4,mo(mb),itag,icom,ierr)
  end if
 
  end subroutine vminmax

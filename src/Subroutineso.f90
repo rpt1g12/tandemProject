@@ -14,11 +14,11 @@
 
  subroutine penta(xu,xl,albes,albee,alpha,beta,is,ie)
 
- integer(k4),intent(in) :: is,ie
- real(k8),dimension(0:lim,3),intent(inout) :: xu
- real(k8),dimension(0:lim,2),intent(inout) :: xl
- real(k8),dimension(-2:2,0:2),intent(in) :: albes,albee
- real(k8),intent(in) :: alpha,beta
+ integer(kind=ni),intent(in) :: is,ie
+ real(kind=nr),dimension(0:lim,3),intent(inout) :: xu
+ real(kind=nr),dimension(0:lim,2),intent(inout) :: xl
+ real(kind=nr),dimension(-2:2,0:2),intent(in) :: albes,albee
+ real(kind=nr),intent(in) :: alpha,beta
 
  do i=is,ie
     xl(i,:)=one; xu(i,:)=one
@@ -70,10 +70,10 @@
 
  subroutine fcbcm(fltk,fltkbc,albef,fa,fb,fc)
  
- real(k8),intent(in) :: fltk,fltkbc
- real(k8),dimension(-2:2,0:2),intent(inout) :: albef
- real(k8),dimension(0:2),intent(inout) :: fa,fb,fc
- real(k8) :: alphz,betz,za,zb,zc
+ real(kind=nr),intent(in) :: fltk,fltkbc
+ real(kind=nr),dimension(-2:2,0:2),intent(inout) :: albef
+ real(kind=nr),dimension(0:2),intent(inout) :: fa,fb,fc
+ real(kind=nr) :: alphz,betz,za,zb,zc
 
     res=(fltkbc-fltk)/9; ra2=fltk+res; ra1=fltk+4*res; ra0=fltk+9*res
 
@@ -90,9 +90,9 @@
 
  subroutine fcint(fltk,fltr,alphz,betz,za,zb,zc)
  
- real(k8),intent(in) :: fltk,fltr
- real(k8),intent(inout) :: alphz,betz,za,zb,zc
- real(k8),dimension(3) :: cosf
+ real(kind=nr),intent(in) :: fltk,fltr
+ real(kind=nr),intent(inout) :: alphz,betz,za,zb,zc
+ real(kind=nr),dimension(3) :: cosf
 
     cosf(1)=cos(fltk); cosf(2)=cos(2*fltk); cosf(3)=cos(3*fltk)
     fctr=1/(30+5*(7-16*fltr)*cosf(1)+2*(1+8*fltr)*cosf(2)-3*cosf(3))
@@ -106,9 +106,9 @@
 
  subroutine sbcco
 
- real(k8),dimension(:,:),allocatable :: ax,bx,rx,sx
- real(k8),dimension(0:4) :: zv
- real(k8) :: alphz,betz,za,zb,zc
+ real(kind=nr),dimension(:,:),allocatable :: ax,bx,rx,sx
+ real(kind=nr),dimension(0:4) :: zv
+ real(kind=nr) :: alphz,betz,za,zb,zc
 
  do nt=0,1; lp=2*nt-1
  if(nt==0) then; ll=lmd; is=1; ie=2*(ll+1)
@@ -162,14 +162,14 @@
 
  subroutine mtrxi(ax,sx,is,ie)
 
- integer(k4),intent(in) :: is,ie
- real(k8),dimension(is:ie,is:ie),intent(in) :: ax
- real(k8),dimension(is:ie,is:ie),intent(inout) :: sx
+ integer(kind=ni),intent(in) :: is,ie
+ real(kind=nr),dimension(is:ie,is:ie),intent(in) :: ax
+ real(kind=nr),dimension(is:ie,is:ie),intent(inout) :: sx
 
- integer(k4),dimension(1) :: imax
- integer(k4),dimension(is:ie) :: ipvt
- real(k8),dimension(is:ie,is:ie) :: rx
- real(k8),dimension(is:ie) :: temp
+ integer(kind=ni),dimension(1) :: imax
+ integer(kind=ni),dimension(is:ie) :: ipvt
+ real(kind=nr),dimension(is:ie,is:ie) :: rx
+ real(kind=nr),dimension(is:ie) :: temp
 
     rx(:,:)=ax(:,:); ipvt(:)=(/(i,i=is,ie)/)
  do i=is,ie
@@ -191,7 +191,7 @@
 
  subroutine movef(dtko,dtk)
 
- real(k8),intent(in) :: dtko,dtk
+ real(kind=nr),intent(in) :: dtko,dtk
 
  if(nsmf==0) then
     ra0=pi/timf; ra1=ra0*min(timo,timf); ra2=ra0*min(timo+dtko,timf)
@@ -215,22 +215,22 @@
 
  subroutine lambl(x,y,blu,blv,blm,lbl)
 
- integer(k4),intent(in) :: lbl
- real(k8),dimension(0:lbl),intent(in) :: x,y
- real(k8),dimension(0:lbl),intent(inout) :: blu,blv,blm
+ integer(kind=ni),intent(in) :: lbl
+ real(kind=nr),dimension(0:lbl),intent(in) :: x,y
+ real(kind=nr),dimension(0:lbl),intent(inout) :: blu,blv,blm
 
- real(k8) :: blas,spr,eta,etb
+ real(kind=nr) :: blas,spr,eta,etb
 
-    blas=0.3320573362151963_k8; spr=sqrt(prndtl)
+    blas=0.3320573362151963_nr; spr=sqrt(prndtl)
     ra0=half*pi; ra1=3*blas*blas/560; ra2=11*blas/420
  do i=0,lbl
-    fctr=1/sqrt(x(i))
+    fctr=one/sqrt(x(i))
     eta=fctr*sqrtrema*y(i); etb=spr*eta
-    res=0.000001_k8*eta**4*exp(eta**1.3625_k8)
-    blu(i)=(blas*eta+ra1*eta**4+res)/(1+ra2*eta**3+res)
-    blv(i)=0.8604_k8*fctr*sqrtremai*(sin(ra0*tanh(exp(0.177_k8*eta)-1)))**1.96_k8
-    res=0.000001_k8*etb**4*exp(etb**1.3625_k8)
-    blm(i)=(blas*etb+ra1*etb**4+res)/(1+ra2*etb**3+res)
+    res=0.000001_nr*eta**four*exp(eta**1.3625_nr)
+    blu(i)=(blas*eta+ra1*eta**four+res)/(one+ra2*eta**three+res)
+    blv(i)=0.8604_nr*fctr*sqrtremai*(sin(ra0*tanh(exp(0.177_nr*eta)-one)))**1.96_nr
+    res=0.000001_nr*etb**four*exp(etb**1.3625_nr)
+    blm(i)=(blas*etb+ra1*etb**four+res)/(one+ra2*etb**three+res)
  end do
 
  end subroutine lambl
@@ -265,15 +265,44 @@
 
  end subroutine gridf
 
+!===== SUBROUTINE FOR GRID LINE GENERATION new
+
+ !subroutine gridf(x,xxi,xo,xn,dxo,dxn,lxi,mxin,ip)
+
+ !integer(kind=ni),intent(in) :: lxi,mxin,ip
+ !real(kind=nr),dimension(0:lxi),intent(inout) :: x,xxi
+ !real(kind=nr),intent(in) :: xo,xn,dxo,dxn
+
+ !integer(kind=ni) :: i,ii
+ !real(kind=nr) :: dxoo,dxnn,aa,bb,cc,dd,xi,fctr
+
+ !   dxoo=dxo; dxnn=dxn; xi=mxin
+ !if(int((dxo+sml)/free,kind=ni)==1) then
+ !   dxoo=two*(xn-xo)/xi-dxnn
+ !end if
+ !if(int((dxn+sml)/free,kind=ni)==1) then
+ !   dxnn=two*(xn-xo)/xi-dxoo
+ !end if
+ !   aa=6.0_nr*(xn-xo)-3.0_nr*xi*(dxoo+dxnn)
+ !   bb=15.0_nr*(xo-xn)+xi*(8.0_nr*dxoo+7.0_nr*dxnn)
+ !   cc=10.0_nr*(xn-xo)-xi*(6.0_nr*dxoo+4.0_nr*dxnn)
+ !   dd=xi*dxoo; fctr=one/xi
+ !do i=0,mxin
+ !   ii=i+ip; xi=i*fctr
+ !   x(ii)=aa*xi**five+bb*xi**four+cc*xi**three+dd*xi+xo
+ !   xxi(ii)=fctr*(five*aa*xi**four+four*bb*xi**three+three*cc*xi**two+dd)
+ !end do
+
+ !end subroutine gridf
 
 !===== SUBROUTINE FOR CHARACTER STRING CONVERSION
 
  subroutine strio(nfile,lh,cinput)
 
- integer(k4),intent(in) :: nfile
- integer(k4),intent(inout) :: lh
+ integer(kind=ni),intent(in) :: nfile
+ integer(kind=ni),intent(inout) :: lh
  character(16),intent(in) :: cinput
- integer(k4) :: ll
+ integer(kind=ni) :: ll
 
  do ll=1,len_trim(cinput)
     write(nfile,pos=4*lh+1) ichar(cinput(ll:ll)); lh=lh+1
@@ -286,8 +315,8 @@
 
  function indx3(i,j,k,nn) result(lm)
 
- integer(k4),intent(in) :: i,j,k,nn
- integer(k4) :: lm
+ integer(kind=ni),intent(in) :: i,j,k,nn
+ integer(kind=ni) :: lm
 
  select case(nn)
  case(1); lm=(k*(let+1)+j)*(lxi+1)+i
@@ -301,8 +330,8 @@
 
  function indx2(i,j,nn) result(lm)
 
- integer(k4),intent(in) :: i,j,nn
- integer(k4) :: lm
+ integer(kind=ni),intent(in) :: i,j,nn
+ integer(kind=ni) :: lm
 
  select case(nn)
  case(1); lm=j*(lxi+1)+i

@@ -32,7 +32,7 @@
 
     open(9,file='inputo.dat')
     read(9,*) cinput,mbk,bkx,bky,bkz
-    read(9,*) cinput,nts,nto,iwrec
+    read(9,*) cinput,nts,nto
     read(9,*) cinput,nscrn,nsgnl
     read(9,*) cinput,ndata
     read(9,*) cinput,nkrk
@@ -40,6 +40,7 @@
     read(9,*) cinput,nsmf
     read(9,*) cinput,nfskp
     read(9,*) cinput,nrestart
+    read(9,*) cinput,nextrabc,nextgcic
     read(9,*) cinput,reoo,tempoo
     read(9,*) cinput,amach1,amach2,amach3
     read(9,*) cinput,wtemp
@@ -57,8 +58,6 @@
     rhooo=one; poo=one/gam; aoo=sqrt(gam*poo/rhooo); amachoo=sqrt(amach1*amach1+amach2*amach2+amach3*amach3)
     srefoo=111/tempoo; srefp1dre=(srefoo+one)/reoo; sqrtrema=sqrt(reoo*amachoo); sqrtremai=one/sqrtrema
     uoo(1)=amach1*aoo; uoo(2)=amach2*aoo; uoo(3)=amach3*aoo
-    ! rpt-Initialising the record count 
-    nwrec=0
     ! rpt-Do not use postprocessing subroutines
     ispost=.false.
     ! rpt-Position of signal sampling
@@ -95,21 +94,21 @@
      ! rpt- Create communicator per block
      CALL MPI_COMM_SPLIT(icom,mb,myid,bcom,ierr)   
 
- if (output==2) then
-     cfilet(-1)='grid'
-  do n=0,ndata
-     no(2)=n/100; no(1)=mod(n,100)/10; no(0)=mod(n,10)
-     cno=achar(no+48); cfilet(n)='n'//cno(2)//cno(1)//cno(0)
-  end do
-  do n=-1,ndata
-             ctecplt(n)='out/'//cfilet(n)//'.plt'
-  end do
-  do mm=0,mbk
-     no(2)=mm/100; no(1)=mod(mm,100)/10; no(0)=mod(mm,10)
-     cno=achar(no+48); czonet(mm)='z'//cno(2)//cno(1)//cno(0)
- 	cthead(mm)='data/'//czonet(mm)//'.plt'
-  end do
- end if
+    if (output==2) then
+    cfilet(-1)='grid'
+ do n=0,ndata
+    no(2)=n/100; no(1)=mod(n,100)/10; no(0)=mod(n,10)
+    cno=achar(no+48); cfilet(n)='n'//cno(2)//cno(1)//cno(0)
+ end do
+ do n=-1,ndata
+            ctecplt(n)='out/'//cfilet(n)//'.plt'
+ end do
+ do mm=0,mbk
+    no(2)=mm/100; no(1)=mod(mm,100)/10; no(0)=mod(mm,10)
+    cno=achar(no+48); czonet(mm)='z'//cno(2)//cno(1)//cno(0)
+    cthead(mm)='data/'//czonet(mm)//'.plt'
+ end do
+    end if
     no(2)=mb/100; no(1)=mod(mb,100)/10; no(0)=mod(mb,10)
     cno=achar(no+48); cnzone=cno(2)//cno(1)//cno(0)
     czone='zone'//cnzone;
@@ -120,9 +119,8 @@
     no(4)=myid/10000; no(3)=mod(myid,10000)/1000;
     no(2)=mod(myid,1000)/100; no(1)=mod(myid,100)/10; no(0)=mod(myid,10)
     cno=achar(no+48); cnnode=cno(4)//cno(3)//cno(2)//cno(1)//cno(0)
-    cdata='data/data'//cnnode//'.dat';
-    cturb='misc/turb'//cnnode//'.dat'
-
+    cdata='misc/data'//cnnode//'.dat'; cturb='misc/turb'//cnnode//'.dat'
+    
     call domdcomp
 
     ip=mod(myid-mo(mb),npc(mb,1))
@@ -154,21 +152,21 @@
     ncd(0,nn)=ncds(nn); ncd(1,nn)=ncde(nn)
  end if
  if(ma>=2) then
-    if(lp==0) then
+ if(lp==0) then
        l=ll-((ll+1)/ma)*(ma-1);
        nbc(0,nn)=nbcs(nn); nbc(1,nn)=40;
        ncd(0,nn)=ncds(nn); ncd(1,nn)=myid+mp
-    end if
-    if(lp>0.and.lp<ma-1) then
+ end if
+ if(lp>0.and.lp<ma-1) then
        l=(ll+1)/ma-1;
        nbc(0,nn)=40; nbc(1,nn)=40;
        ncd(0,nn)=myid-mp; ncd(1,nn)=myid+mp
-    end if
-    if(lp==ma-1) then
+ end if
+ if(lp==ma-1) then
        l=(ll+1)/ma-1;
        nbc(0,nn)=40; nbc(1,nn)=nbce(nn);
        ncd(0,nn)=myid-mp; ncd(1,nn)=ncde(nn)
-    end if
+ end if
  end if
  select case(nn); case (1); lxi=l; case (2); let=l; case (3); lze=l; end select
  end do
@@ -258,11 +256,10 @@
     mpijks=(/ibegin(mpc(1)),jbegin(mpc(2)),kbegin(mpc(3))/)
 
 !===== ALLOCATION OF MAIN ARRAYS
-
     if (output==2) then
-      allocate(qo(0:lmx,5),qa(0:lmx,5),qb(0:lmx,5),de(0:lmx,5))
+       allocate(qo(0:lmx,5),qa(0:lmx,5),qb(0:lmx,5),de(0:lmx,5))
     else
-      allocate(qo(0:lmx,5),qa(0:lmx,5),de(0:lmx,5))
+       allocate(qo(0:lmx,5),qa(0:lmx,5),de(0:lmx,5))
     end if
     allocate(xim(0:lmx,3),etm(0:lmx,3),zem(0:lmx,3),rr(0:lmx,3),ss(0:lmx,3))
     allocate(p(0:lmx),yaco(0:lmx),varr(0:lmx))
@@ -306,17 +303,17 @@
 !===== PENTADIAGONAL MATRICES FOR DIFFERENCING & FILETERING
 
  do nn=1,3
- select case(nn)
+    select case(nn)
        case(1); is=0; ie=is+lxi;
-       case(2); is=lxi+1; ie=is+let; 
+       case(2); is=lxi+1; ie=is+let;
        case(3); is=lxi+let+2; ie=is+lze
- end select
- do ip=0,1; np=nbc(ip,nn)
- select case(np)
- case(10,20,25,30); ndf(ip,0,nn)=0; ndf(ip,1,nn)=0
- case(35,40,45); ndf(ip,0,nn)=1; ndf(ip,1,nn)=1
- end select
- end do
+    end select
+    do ip=0,1; np=nbc(ip,nn)
+       select case(np)
+         case(10,20,25,30); ndf(ip,0,nn)=0; ndf(ip,1,nn)=0
+         case(35,40,45); ndf(ip,0,nn)=1; ndf(ip,1,nn)=1
+       end select
+    end do
     ns=ndf(0,0,nn); ne=ndf(1,0,nn)
     call penta(xu(:,:),xl(:,:),albed(:,:,ns),albed(:,:,ne),alpha,beta,is,ie)
     ns=ndf(0,1,nn); ne=ndf(1,1,nn)
@@ -339,6 +336,20 @@
        allocate(xyz4(0:lmx,3))
        xyz4(:,:)=ss(:,:)
     end if
+
+    !RPT-FIND POSITION FOR SIGNAL SAMPLING
+    !idsignal=-1
+    !varr(:)=sqrt((ss(:,1)-sxpos)**2+(ss(:,2)-sypos)**2+(ss(:,3)-szpos)**2)
+    !lsignal=minloc(varr(:),1)-1
+    !ra0=varr(lsignal)
+    !CALL MPI_ALLREDUCE(ra0,ra1,1,MPI_REAL8,MPI_MIN,icom,ierr)
+    !if (abs(ra0-ra1)/ra0<sml) then
+    !   idsignal=myid
+    !end if
+    !if (myid==idsignal) then
+    !open(6,file='data/signal.dat')
+    !end if
+
 
     rr(:,1)=ss(:,1)
     m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
@@ -384,8 +395,8 @@
 !    m=3; call mpigo(ntdrv,nrall,n45go,m); call deriv(2,2,m); call deriv(1,1,m); zem(:,m)=rr(:,2)-rr(:,1)
 
     yaco(:)=three/(qo(:,1)*xim(:,1)+qo(:,2)*etm(:,1)+qo(:,3)*zem(:,1)&
-              +qa(:,1)*xim(:,2)+qa(:,2)*etm(:,2)+qa(:,3)*zem(:,2)&
-              +de(:,1)*xim(:,3)+de(:,2)*etm(:,3)+de(:,3)*zem(:,3))
+                  +qa(:,1)*xim(:,2)+qa(:,2)*etm(:,2)+qa(:,3)*zem(:,2)&
+                  +de(:,1)*xim(:,3)+de(:,2)*etm(:,3)+de(:,3)*zem(:,3))
 
 
     if ((ngridv==1).and.(output==1)) then
@@ -415,32 +426,36 @@
 
 !===== EXTRA COEFFICIENTS FOR GCBC/GCIC
 
-    cbca(:,:)=zero; cbca(1,1:2)=albed(1:2,0,0); cbca(2,1:3)=albed(0:2,1,0); cbca(3,1:3)=albed(-1:1,2,0)
+    cbca(:,:)=zero; cbca(1,1:2)=albed(1:2,0,0);
+    cbca(2,1:3)=albed(0:2,1,0); cbca(3,1:3)=albed(-1:1,2,0)
  if(mbci>=4) then
     cbca(3,4)=albed(2,2,0)
- do i=4,mbci
-    cbca(i,i-3:i)=(/beta,alpha,one,alpha/); if(i<mbci) then; cbca(i,i+1)=beta; end if
- end do
+    do i=4,mbci
+       cbca(i,i-3:i)=(/beta,alpha,one,alpha/);
+       if(i<mbci) then; cbca(i,i+1)=beta; end if
+    end do
  end if
     rbci(:)=zero; rbci(1:3)=(/one,albed(-1,1,0),albed(-2,2,0)/)
     call mtrxi(cbca,cbcs,1,mbci); sbci(:)=-matmul(cbcs(:,:),rbci(:))
+    ! rpt- New added
+ !???????????????????
     fctr=pi/(mbci+1); res=zero
  do i=1,mbci; res=res+one
     sbci(i)=half*sbci(i)*(one+cos(res*fctr))
  end do
     lp=-1; ll=-1; rr(:,1)=zero
  do nn=1,3; do ip=0,1; np=nbc(ip,nn); i=ip*ijk(1,nn); iq=1-2*ip
- if((np-10)*(np-20)*(np-25)*(np-30)==0) then
- do k=0,ijk(3,nn); do j=0,ijk(2,nn); l=indx3(i,j,k,nn)
- if((np-20)*(np-25)==0) then
-    lp=lp+1; call extrabcc(de(lp,1))
- end if
-    ll=ll+1; res=one/yaco(l); rr(l,1)=rr(l,1)+one; rr(ll,2)=res; rr(ll,3)=l+sml
- do ii=1,mbci; l=indx3(i+iq*ii,j,k,nn)
-    ll=ll+1; rr(l,1)=rr(l,1)+one; rr(ll,2)=res*sbci(ii); rr(ll,3)=l+sml
- end do
- end do; end do
- end if
+    if((np-10)*(np-20)*(np-25)*(np-30)==0) then
+       do k=0,ijk(3,nn); do j=0,ijk(2,nn); l=indx3(i,j,k,nn)
+       if((np-20)*(np-25)==0) then
+          lp=lp+1; call extrabcc(de(lp,1))
+       end if
+          ll=ll+1; res=one/yaco(l); rr(l,1)=rr(l,1)+one; rr(ll,2)=res; rr(ll,3)=l+sml
+       do ii=1,mbci; l=indx3(i+iq*ii,j,k,nn)
+          ll=ll+1; rr(l,1)=rr(l,1)+one; rr(ll,2)=res*sbci(ii); rr(ll,3)=l+sml
+       end do
+       end do; end do
+    end if
  end do; end do
     lq=ll; allocate(rpex(0:lp),sbcc(0:lq))
  do ll=0,lp
@@ -449,6 +464,7 @@
  do ll=0,lq; l=rr(ll,3)
     sbcc(ll)=rr(ll,2)/rr(l,1)
  end do
+ !???????????????????
 
 !===== SETTING UP OUTPUT FILE & STORING GRID DATA
 
@@ -472,6 +488,10 @@
 !===== SETTING UP SPONGE ZONE PARAMETERS
 
     call spongeup
+    if ((ngridv==1).and.(output==1)) then
+       call wrP3dF('sponge',0,2)
+       deallocate(fout)
+    end if
 
 !===== SETTING UP FORCING PARAMETERS
 
@@ -488,36 +508,35 @@
        tsam=timo
     end if
  end if
+ if (output==2) qb(:,:)=0
 
 !============================================
 !===== BEGINNING OF TIME MARCHING IN SOLUTION
 !============================================
-  if (output==2) then
-    qb(:,:)=0
-  end if
-  ! OUTPUT HEADER
-  if (myid==0) then
-     write(*,"(3x,'n',8x,'time',9x,'Cl',9x,'Cd',5x)")  
-     write(*,"('============================================')")
-  end if
 
  ! START MEASURING WALL TIME
- wts=MPI_WTIME()
+    wts=MPI_WTIME()
 
  if(myid==0) then
     open(1,file='signal.dat'); close(1,status='delete')
  end if
- call MPI_BARRIER(icom,ierr)
+    call MPI_BARRIER(icom,ierr)
     open(1,file='signal.dat',access='direct',form='formatted',recl=16)
+
+  ! OUTPUT HEADER
+  if (myid==0) then
+  write(*,"(3x,'n',8x,'time',9x,'Cl',9x,'Cd',5x)")  
+  write(*,"('============================================')")
+  end if
 
     ndati=-1; nsigi=-1; dtsum=zero
  do while(timo<tmax.and.(dt/=zero.or.n<=2))
 
 !----- FILTERING & RE-INITIALISING
-
  do m=1,5
     rr(:,1)=qa(:,m)
-    call mpigo(ntflt,nrone,n45no,m); call filte(1,1); call filte(2,1); call filte(3,1)
+    call mpigo(ntflt,nrone,n45no,m);
+    call filte(1,1); call filte(2,1); call filte(3,1)
     qa(:,m)=rr(:,1)
  end do
     qo(:,:)=qa(:,:)
@@ -542,7 +561,7 @@
 
     p(:)=gamm1*(qa(:,5)-half*(qa(:,2)*de(:,2)+qa(:,3)*de(:,3)+qa(:,4)*de(:,4)))
     de(:,5)=gam*p(:)*de(:,1) ! Temperature
-    ss(:,1)=srefp1dre*de(:,5)**1.5_k8/(de(:,5)+srefoo) ! Sutherland's Law
+    ss(:,1)=srefp1dre*de(:,5)**1.5_nr/(de(:,5)+srefoo) ! Sutherland's Law
 
 !----- DETERMINATION OF TIME STEP SIZE & OUTPUT TIME
 
@@ -559,17 +578,17 @@
     res=maxval((sqrt(de(:,5)*rr(:,1))+rr(:,2))*ss(:,2))
     call MPI_ALLREDUCE(res,fctr,1,MPI_REAL8,MPI_MAX,icom,ierr)
     ra0=cfl/fctr; ra1=ra0
-    if(nviscous==1) then
-       res=maxval(de(:,1)*ss(:,1)*rr(:,1)*ss(:,2)*ss(:,2))
-       call MPI_ALLREDUCE(res,fctr,1,MPI_REAL8,MPI_MAX,icom,ierr)
-       ra1=half/fctr
-    end if
+ if(nviscous==1) then
+    res=maxval(de(:,1)*ss(:,1)*rr(:,1)*ss(:,2)*ss(:,2))
+    call MPI_ALLREDUCE(res,fctr,1,MPI_REAL8,MPI_MAX,icom,ierr)
+    ra1=half/fctr
+ end if
     dte=min(ra0,ra1)
  else
     dte=dto
  end if
  end if
-    dt=dts+(dte-dts)*sin(0.05_k8*pi*(n-ndt))**two
+    dt=dts+(dte-dts)*sin(0.05_nr*pi*(n-ndt))**two
 
     nout=0; res=tsam+(ndati+1)*(tmax-tsam)/ndata
  if((timo-res)*(timo+dt-res)<=zero) then
@@ -667,11 +686,13 @@
     ss(:,2)=etm(:,1)*rr(:,1)+etm(:,2)*rr(:,2)+etm(:,3)*rr(:,3)
     ss(:,3)=zem(:,1)*rr(:,1)+zem(:,2)*rr(:,2)+zem(:,3)*rr(:,3)
 
+
     rr(:,1)=qa(:,1)*ss(:,1)
     rr(:,2)=qa(:,1)*ss(:,2)
     rr(:,3)=qa(:,1)*ss(:,3)
     m=1; call mpigo(ntdrv,nrall,n45no,m); call deriv(1,1,m); call deriv(2,2,m); call deriv(3,3,m)
     de(:,m)=rr(:,1)+rr(:,2)+rr(:,3)
+
 
     rr(:,1)=qa(:,2)*ss(:,1)+xim(:,1)*p(:)
     rr(:,2)=qa(:,2)*ss(:,2)+etm(:,1)*p(:)
@@ -753,7 +774,7 @@
  case(1); drva=>drva1; drvb=>drvb1; case(2); drva=>drva2; drvb=>drvb2; case(3); drva=>drva3; drvb=>drvb3
  end select
  do ip=0,1; iq=1-ip; np=nbc(ip,nn)
- if(np==30) then
+ if(np==30.or.abs(nextgcic-1)+abs((np-20)*(np-25))==0) then
     ir=ir+1; call MPI_ISEND(drva(:,:,ip),5*nbsize(nn),MPI_REAL8,ncd(ip,nn),itag+iq,icom,ireq(ir),ierr)
     ir=ir+1; call MPI_IRECV(drvb(:,:,ip),5*nbsize(nn),MPI_REAL8,ncd(ip,nn),itag+ip,icom,ireq(ir),ierr)
  end if
@@ -767,56 +788,56 @@
 
     lp=-1; ll=-1
  do nn=1,3
-   select case(nn)
-      case(1); drva=>drva1; drvb=>drvb1; cm=>cm1
-      case(2); drva=>drva2; drvb=>drvb2; cm=>cm2
-      case(3); drva=>drva3; drvb=>drvb3; cm=>cm3
-   end select
-   do ip=0,1; np=nbc(ip,nn); i=ip*ijk(1,nn); iq=1-2*ip; ra0=iq
-     select case(np)
-        case(10)
-           do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
-           do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
-              call eleme(l,cm(jk,:,ip)); cha(:)=drva(jk,:,ip); dha(:)=drvb(jk,:,ip)
-              if(ra0*(vn+vs+ao)>zero) then; cha(4)=zero; end if
-              if(ra0*(vn+vs-ao)>zero) then; cha(5)=zero; end if
-              call xtr2q(cm(jk,:,ip)); dha(:)=matmul(xt(:,:),(cha(:)-drva(jk,:,ip)))
-              do ii=0,mbci; l=indx3(i+iq*ii,j,k,nn)
-                 ll=ll+1; de(l,:)=de(l,:)+sbcc(ll)*dha(:)
-              end do
-           end do
-           end do
-        case(20,25)
-           do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
-           do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn); lp=lp+1
-              call eleme(l,cm(jk,:,ip)); cha(:)=drva(jk,:,ip); dha(:)=drvb(jk,:,ip)
-              if(rpex(lp)==zero) then
-                 cha(4+ip)=cha(5-ip)+two*ra0*aoi*qa(l,1)&
-                           *(sum(cm(jk,:,ip)*dudtmf(:))+50.0_k8*(vn+vs))
-              else
-              call extrabcs
-           end if
-              call xtr2q(cm(jk,:,ip)); dha(:)=matmul(xt(:,:),(cha(:)-drva(jk,:,ip)))
-           do ii=0,mbci; l=indx3(i+iq*ii,j,k,nn)
-              ll=ll+1; de(l,:)=de(l,:)+sbcc(ll)*dha(:)
-           end do
-           end do
-           end do
-        case(30)
-        do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
-        do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
-           call eleme(l,cm(jk,:,ip)); cha(:)=drva(jk,:,ip); dha(:)=drvb(jk,:,ip)
-           if(ra0*(vn+vs)>zero) then; cha(1:3)=dha(1:3); end if
-           if(ra0*(vn+vs+ao)>zero) then; cha(4)=dha(4); end if
-           if(ra0*(vn+vs-ao)>zero) then; cha(5)=dha(5); end if
-           call xtr2q(cm(jk,:,ip)); dha(:)=matmul(xt(:,:),(cha(:)-drva(jk,:,ip)))
-        do ii=0,mbci; l=indx3(i+iq*ii,j,k,nn)
-           ll=ll+1; de(l,:)=de(l,:)+sbcc(ll)*dha(:)
-        end do
-        end do
-        end do
-     end select
-   end do
+    select case(nn)
+    case(1); drva=>drva1; drvb=>drvb1; cm=>cm1
+    case(2); drva=>drva2; drvb=>drvb2; cm=>cm2
+    case(3); drva=>drva3; drvb=>drvb3; cm=>cm3
+    end select
+    do ip=0,1; np=nbc(ip,nn); i=ip*ijk(1,nn); iq=1-2*ip; ra0=iq
+       select case(np)
+       case(10)
+          do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
+             do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
+                call eleme(l,cm(jk,:,ip)); cha(:)=drva(jk,:,ip); dha(:)=drvb(jk,:,ip)
+                if(ra0*(vn+vs+ao)>zero) then; cha(4)=zero; end if
+                if(ra0*(vn+vs-ao)>zero) then; cha(5)=zero; end if
+                call xtr2q(cm(jk,:,ip)); dha(:)=matmul(xt(:,:),(cha(:)-drva(jk,:,ip)))
+                do ii=0,mbci; l=indx3(i+iq*ii,j,k,nn)
+                   ll=ll+1; de(l,:)=de(l,:)+sbcc(ll)*dha(:)
+                end do
+             end do
+          end do
+       case(20,25)
+          do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
+             do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn); lp=lp+1
+                call eleme(l,cm(jk,:,ip)); cha(:)=drva(jk,:,ip); dha(:)=drvb(jk,:,ip)
+                if(rpex(lp)==zero) then
+                   cha(4+ip)=cha(5-ip)+two*ra0*aoi*qa(l,1)*&
+                             (sum(cm(jk,:,ip)*dudtmf(:))+50.0_nr*(vn+vs))
+                else
+                   call extrabcs
+                end if
+                   call xtr2q(cm(jk,:,ip)); dha(:)=matmul(xt(:,:),(cha(:)-drva(jk,:,ip)))
+                do ii=0,mbci; l=indx3(i+iq*ii,j,k,nn)
+                   ll=ll+1; de(l,:)=de(l,:)+sbcc(ll)*dha(:)
+                end do
+             end do
+          end do
+       case(30)
+          do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
+             do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
+                call eleme(l,cm(jk,:,ip)); cha(:)=drva(jk,:,ip); dha(:)=drvb(jk,:,ip)
+                if(ra0*(vn+vs)>zero) then; cha(1:3)=dha(1:3); end if
+                if(ra0*(vn+vs+ao)>zero) then; cha(4)=dha(4); end if
+                if(ra0*(vn+vs-ao)>zero) then; cha(5)=dha(5); end if
+                call xtr2q(cm(jk,:,ip)); dha(:)=matmul(xt(:,:),(cha(:)-drva(jk,:,ip)))
+                do ii=0,mbci; l=indx3(i+iq*ii,j,k,nn)
+                   ll=ll+1; de(l,:)=de(l,:)+sbcc(ll)*dha(:)
+                end do
+             end do
+          end do
+       end select
+    end do
  end do
 
 !----- UPDATING CONSERVATIVE VARIABLES
@@ -831,17 +852,17 @@
     qa(:,4)=qo(:,4)-rr(:,1)*de(:,4)
     qa(:,5)=qo(:,5)-rr(:,1)*de(:,5)
 
+
 !----- WALL TEMPERATURE & VELOCITY CONDITION
 
-    ra0=ham*hamm1*wtemp
+    lp=-1; ra0=ham*hamm1*wtemp
  do nn=1,3; do ip=0,1; np=nbc(ip,nn); i=ip*ijk(1,nn)
- if((np-20)*(np-25)==0) then; ns=(25-np)/5; ne=1-ns
- do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
- do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
-    qa(l,2:4)=ns*qa(l,2:4)-ne*umf(:)*qa(l,1)
-    qa(l,5)=ra0*qa(l,1)+half*(qa(l,2)*qa(l,2)+qa(l,3)*qa(l,3)+qa(l,4)*qa(l,4))/qa(l,1)
- end do
- end do
+ if((np-20)*(np-25)==0) then; ra1=(np-20)/5
+ do k=0,ijk(3,nn); do j=0,ijk(2,nn); l=indx3(i,j,k,nn); lp=lp+1;
+    ra2=one-rpex(lp); ra3=one-ra1*ra2
+    fctr=(one-ra3)*qa(l,1); qa(l,2:4)=ra3*qa(l,2:4)-fctr*umf(:)
+    qa(l,5)=rpex(lp)*qa(l,5)+ra2*(ra0*qa(l,1)+half*(qa(l,2)*qa(l,2)+qa(l,3)*qa(l,3)+qa(l,4)*qa(l,4))/qa(l,1))
+ end do; end do
  end if
  end do; end do
 
@@ -851,45 +872,55 @@
 
     ir=0; itag=30
  do nn=1,3
- select case(nn)
+    select case(nn)
     case(1); drva=>drva1; drvb=>drvb1;
     case(2); drva=>drva2; drvb=>drvb2;
     case(3); drva=>drva3; drvb=>drvb3
- end select
- do ip=0,1; iq=1-ip; np=nbc(ip,nn); i=ip*ijk(1,nn)
- if((np-30)*(np-35)*(np-45)==0) then
- do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
- do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
-    drva(jk,:,ip)=qa(l,:); rr(l,1)=one
- end do
- end do
-    ir=ir+1; call MPI_ISEND(drva(:,:,ip),5*nbsize(nn),MPI_REAL8,ncd(ip,nn),itag+iq,icom,ireq(ir),ierr)
-    ir=ir+1; call MPI_IRECV(drvb(:,:,ip),5*nbsize(nn),MPI_REAL8,ncd(ip,nn),itag+ip,icom,ireq(ir),ierr)
- end if
- end do
+    end select
+    do ip=0,1; iq=1-ip; np=nbc(ip,nn); i=ip*ijk(1,nn)
+       if((np-30)*(np-35)*(np-45)==0.or.abs(nextgcic-1)+abs((np-20)*(np-25))==0) then
+          do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
+             do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
+                drva(jk,:,ip)=qa(l,:); rr(l,1)=one
+             end do
+          end do
+          ir=ir+1; call MPI_ISEND(drva(:,:,ip),5*nbsize(nn),MPI_REAL8,&
+                                  ncd(ip,nn),itag+iq,icom,ireq(ir),ierr)
+          ir=ir+1; call MPI_IRECV(drvb(:,:,ip),5*nbsize(nn),MPI_REAL8,&
+                                  ncd(ip,nn),itag+ip,icom,ireq(ir),ierr)
+       end if
+    end do
  end do
 
  if(ir/=0) then
     call MPI_WAITALL(ir,ireq,ista,ierr)
  end if
-
+    lp=-1
  do nn=1,3
-   select case(nn);
-   case(1); drvb=>drvb1; 
-   case(2); drvb=>drvb2; 
-   case(3); drvb=>drvb3; 
-   end select
- do ip=0,1; np=nbc(ip,nn); i=ip*ijk(1,nn)
- if((np-30)*(np-35)*(np-45)==0) then
- do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
- do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
-    rr(l,1)=rr(l,1)+one; 
-    rr(l,2)=one/rr(l,1); 
-    qa(l,:)=rr(l,2)*((rr(l,1)-one)*qa(l,:)+drvb(jk,:,ip))
- end do
- end do
- end if
- end do
+    select case(nn);
+    case(1); drvb=>drvb1;
+    case(2); drvb=>drvb2;
+    case(3); drvb=>drvb3;
+    end select
+    do ip=0,1; np=nbc(ip,nn); i=ip*ijk(1,nn)
+       if((np-30)*(np-35)*(np-45)==0) then
+          do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
+             do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
+                rr(l,1)=rr(l,1)+one; rr(l,2)=one/rr(l,1);
+                qa(l,:)=rr(l,2)*((rr(l,1)-one)*qa(l,:)+drvb(jk,:,ip))
+             end do
+          end do
+       end if
+       if(abs(nextgcic-1)+abs((np-20)*(np-25))==0) then
+          do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
+             do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn);
+                lp=lp+1; ra0=rpex(lp); ra1=one-ra0
+                rr(l,1)=rr(l,1)+ra0; rr(l,2)=one/rr(l,1);
+                qa(l,:)=ra0*rr(l,2)*((rr(l,1)-one)*qa(l,:)+drvb(jk,:,ip))+ra1*qa(l,:)
+             end do
+          end do
+       end if
+    end do
  end do
 
 !-------------------------------
@@ -929,7 +960,7 @@
       times(ndati)=timo
    if(myid==0) then
       write(*,"('===> saving output ',i3,' at time =',f12.8)") ndati,timo
-   end if
+ end if
    selectcase(output)
    case(2) ! New Tecplot Style
    qb(:,:)=qa(:,:)
@@ -951,10 +982,10 @@
    
     if(nrestart==1) then
        call wrRsta
-    end if
+ end if
  end if
 
- !if(timo-tsam>=0.and.mod(n,nsgnl)==0) then
+ !if(timo>=tsam.and.mod(n,nsgnl)==0) then
  !   nsigi=nsigi+1; call signalgo
  !end if
 
@@ -970,10 +1001,11 @@
 !==========================
 !===== END OF TIME MARCHING
 !==========================
+
  end do
     close(1)
     if (output==2) then
-	close(0)
+    close(0)
     end if
     !if (myid==idsignal) then
     !   close(6)
@@ -991,16 +1023,36 @@
     close(9)
 
     open(9,file='walltime.dat',position='append')
-    write(9,'(2es15.7)') real(npro,k8),wtime/npro
+    write(9,'(2es15.7)') real(npro,kind=nr),wtime/npro
     close(9)
  end if
 
+!===== GENERATING RESTART DATA FILE
+
+! if(nrestart==1) then
+! if(myid==mo(mb)) then
+!    open(9,file=crestart); close(9,status='delete')
+! end if
+!    call MPI_BARRIER(icom,ierr)
+!    open(9,file=crestart,access='direct',form='unformatted',recl=5*nrecd)
+! if(myid==mo(mb)) then
+!    cha(:)=(/real(n,kind=nr),real(ndt,kind=nr),dt,dts,dte/); dha(:)=(/timo,zero,zero,zero,zero/)
+!    write(9,rec=1) cha(:); write(9,rec=2) dha(:)
+! end if
+!    lp=lpos(myid)+2
+! do k=0,lze; do j=0,let; lq=lp+lio(j,k)
+! do i=0,lxi; l=indx3(i,j,k,1)
+!    write(9,rec=lq+i+1) qa(l,:)
+! end do
+! end do; end do
+!    close(9)
+! end if
 
 !===== POST-PROCESSING & GENERATING TECPLOT DATA FILE
 
  if(dt==0) then
     if (myid==0) then
-       write(*,*) "Overflow."
+    write(*,*) "Overflow."
     end if
     ndata=ndati
  else
@@ -1009,16 +1061,16 @@
    case(2)
    ! rpt-Deallocate Arrays
     deallocate(qo,qa,qb,de,xim,etm,zem,rr,ss,p,yaco)
- if(nviscous==1) then
-    deallocate(txx,tyy,tzz,txy,tyz,tzx,hxx,hyy,hzz)
- end if
+    if(nviscous==1) then
+       deallocate(txx,tyy,tzz,txy,tyz,tzx,hxx,hyy,hzz)
+    end if
    ! rpt-nlmx=>last index of total output
    ! rpt-ll=>last index of each output
-	nlmx=(3+5*(ndata+1))*(lmx+1)-1; ll=5*(lmx+1)-1; allocate(vart(0:nlmx),vmean(0:ll))
+    nlmx=(3+5*(ndata+1))*(lmx+1)-1; ll=5*(lmx+1)-1; allocate(vart(0:nlmx),vmean(0:ll))
    ! rpt-Read all data written data into vart and delete files
 	open(9,file=cdata,access='direct',form='unformatted',recl=nrecs*(nlmx+1))
-	read(9,rec=1) vart(:)
-	close(9,status='delete')
+    read(9,rec=1) vart(:)
+    close(9,status='delete')
    !!!----- CALCULATING UNSTEADY FLUCTUATIONS
    !!     fctr=half/(times(ndata)-times(0)); vmean(:)=0
    !!do n=0,ndata; lis=(3+5*n)*(lmx+1); lie=lis+ll
@@ -1027,60 +1079,61 @@
    !!   if(n>0.and.n<ndata) then; ra0=fctr*(times(n+1)-times(n-1)); end if
    !!   vmean(:)=vmean(:)+ra0*vart(lis:lie)
    !!end do
- do n=0,ndata; lis=(3+5*n)*(lmx+1); lie=lis+ll
-          !vart(lis:lie)=vart(lis:lie)-vmean(:)
-   ! rpt-Compute min and max of each variable
- do m=1,5; nn=3+5*n+m; l=lis+(m-1)*(lmx+1)
-	varr(:)=vart(l:l+lmx); call vminmax(nn)
- end do
- end do
-   !----- COLLECTING DATA FROM SUBDOMAINS & BUILDING TECPLOT OUTPUT FILES
-	lje=-1
- do n=-1,ndata
-	mq=3+2*min(n+1,1); llmb=mq*ltomb-1; allocate(vara(0:llmb),varb(0:llmb))
-	ljs=lje+1; lje=ljs+mq*(lmx+1)-1
-      if(myid==mo(mb)) then 
-	mps=mo(mb); mpe=mps+npc(mb,1)*npc(mb,2)*npc(mb,3)-1
-	lis=0; lie=mq*(lmx+1)-1; vara(lis:lie)=vart(ljs:lje)
- do mp=mps+1,mpe
-	lis=lie+1; lie=lis+mq*(lxim(mp)+1)*(letm(mp)+1)*(lzem(mp)+1)-1
-    itag=1; call MPI_RECV(vara(lis:lie),lie-lis+1,MPI_REAL4,mp,itag,icom,ista,ierr)
- end do
-	lis=0
- do mp=mps,mpe; do m=1,mq; do k=0,lzem(mp); do j=0,letm(mp)
-	ljs=lpos(mp)+(m-1)*ltomb+k*(leto+1)*(lxio+1)+j*(lxio+1)
-	varb(ljs:ljs+lxim(mp))=vara(lis:lis+lxim(mp)); lis=lis+lxim(mp)+1
- end do; end do; end do; end do
-	open(9,file=cthead(mb),access='stream',form='unformatted')
-	call techead(9,n,mb,lh)
-	deallocate(vara); allocate(vara(0:lh+llmb)); read(9,pos=1) vara(0:lh-1)
-	close(9,status='delete')
-	lhmb(mb)=lh+llmb+1; vara(lh:lh+llmb)=varb(:)
-        if(mb==0) then
- do mm=1,mbk
-	itag=2; call MPI_RECV(lhmb(mm),1,MPI_INTEGER8,mo(mm),itag,icom,ista,ierr)
- end do
-	llmo=sum(lhmb(:))-1; deallocate(varb); allocate(varb(0:llmo))
-	lis=0; lie=lhmb(mb)-1; varb(lis:lie)=vara(:)
- do mm=1,mbk
-	lis=lie+1; lie=lis+lhmb(mm)-1
-	itag=3; call MPI_RECV(varb(lis:lie),lie-lis+1,MPI_REAL4,mo(mm),itag,icom,ista,ierr)
- end do
-                write(*,*) ctecplt(n)
+    do n=0,ndata; lis=(3+5*n)*(lmx+1); lie=lis+ll
+             !vart(lis:lie)=vart(lis:lie)-vmean(:)
+      ! rpt-Compute min and max of each variable
+    do m=1,5; nn=3+5*n+m; l=lis+(m-1)*(lmx+1)
+       varr(:)=vart(l:l+lmx); call vminmax(nn)
+    end do
+    end do
+      !----- COLLECTING DATA FROM SUBDOMAINS & BUILDING TECPLOT OUTPUT FILES
+       lje=-1
+    do n=-1,ndata
+       mq=3+2*min(n+1,1); llmb=mq*ltomb-1; allocate(vara(0:llmb),varb(0:llmb))
+       ljs=lje+1; lje=ljs+mq*(lmx+1)-1
+         if(myid==mo(mb)) then 
+       mps=mo(mb); mpe=mps+npc(mb,1)*npc(mb,2)*npc(mb,3)-1
+       lis=0; lie=mq*(lmx+1)-1; vara(lis:lie)=vart(ljs:lje)
+    do mp=mps+1,mpe
+       lis=lie+1; lie=lis+mq*(lxim(mp)+1)*(letm(mp)+1)*(lzem(mp)+1)-1
+       itag=1; call MPI_RECV(vara(lis:lie),lie-lis+1,MPI_REAL4,mp,itag,icom,ista,ierr)
+    end do
+       lis=0
+    do mp=mps,mpe; do m=1,mq; do k=0,lzem(mp); do j=0,letm(mp)
+       ljs=lpos(mp)+(m-1)*ltomb+k*(leto+1)*(lxio+1)+j*(lxio+1)
+       varb(ljs:ljs+lxim(mp))=vara(lis:lis+lxim(mp)); lis=lis+lxim(mp)+1
+    end do; end do; end do; end do
+       open(9,file=cthead(mb),access='stream',form='unformatted')
+       call techead(9,n,mb,lh)
+       deallocate(vara); allocate(vara(0:lh+llmb)); read(9,pos=1) vara(0:lh-1)
+       close(9,status='delete')
+       lhmb(mb)=lh+llmb+1; vara(lh:lh+llmb)=varb(:)
+           if(mb==0) then
+    do mm=1,mbk
+       itag=2; call MPI_RECV(lhmb(mm),1,MPI_INTEGER8,mo(mm),itag,icom,ista,ierr)
+    end do
+       llmo=sum(lhmb(:))-1; deallocate(varb); allocate(varb(0:llmo))
+       lis=0; lie=lhmb(mb)-1; varb(lis:lie)=vara(:)
+    do mm=1,mbk
+       lis=lie+1; lie=lis+lhmb(mm)-1
+       itag=3; call MPI_RECV(varb(lis:lie),lie-lis+1,MPI_REAL4,mo(mm),itag,icom,ista,ierr)
+    end do
+                   write(*,*) ctecplt(n)
  	open(0,file=ctecplt(n),access='direct',form='unformatted',recl=nrecs*(llmo+1))
-	write(0,rec=1) varb(:)
-	close(0)
-        else
-	itag=2; call MPI_SEND(lhmb(mb),1,MPI_INTEGER8,mo(0),itag,icom,ierr)
-	itag=3; call MPI_SEND(vara(:),lhmb(mb),MPI_REAL4,mo(0),itag,icom,ierr)
-        end if
-      else
-	itag=1; call MPI_SEND(vart(ljs:lje),lje-ljs+1,MPI_REAL4,mo(mb),itag,icom,ierr)
-      end if
-	deallocate(vara,varb)
- end do
+       write(0,rec=1) varb(:)
+       close(0)
+           else
+       itag=2; call MPI_SEND(lhmb(mb),1,MPI_INTEGER8,mo(0),itag,icom,ierr)
+       itag=3; call MPI_SEND(vara(:),lhmb(mb),MPI_REAL4,mo(0),itag,icom,ierr)
+           end if
+         else
+       itag=1; call MPI_SEND(vart(ljs:lje),lje-ljs+1,MPI_REAL4,mo(mb),itag,icom,ierr)
+         end if
+       deallocate(vara,varb)
+    end do
    end select
  end if
+
 
 !===== END OF JOB
 
