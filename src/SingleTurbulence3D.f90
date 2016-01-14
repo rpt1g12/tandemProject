@@ -113,14 +113,6 @@
     yit(nn)=(one-cutlb)*ran(nn,2)*(two*yit(nn)-one)
     zit(nn)=min(span,res)*(zit(nn)-half)
  end do
-    call MPI_BCAST(mxc,nits,MPI_INTEGER,0,icom,ierr)
- do m=1,3
-    call MPI_BCAST(sit(:,m),nits,MPI_REAL8,0,icom,ierr)
-    call MPI_BCAST(ait(:,m),nits,MPI_REAL8,0,icom,ierr)
- end do
-    call MPI_BCAST(zit,nits,MPI_REAL8,0,icom,ierr)
-    call MPI_BCAST(yit,nits,MPI_REAL8,0,icom,ierr)
-    call MPI_BCAST(xit,nits,MPI_REAL8,0,icom,ierr)
 
  end subroutine inputext
 
@@ -484,25 +476,25 @@
 
  subroutine signalgo
 
-    inquire(iolength=l) idsgnl; ll=l-1; lp=(2+3*ll)*nsigi
+    lp=(2+3*lze0)*nsigi
 
     m=0; l=lsgnl(m)
  if(myid==idsgnl(m)) then
     write(1,'(es15.7)',rec=lp+1) timo
     write(1,'(es15.7)',rec=lp+2) gam*p(l)-one
  end if
- do m=1,ll-1; l=lsgnl(m)
+ do m=1,lze0-1; l=lsgnl(m)
  if(myid==idsgnl(m)) then; ve(:)=qa(l,2:4)/qa(l,1)
     write(1,'(es15.7)',rec=lp+3*m) ve(1)
     write(1,'(es15.7)',rec=lp+3*m+1) ve(2)
     write(1,'(es15.7)',rec=lp+3*m+2) ve(3)
  end if
  end do
-    m=ll; l=lsgnl(m)
+    m=lze0; l=lsgnl(m)
  if(myid==idsgnl(m)) then; ve(:)=qa(l,2:4)/qa(l,1)
     write(1,'(es15.7)',rec=lp+3*m) ve(1)
     write(1,'(es15.7)',rec=lp+3*m+1) ve(2)
-    write(1,'(es15.7,a)',rec=lp+3*m+2) 8,achar(10)
+    write(1,'(es15.7,a)',rec=lp+3*m+2) ve(3),achar(10)
  end if
 
  end subroutine signalgo
