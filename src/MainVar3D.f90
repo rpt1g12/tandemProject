@@ -201,6 +201,14 @@
 ! real(k8), dimension (:,:,:,:), allocatable :: qxyz
  logical :: fflag
 
+ ! Cylinder probes variables
+ real(k8), dimension(:,:), allocatable :: xyprob,nlprob
+ real(k8), dimension(:,:,:), allocatable :: nklprob
+ integer, dimension(:), allocatable :: mprob,probcom,lprob
+ real(k8), dimension(:), allocatable :: aprob,vprob
+ integer :: lcprob,nprob
+ logical, dimension(:), allocatable :: probflag
+
  logical :: intgflag
  integer :: intgcom
  integer(k4) :: lcintg
