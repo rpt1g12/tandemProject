@@ -39,7 +39,11 @@ if (intgflag) then
               ' using ',i4,' elements')") &
               myid,sum(aintg),lcintg
 end if
-
+!call spongeup
+!allocate(fout(0:lmx,2))
+!fout(:,1)=de(:,1); fout(:,2)=de(:,2)*de(:,1)
+!
+!call wrP3dF('sponge',0,2,fmblk)
 !===== COMPUTE AVERAGE VALUES IF NOT AVAILABLE YET
 if (favg==1) then
    call p3daverage
@@ -118,8 +122,12 @@ if (fwplus==1) then
       end do
       close(7)
       if(.not.allocated(wvarr)) allocate(wvarr(0:lcwall))
+      wvarr=wplus(:,1)
+      call wavg('x+',dir=2,wall=.true.)
       wvarr=wplus(:,2)
       call wavg('y+',dir=2,wall=.true.)
+      wvarr=wplus(:,3)
+      call wavg('z+',dir=2,wall=.true.)
    end if
 end if
 
@@ -290,7 +298,7 @@ if (fstrip) then
   if(mb==7) close(7)
 end if
 
-call probCirc
+!call probCirc
 !!==== SHIFT RESTART SOLUTION
 !fflag=.true.
 !call rdRsta
