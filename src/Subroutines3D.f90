@@ -81,7 +81,7 @@
 
 !===== SUBROUTINE FOR COMPACT FINITE DIFFERENTIATING
 
- subroutine deriv(nn,nz)
+ subroutine deriv(nn,nz,m)
 
  integer(kind=ni),intent(in) :: nn,nz,m
 
