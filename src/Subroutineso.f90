@@ -239,31 +239,61 @@
 
  subroutine gridf(x,xxi,xo,xn,dxo,dxn,lxi,mxin,ip)
 
- integer(kind=ni),intent(in) :: lxi,mxin,ip
- real(kind=nr),dimension(0:lxi),intent(inout) :: x,xxi
- real(kind=nr),intent(in) :: xo,xn,dxo,dxn
+ integer(k4),intent(in) :: lxi,mxin,ip
+ real(k8),dimension(0:lxi),intent(inout) :: x,xxi
+ real(k8),intent(in) :: xo,xn,dxo,dxn
 
- integer(kind=ni) :: i,ii
- real(kind=nr) :: dxoo,dxnn,aa,bb,cc,dd,xi,fctr
+ integer(k4) :: i,ii
+ real(k8) :: dxoo,dxnn,aa,bb,cc,ee,dd,xi,fctr
 
-    dxoo=dxo; dxnn=dxn; xi=mxin
- if(int((dxo+sml)/free,kind=ni)==1) then
-    dxoo=two*(xn-xo)/xi-dxnn
+    dxoo=dxo; dxnn=dxn
+ if(dxo==sml) then
+    dxoo=2*(xn-xo)/mxin-dxn
  end if
- if(int((dxn+sml)/free,kind=ni)==1) then
-    dxnn=two*(xn-xo)/xi-dxoo
+ if(dxn==sml) then
+    dxnn=2*(xn-xo)/mxin-dxo
  end if
-    aa=6.0_nr*(xn-xo)-3.0_nr*xi*(dxoo+dxnn)
-    bb=15.0_nr*(xo-xn)+xi*(8.0_nr*dxoo+7.0_nr*dxnn)
-    cc=10.0_nr*(xn-xo)-xi*(6.0_nr*dxoo+4.0_nr*dxnn)
-    dd=xi*dxoo; fctr=one/xi
+    aa=6*(xn-xo)-3*mxin*(dxoo+dxnn)
+    bb=15*(xo-xn)+mxin*(8*dxoo+7*dxnn)
+    cc=10*(xn-xo)-mxin*(6*dxoo+4*dxnn)
+    dd=mxin*dxoo; fctr=one/mxin
  do i=0,mxin
     ii=i+ip; xi=i*fctr
-    x(ii)=aa*xi**five+bb*xi**four+cc*xi**three+dd*xi+xo
-    xxi(ii)=fctr*(five*aa*xi**four+four*bb*xi**three+three*cc*xi**two+dd)
+    x(ii)=aa*xi**5+bb*xi**4+cc*xi**3+dd*xi+xo
+    xxi(ii)=fctr*(5*aa*xi**4+4*bb*xi**3+3*cc*xi**2+dd)
  end do
 
  end subroutine gridf
+
+!===== SUBROUTINE FOR GRID LINE GENERATION new
+
+ !subroutine gridf(x,xxi,xo,xn,dxo,dxn,lxi,mxin,ip)
+
+ !integer(kind=ni),intent(in) :: lxi,mxin,ip
+ !real(kind=nr),dimension(0:lxi),intent(inout) :: x,xxi
+ !real(kind=nr),intent(in) :: xo,xn,dxo,dxn
+
+ !integer(kind=ni) :: i,ii
+ !real(kind=nr) :: dxoo,dxnn,aa,bb,cc,dd,xi,fctr
+
+ !   dxoo=dxo; dxnn=dxn; xi=mxin
+ !if(int((dxo+sml)/free,kind=ni)==1) then
+ !   dxoo=two*(xn-xo)/xi-dxnn
+ !end if
+ !if(int((dxn+sml)/free,kind=ni)==1) then
+ !   dxnn=two*(xn-xo)/xi-dxoo
+ !end if
+ !   aa=6.0_nr*(xn-xo)-3.0_nr*xi*(dxoo+dxnn)
+ !   bb=15.0_nr*(xo-xn)+xi*(8.0_nr*dxoo+7.0_nr*dxnn)
+ !   cc=10.0_nr*(xn-xo)-xi*(6.0_nr*dxoo+4.0_nr*dxnn)
+ !   dd=xi*dxoo; fctr=one/xi
+ !do i=0,mxin
+ !   ii=i+ip; xi=i*fctr
+ !   x(ii)=aa*xi**five+bb*xi**four+cc*xi**three+dd*xi+xo
+ !   xxi(ii)=fctr*(five*aa*xi**four+four*bb*xi**three+three*cc*xi**two+dd)
+ !end do
+
+ !end subroutine gridf
 
 !===== SUBROUTINE FOR CHARACTER STRING CONVERSION
 
