@@ -1,19 +1,26 @@
-lxi0-1-2        660 100 660
-let0            330
-lze0            50
-nbody-nthick    1   0
-ngridv          0
-npbxi0-to-5     12  2   12  12  2   12
-npbet0-to-5     6   6   6   6   6   6
-npbze0-to-5     1   1   1   1   1   1
-nito-nits-litr  1   300 10
-smgrid-domlen   0.00625e0       7.0e0
-span-wlew-wlea  0.26666666e0    0.13333333e0    0.0e0
-szth1-th2-xt-co 2.0e0           2.0e0           2.0e0           3.0e0
-tgusto          0.0e0
-slit-gaus-cfit  5.76e0          0.45087254e0    1.6e0
+lxi0-to-bkx	120	320     360   !lxit=800	
+let0-to-bky	120	360           !lett=480
+lze0-to-bkz	20                    !pts x plane = 384k
+nbody-nthick	2	2
+ngridv		1
+npcx		1	1	1
+npcy		1	1
+npcz		1
+nito-nits-litr	0	1	10
+smgrid-domlen	0.0075e0 		10.0e0
+ximod-etamod	0.3e0		0.05e0
+span-wlew-wlea	0.22e0		0.11e0		0.015e0
+gap-chord1-2	1.0e0		1.0e0		1.0e0
+delt1-2(deg)	00.0e0		0.0e0		
+szth1-th2-xt-co	2.0e0		2.0e0		4.0e0		12.0e0
+tgusto		500.0e0
+slit-gaus-cfit	5.76e0		0.45087254e0	0.5e0
 tlg0-g1-gw      0.14696321e0    0.30349845e0    0.55123963e0
 tlm0-m1-mw      0.1e0           0.19319688e0    2.12404140e0
-tamg1-2-3       0.00911487e0    0.01112472e0    0.00649983e0
-tamm1-2-3       0.00513841e0    0.01042273e0    0.01123619e0
+tamg1-2-3	0.0e0		0.0e0		0.0e0
+tamm1-2-3	0.0e0		0.0e0		0.0e0
 cutlb           0.5e0
+
+npcx		3	8	9
+npcy		3	9
+npcz		2
