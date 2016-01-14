@@ -13,6 +13,7 @@
  integer,parameter :: int32=selected_int_kind(9),int64=selected_int_kind(18)
  integer,parameter :: ieee32=selected_real_kind(6,37),ieee64=selected_real_kind(15,307)
  integer,parameter :: ni=int32,nr=ieee64
+ integer,parameter :: k4=int32,k8=ieee64
 
  integer(kind=ni),parameter :: ntdrv=0,ntflt=1,nrall=0,nrone=1,n45no=0,n45go=1
  integer(kind=ni),parameter :: lmd=11,lmf=8,lmp=max(lmd,lmf),mbci=3
@@ -20,12 +21,15 @@
 
  character(len=*),parameter :: fmts='es15.8',fmtl='es23.16',fmtsa=fmts//',a',fmtla=fmtl//',a'
 
+ real(kind=nr),parameter :: quarter=0.25_nr
  real(kind=nr),parameter :: half=0.5_nr,zero=0,one=1,two=2,three=3,four=4,five=5
  real(kind=nr),parameter :: one_three=one/three,two_three=two/three
  real(kind=nr),parameter :: pi=acos(-one),halfpi=pi/two,twopi=two*pi,sqrt2=sqrt(two),sqrt2i=one/sqrt2
  real(kind=nr),parameter :: sml=1.0e-6_nr,free=1.0e+6_nr
  real(kind=nr),parameter :: gam=1.4_nr,gamm1=gam-one,ham=one/gam,hamm1=one/gamm1
  real(kind=nr),parameter :: prndtl=0.71_nr,gamm1prndtli=one/(gamm1*prndtl)
+ ! rpt- LES Constants
+ real(k8),parameter :: tprndtl=0.99_k8,tgamm1prndtli=1/(gamm1*tprndtl)
 
  real(kind=nr),parameter :: alpha=0.5862704032801503_nr
  real(kind=nr),parameter :: beta=0.09549533555017055_nr
@@ -102,7 +106,7 @@
 
  character(13),dimension(:),allocatable :: ctecplt,cthead
  character(4),dimension(:),allocatable :: cfilet
- character(4),dimension(:),allocatable :: czonet
+ character(7),dimension(:),allocatable :: czonet
 
 !===== CONSTANT-SIZED MAIN VARIABLES
 
@@ -141,7 +145,7 @@
  character(3) :: cnzone,cndata
  character(5) :: cnnode
  character(7) :: czone
- character(13) :: coutput
+ character(17) :: coutput
  character(16) :: cinput
  character(16) :: cgrid
  character(18) :: cdata,cturb
@@ -152,6 +156,73 @@
  integer(kind=ni),dimension(:,:),allocatable :: ista
  integer(kind=ni),dimension(:),allocatable :: ireq
  integer(kind=ni) :: ir,mpro,npro,myid,itag,info,icom,ierr
+
+!===== INTEGER VARIABLES FOR RECORDING BY RPT
+
+ integer(k4) :: ngrec,nwrec,nread,totVar
+
+!===== VARIABLES FOR FORCING BY RPT
+
+ real(k8)  ::  xfor,yfor,rfor,amfor,tsfor,tefor
+ integer(k4)   ::  lfor
+ integer(k4) ,allocatable,dimension(:)  ::  lcfor
+ real(k8),allocatable,dimension(:,:)  ::  xafor,yafor,bfor
+
+!===== MPI-IO VARIABLES BY RPT
+ integer(k4), dimension (3) :: mpc,mbijkl,mpijkl,mpijks
+ integer(k4), dimension (:), allocatable :: ibegin,jbegin,kbegin
+ integer :: bcom
+ integer :: q4arr,q4fh,qarr,qfh
+ logical :: qflag=.false.,gflag=.false.,q4flag=.false.
+ logical :: wrsfg=.false.,wrrfg=.false.
+ real(k8), dimension(:,:), allocatable :: q8
+ real(k4), dimension(:,:), allocatable :: fout,xyz4,q4
+!===== VARIABLES FOR WALL OPERATIONS BY RPT
+ integer(k4) :: lcwall
+ integer(k4), dimension(:), allocatable ::lwall
+ real(k8), dimension(:), allocatable ::area
+ real(k8), dimension(:,:), allocatable ::wnor,wtan,tw
+ logical :: wflag
+ real(k8), dimension(:,:), allocatable,target :: xyz
+ integer(k4) :: wcom,bwcom
+
+!===== POST-PROCESSING VARIABLES BY RPT
+
+ integer(k4) :: lsta
+ logical :: tecplot,ispost
+ real(k8), dimension(:,:), allocatable :: wplus
+ real(k8), dimension(:), allocatable :: wvarr
+ character(:),dimension(:),allocatable :: ofiles 
+ real(k8), dimension(2,2) :: cl
+ real(k8), dimension(2,2,2) :: clh
+
+ integer :: fparallel,fmblk
+ integer :: favg,fwavg,favgu,fcoef,fcf,fcp,floc,fwplus,fqcrit,fwss,fcurl,frms,fwrms
+ integer :: fstrip
+ real(k8),dimension(:),allocatable :: delt
+ real(k8), dimension (:,:), allocatable :: svarr
+! real(k8), dimension (:,:,:,:), allocatable :: qxyz
+ logical :: fflag
+
+ logical :: intgflag
+ integer :: intgcom
+ integer(k4) :: lcintg
+ real(k8),dimension(:),allocatable :: vintg,aintg
+ integer(k4),dimension(:),allocatable :: lintg
+ real :: rdis,xpos,ypos
+ integer :: fintg,atk
+
+!===== ADITIONAL INPUTO VARIABLES BY RPT
+ integer(k4)  :: nto,iwrec
+ integer(k4)  :: forcing,LES
+ real(k8) :: tgustd,tguste
+ real(k8) :: talphas,talphar,aoa
+ real(k8) :: smago1,smago2
+ integer(k4)  :: output,ogrid,osol,oblock
+
+ integer(k4) :: bkx,bky,bkz
+ integer(k4), dimension(:),allocatable:: lxibk,letbk,lzebk
+
 
 !=====
 
