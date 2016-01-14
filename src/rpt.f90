@@ -791,12 +791,6 @@ contains
        call MPI_COMM_SPLIT(wcom,mb,myid,bwcom,ierr)
     end if
  
-    call MPI_COMM_SPLIT(icom,color,myid,wcom,ierr)
-
-    if (color==1) then
-       call MPI_COMM_SPLIT(wcom,mb,myid,bwcom,ierr)
-    end if
- 
  end subroutine wallArea
 
 !====================================================================================
