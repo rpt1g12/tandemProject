@@ -95,23 +95,12 @@
 
  real(kind=nr),dimension(:,:,:),pointer :: drva,drvb,send,recv,cm
 
- real(k8),dimension(:,:,:),allocatable,target :: drva1,drva2,drva3
- real(k8),dimension(:,:,:),allocatable,target :: drvb1,drvb2,drvb3
- real(k8),dimension(:,:,:),allocatable,target :: send1,send2,send3
- real(k8),dimension(:,:,:),allocatable,target :: recv1,recv2,recv3
- real(k8),dimension(:,:,:),allocatable,target :: cm1,cm2,cm3
- real(k8),dimension(:,:),allocatable,target :: cmm1,cmm2,cmm3
-
-! check if this affects, should be k4 kind
- !real(4),dimension(:),allocatable :: varr
-=======
  real(kind=nr),dimension(:,:,:),allocatable,target :: drva1,drva2,drva3
  real(kind=nr),dimension(:,:,:),allocatable,target :: drvb1,drvb2,drvb3
  real(kind=nr),dimension(:,:,:),allocatable,target :: send1,send2,send3
  real(kind=nr),dimension(:,:,:),allocatable,target :: recv1,recv2,recv3
  real(kind=nr),dimension(:,:,:),allocatable,target :: cm1,cm2,cm3
 
->>>>>>> fKimDec2015
  real(kind=ieee32),dimension(:,:),allocatable :: varm
  real(kind=ieee32),dimension(:),allocatable :: varr,vart,vara,varb,vmean,varmin,varmax
 
