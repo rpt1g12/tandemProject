@@ -19,7 +19,7 @@ contains
  subroutine setup
 !===== INPUT PARAMETERS
 
-    open(9,file='inputo.dat',shared)
+    open(9,file='inputo.dat')
     read(9,*) cinput,mbk
     read(9,*) cinput,nts,nto,iwrec
     read(9,*) cinput,nscrn,nsgnl
@@ -816,7 +816,7 @@ end subroutine flst
          open(9,file='out/solA.qa'); close(9,status='delete')
        end if
        CALL MPI_BARRIER(icom,ierr)
-       open (unit=9, file='out/solA.qa', access='stream',shared)
+       open (unit=9, file='out/solA.qa', access='stream')
        lh=0
        if (myid==0) then
         write(9,pos=4*lh+1) mbk+1; lh=lh+1 ! Number of zones
