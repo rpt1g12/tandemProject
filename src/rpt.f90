@@ -577,6 +577,7 @@ contains
 
         if(myid==mo(mb)) CALL MPI_FILE_DELETE(crestart,info,ierr)
         CALL MPI_FILE_OPEN(bcom,crestart,amode,info,qfh,ierr)
+        lh=0
         if (myid==mo(mb)) then
             ibuf=n; offset=lh*iolen ! Iteration Number
             CALL MPI_FILE_WRITE_AT(qfh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
