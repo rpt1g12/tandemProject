@@ -23,8 +23,11 @@
     mpro=npro-1; icom=MPI_COMM_WORLD; info=MPI_INFO_NULL
 
     allocate(lxim(0:mpro),letm(0:mpro),lzem(0:mpro),lpos(0:mpro),vmpi(0:mpro))
-    allocate(ista(MPI_STATUS_SIZE,12))
 
+    ll=max(npro,12); allocate(ista(MPI_STATUS_SIZE,ll),ireq(ll))
+
+    inquire(iolength=ll) real(1.0,kind=ieee32); nrecs=ll
+    inquire(iolength=ll) real(1.0,kind=ieee64); nrecd=ll
 call setup
 call flst(fmblk)
    
@@ -102,7 +105,7 @@ if (floc==1) then
       write(7,"('t uprime')") 
       do n = 0, ndata
          res=0
-         call p3dread(0,n)
+         call rdP3dS(n,fmblk)
          res=(qo(l,2)-qa(l,2))
          write(7,"(f10.5,f10.5)") times(n),res
       end do
@@ -113,7 +116,7 @@ end if
 !==COMPUTE WALL DISTANCES
 if (fwplus==1) then
    call getwplus(nvar=ndata+1)
-   if (myid==7) then
+   if (myid==4) then
       open(7,file='out/wplus.dat')
       write(7,"('x y z x+ y+ z+')") 
       do nn = 0, lcwall;l=lwall(nn)
