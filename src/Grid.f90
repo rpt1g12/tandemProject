@@ -69,7 +69,7 @@ module gridgen
  real(k8),intent(in) :: ximod,etamod
  real(k8) :: lsz1,lsz2
  real(k8) :: lbl,lwle
- real(k8) :: alph,thk=21
+ real(k8) :: alph,thk=00
  real(k8) :: oxp,oyp
  real(k8) :: tmps,tmpe,tmpc
  real(k8) :: sha,shb,shc
@@ -112,23 +112,23 @@ if(myid==mo(mb)) then
     open(1,file='misc/grid'//cno(2)//cno(1)//cno(0)//'.dat',access='stream',form='unformatted')
 
 !---Domain Sizes
-    dlth(0,0)=0.7e0*domlen; dlth(0,1)=domlen+szxt
-    dlth(1,0)=0.7e0*domlen; dlth(1,1)=domlen+szxt
+    dlth(0,0)=domlen; dlth(0,1)=domlen
+    dlth(1,0)=domlen; dlth(1,1)=domlen
 !---POINTS IN SPONGE
     szth(0,0)=szth1; szth(0,1)=szth2+szxt
     szth(1,0)=szth1; szth(1,1)=szth2+szxt
-    szll(0,0)=min(szth(0,0)/dlth(0,0),0.15e0)*lxibk(0)
-    szll(0,1)=min(szth(0,1)/dlth(0,1),0.15e0)*lxibk(bkx-1)
-    szll(1,0)=min(szth(1,0)/dlth(1,0),0.15e0)*letbk(0)
-    szll(1,1)=min(szth(1,1)/dlth(1,1),0.15e0)*letbk(bky-1)
+    szll(0,0)=(0.15e0)*lxibk(0)
+    szll(0,1)=(0.15e0)*lxibk(bkx-1)
+    szll(1,0)=(0.15e0)*letbk(0)
+    szll(1,1)=(0.15e0)*letbk(bky-1)
     szsh(:,:)=szth(:,:)/szll(:,:)
     if (myid==0) then
        write(*,"('Sponge Pts: west=',i4,' north=',i4,' east=',i4, ' south=',i4)")&
        szll(0,0),szll(1,1),szll(0,1),szll(1,0)
     end if
 !---Boundary Layer Refinement
-    blx(0,0)=0.4*c1
-    blx(0,1)=0.4*c1
+    blx(0,0)=0.0*c1
+    blx(0,1)=0.0*c1
     blx(1,0)=zero
     blx(1,1)=zero
     bly(0,0)=0.5e0*c1!thk*0.01*c1
@@ -167,8 +167,8 @@ if(myid==mo(mb)) then
     px(2,0)=px(2,2)-blx(0,0)
     px(2,3)=px(2,2)-blx(0,1)
     px(3,:)=-half*c1+c1*cos(delt1)
-    px(4,:)=px(3,:)+dlth(0,1)-szth(0,1)
-    px(5,:)=px(3,:)+dlth(0,1)
+    px(4,:)=dlth(0,1)-szth(0,1)
+    px(5,:)=dlth(0,1)
 !---HORIZONTAL LINES
     py(0,:)=-dlth(1,0)
     py(1,:)=py(0,:)+szth(1,0)
@@ -177,8 +177,8 @@ if(myid==mo(mb)) then
     py(2,2)=-c1*sin(delt1)
     py(2,3)=py(2,2)
     py(3,:)=py(2,:)
-    py(4,:)=py(2,2)+dlth(1,1)-szth(1,1)
-    py(5,:)=py(2,2)+dlth(1,1)
+    py(4,:)=dlth(1,1)-szth(1,1)
+    py(5,:)=dlth(1,1)
 
 !----- CONSTANT ANGLES IN RADIANS
     if(.not.allocated(degarr)) allocate(degarr(3))
@@ -193,8 +193,8 @@ if(myid==mo(mb)) then
 
 !----- INITIAL AND END VERTICAL SLOPES
     vslo(0,:,:)=zero
-    vslo(1,0,:)=(/zero,tan(pi4+delt1)/)
-    vslo(1,1,:)=(/-tan(pi4-delt1),zero/)
+    vslo(1,0,:)=(/zero,zero/)
+    vslo(1,1,:)=(/zero,zero/)
     vslo(2,:,:)=zero
     vslo(3,:,:)=zero
 
@@ -261,7 +261,7 @@ if(myid==mo(mb)) then
 !----- AEROFOIL SURFACE GRID POINTS
     tmp=c1-lwle;tmpa=px(2,1);tmpb=py(2,1);
     lxis=lxise(1,0);lxie=lxise(1,1);lxib=lxibk(1);
-    alph=delt1;thk=21
+    alph=delt1;!thk=21
     ! DETERMINE UPPER AND LOWER SIDES
     do n=1,2
        yp(lxis,n)=zero;xp(lxis,n)=zero

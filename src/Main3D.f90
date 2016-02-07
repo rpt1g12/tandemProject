@@ -254,6 +254,41 @@
     mpijkl=(/lxi,let,lze/)+1
     ! rpt- Starts in proccessor per direction
     mpijks=(/ibegin(mpc(1)),jbegin(mpc(2)),kbegin(mpc(3))/)
+    ! rpt- Ends in proccessor per direction
+    mpijke=mpijks+(/lxi,let,lze/)
+
+    allocate(ssRange(mbk,2,2))
+    do m = 0, mbk
+    selectcase(m)
+       case(0,3); ssRange(m,1,:)=(/25,lxim(m)/)
+       case(1,4); ssRange(m,1,:)=(/0,lxim(m)/)
+       case(2,5); ssRange(m,1,:)=(/0,25/)
+    end select
+    selectcase(m)
+       case(0-2); ssRange(m,2,:)=(/25,letm(m)/)
+       case(3-5); ssRange(m,2,:)=(/0,25/)
+    end select
+       
+    end do
+
+    do i = 1, 2
+       ssSize(mb,i)=ssRange(mb,i,2)-ssRange(mb,i,1)+1
+    end do
+    ssSize(mb,3)=mbijkl(3)
+
+
+     if((mpijks(1).ge.ssRange(mb,1,1).and.&
+         mpijke(1).le.ssRange(mb,1,2)).and.&
+        (mpijks(2).ge.ssRange(mb,2,1).and.&
+         mpijke(2).le.ssRange(mb,2,2))) then
+         ssFlag=.true.
+         color=1
+     else
+         ssFlag=.false.
+         color=MPI_UNDEFINED
+     end if
+     ! rpt- Create SubSet communicator 
+     CALL MPI_COMM_SPLIT(icom,sscom,myid,sscom,ierr)   
 
 !===== ALLOCATION OF MAIN ARRAYS
     if (output==2) then
