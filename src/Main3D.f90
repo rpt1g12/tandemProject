@@ -9,6 +9,7 @@
  use subroutines3d
  use problemcase
  use rpt
+ use subsets
  implicit none
  real(k8) :: sxpos,sypos,szpos
  integer(k4) :: lsignal,idsignal
@@ -256,39 +257,9 @@
     mpijks=(/ibegin(mpc(1)),jbegin(mpc(2)),kbegin(mpc(3))/)
     ! rpt- Ends in proccessor per direction
     mpijke=mpijks+(/lxi,let,lze/)
-
-    allocate(ssRange(mbk,2,2))
-    do m = 0, mbk
-    selectcase(m)
-       case(0,3); ssRange(m,1,:)=(/25,lxim(m)/)
-       case(1,4); ssRange(m,1,:)=(/0,lxim(m)/)
-       case(2,5); ssRange(m,1,:)=(/0,25/)
-    end select
-    selectcase(m)
-       case(0-2); ssRange(m,2,:)=(/25,letm(m)/)
-       case(3-5); ssRange(m,2,:)=(/0,25/)
-    end select
-       
-    end do
-
-    do i = 1, 2
-       ssSize(mb,i)=ssRange(mb,i,2)-ssRange(mb,i,1)+1
-    end do
-    ssSize(mb,3)=mbijkl(3)
-
-
-     if((mpijks(1).ge.ssRange(mb,1,1).and.&
-         mpijke(1).le.ssRange(mb,1,2)).and.&
-        (mpijks(2).ge.ssRange(mb,2,1).and.&
-         mpijke(2).le.ssRange(mb,2,2))) then
-         ssFlag=.true.
-         color=1
-     else
-         ssFlag=.false.
-         color=MPI_UNDEFINED
-     end if
-     ! rpt- Create SubSet communicator 
-     CALL MPI_COMM_SPLIT(icom,sscom,myid,sscom,ierr)   
+    
+    ! rpt- SetUp SubSets
+    call ssSetUp
 
 !===== ALLOCATION OF MAIN ARRAYS
     if (output==2) then
@@ -368,8 +339,18 @@
 
     call rdGrid
     if (output==1) then
-       allocate(xyz4(0:lmx,3))
+       allocate(xyz4(0:lmx,3),ssxyz4(0:sslmx,3),lss(0:sslmx))
        xyz4(:,:)=ss(:,:)
+       if (ssFlag) then
+          ll=0
+          do kk = ssGStr(3)-mpijks(3),ssGEnd(3)-mpijks(3)
+             do jj = ssGStr(2)-mpijks(2),ssGEnd(2)-mpijks(2)
+                do ii = ssGStr(1)-mpijks(1),ssGEnd(1)-mpijks(1);l=indx3(ii,jj,kk,1);lss(ll)=l
+                   ssxyz4(ll,:)=ss(l,:);ll=ll+1;
+                end do
+             end do
+          end do
+       end if
     end if
 
     !RPT-FIND POSITION FOR SIGNAL SAMPLING
@@ -516,7 +497,8 @@
  end do
  case(1)
    call wrP3dG
-   deallocate(xyz4)
+   call wrP3dG_ss
+   deallocate(xyz4,ssxyz4)
  end select
 
 
@@ -991,6 +973,9 @@
  !  end do
  !   dtsum=0; qb(:,:)=0
  !end if
+ if(mod(n,ssFreq)==0) then
+    call wrP3dS_ss
+ end if
  if(nout==1) then
       times(ndati)=timo
    if(myid==0) then
