@@ -9,6 +9,7 @@
  use subroutines3d
  use problemcase
  use rpt
+ use subsets
  implicit none
  real(k8) :: sxpos,sypos,szpos
  integer(k4) :: lsignal,idsignal
@@ -254,6 +255,11 @@
     mpijkl=(/lxi,let,lze/)+1
     ! rpt- Starts in proccessor per direction
     mpijks=(/ibegin(mpc(1)),jbegin(mpc(2)),kbegin(mpc(3))/)
+    ! rpt- Ends in proccessor per direction
+    mpijke=mpijks+(/lxi,let,lze/)
+    
+    ! rpt- SetUp SubSets
+    call ssSetUp
 
 !===== ALLOCATION OF MAIN ARRAYS
     if (output==2) then
@@ -333,8 +339,18 @@
 
     call rdGrid
     if (output==1) then
-       allocate(xyz4(0:lmx,3))
+       allocate(xyz4(0:lmx,3),ssxyz4(0:sslmx,3),lss(0:sslmx))
        xyz4(:,:)=ss(:,:)
+       if (ssFlag) then
+          ll=0
+          do kk = ssGStr(3)-mpijks(3),ssGEnd(3)-mpijks(3)
+             do jj = ssGStr(2)-mpijks(2),ssGEnd(2)-mpijks(2)
+                do ii = ssGStr(1)-mpijks(1),ssGEnd(1)-mpijks(1);l=indx3(ii,jj,kk,1);lss(ll)=l
+                   ssxyz4(ll,:)=ss(l,:);ll=ll+1;
+                end do
+             end do
+          end do
+       end if
     end if
 
     !RPT-FIND POSITION FOR SIGNAL SAMPLING
@@ -481,7 +497,8 @@
  end do
  case(1)
    call wrP3dG
-   deallocate(xyz4)
+   call wrP3dG_ss
+   deallocate(xyz4,ssxyz4)
  end select
 
 
@@ -956,6 +973,9 @@
  !  end do
  !   dtsum=0; qb(:,:)=0
  !end if
+ if(mod(n,ssFreq)==0) then
+    call wrP3dS_ss
+ end if
  if(nout==1) then
       times(ndati)=timo
    if(myid==0) then
