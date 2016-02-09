@@ -9,6 +9,7 @@
  use subroutines3d
  use problemcase
  use rpt
+ use subsets
  use rptpost
  implicit none
  character(20) :: cformat
@@ -29,10 +30,15 @@
     inquire(iolength=ll) real(1.0,kind=ieee32); nrecs=ll
     inquire(iolength=ll) real(1.0,kind=ieee64); nrecd=ll
 call setup
+!call ssSetUp
 call flst(fmblk)
    
 !! RPT-READ X,Y,Z COORDINATES
 call rdP3dG(fmblk)
+!do ll = 0, sslmx; l=lss(ll)
+!   ssxyz4(ll,:)=ss(l,:)
+!end do
+!call wrP3dG_ss(fmblk)
 ispost=.true.
 !
 call getMetrics
@@ -42,11 +48,13 @@ if (intgflag) then
               ' using ',i4,' elements')") &
               myid,sum(aintg),lcintg
 end if
-!call spongeup
-!allocate(fout(0:lmx,2))
-!fout(:,1)=de(:,1); fout(:,2)=de(:,2)*de(:,1)
-!
-!call wrP3dF('sponge',0,2,fmblk)
+
+!do n = 0, ndata
+!   call rdP3dS(n,fmblk)
+!   qa(:,:)=qo(:,:)
+!   call wrP3dS_ss
+!end do
+
 !===== COMPUTE AVERAGE VALUES IF NOT AVAILABLE YET
 if (favg==1) then
    call p3daverage
