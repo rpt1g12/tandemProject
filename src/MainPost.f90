@@ -49,11 +49,12 @@ if (intgflag) then
               myid,sum(aintg),lcintg
 end if
 
-!do n = 0, ndata
-!   call rdP3dS(n,fmblk)
+do n = 0, 3
+   call rdP3dS(n,fmblk)
+   write(*,*) timo
 !   qa(:,:)=qo(:,:)
 !   call wrP3dS_ss
-!end do
+end do
 
 !===== COMPUTE AVERAGE VALUES IF NOT AVAILABLE YET
 if (favg==1) then

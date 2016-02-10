@@ -232,6 +232,8 @@ contains
     mpijkl=(/lxi,let,lze/)+1
     ! rpt- Starts in proccessor per direction
     mpijks=(/ibegin(mpc(1)),jbegin(mpc(2)),kbegin(mpc(3))/)
+    ! rpt- Ends in proccessor per direction
+    mpijke=mpijks+(/lxi,let,lze/)
 
 !===== ALLOCATION OF MAIN ARRAYS
 
