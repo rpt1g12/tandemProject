@@ -349,8 +349,8 @@ contains
     if (fintg) then
        call intgUp(rdis,xpos,ypos,atk)
     end if
-    nprob=10
-    call probUp(nprob,(/0.0_k8,0.3_k8/),(/1.0_k8,0.6_k8/))
+    !nprob=10
+    !call probUp(nprob,(/0.0_k8,0.3_k8/),(/1.0_k8,0.6_k8/))
 
  do nn=1,3; do ip=0,1; i=ip*ijk(1,nn)
  do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)

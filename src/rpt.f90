@@ -389,11 +389,9 @@ contains
      if (fflag) then
         CALL MPI_FILE_OPEN(wrcom,lfname ,amode ,info ,fh,ierr)
 
-         lh=0; offset=lh*iolen          ! Number of blocks
+         lh=0
+         ibuf=nbk+1; offset=lh*iolen          ! Number of blocks
          CALL MPI_FILE_READ_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
-         if (mblk) then
-            mbk=ibuf
-         end if
          do l = 0, nbk
             mm=l+(1-mblk)*mb
             offset=lh*iolen ! IMax
@@ -455,7 +453,7 @@ contains
         selectcase(mblk);
         case(1)
            cout=''
-           foper=mo(mb)
+           foper=0
            wrcom=bcom
            nbk=mbk
         case(0)

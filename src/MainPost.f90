@@ -30,15 +30,17 @@
     inquire(iolength=ll) real(1.0,kind=ieee32); nrecs=ll
     inquire(iolength=ll) real(1.0,kind=ieee64); nrecd=ll
 call setup
-!call ssSetUp
+call ssSetUp
 call flst(fmblk)
    
 !! RPT-READ X,Y,Z COORDINATES
 call rdP3dG(fmblk)
-!do ll = 0, sslmx; l=lss(ll)
-!   ssxyz4(ll,:)=ss(l,:)
-!end do
-!call wrP3dG_ss(fmblk)
+if (ssFlag) then
+   do ll = 0, sslmx; l=lss(ll)
+      ssxyz4(ll,:)=ss(l,:)
+   end do
+end if
+call wrP3dG_ss(fmblk)
 ispost=.true.
 !
 call getMetrics
@@ -49,11 +51,10 @@ if (intgflag) then
               myid,sum(aintg),lcintg
 end if
 
+ndati=ndata+1
 do n = 0, 3
    call rdP3dS(n,fmblk)
-   write(*,*) timo
-!   qa(:,:)=qo(:,:)
-!   call wrP3dS_ss
+   call wrP3dS_ss(computin=0)
 end do
 
 !===== COMPUTE AVERAGE VALUES IF NOT AVAILABLE YET

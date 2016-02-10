@@ -86,32 +86,31 @@ contains
            end if
         end if
         CALL MPI_BCAST(ssGSzs,3*(mbk+1),MPI_INTEGER4,0,sscom,ierr)
-     end if
-
-     do i = 1, tss
-        write(cnum,"(i3,a)") i
-        do ii = 1, 3
-           l=scan(cnum,' ')
-           if (l==0) exit
-           cnum(l:l)='0'
+        do i = 1, tss
+           write(cnum,"(i3,a)") i
+           do ii = 1, 3
+              l=scan(cnum,' ')
+              if (l==0) exit
+              cnum(l:l)='0'
+           end do
+           chstr='out/ss'//cnum//'/'
+           if (ssid==0) call system('mkdir -p '//chstr)
         end do
-        chstr='out/ss'//cnum//'/'
-        if (ssid==0) call system('mkdir -p '//chstr)
-     end do
-
-     if (ssFlag) then
-     allocate(ssxyz4(0:sslmx,3),lss(0:sslmx))
-     ll=0
-     do kk = ssGStr(3)-mpijks(3),ssGEnd(3)-mpijks(3)
-        do jj = ssGStr(2)-mpijks(2),ssGEnd(2)-mpijks(2)
-           do ii = ssGStr(1)-mpijks(1),ssGEnd(1)-mpijks(1)
-              l=indx3(ii,jj,kk,1)
-              lss(ll)=l
-              ll=ll+1;
+        allocate(ssxyz4(0:sslmx,3),lss(0:sslmx))
+        ll=0
+        do kk = ssGStr(3)-mpijks(3),ssGEnd(3)-mpijks(3)
+           do jj = ssGStr(2)-mpijks(2),ssGEnd(2)-mpijks(2)
+              do ii = ssGStr(1)-mpijks(1),ssGEnd(1)-mpijks(1)
+                 l=indx3(ii,jj,kk,1)
+                 lss(ll)=l
+                 ll=ll+1;
+              end do
            end do
         end do
-     end do
+        if (ssid==0) write(*,*) 'SubSets Ready to use!'
      end if
+
+
 
 
   end subroutine ssSetUp
@@ -226,9 +225,8 @@ contains
 !====================================================================================
 !=====  SUBSETS PLOT3D Q FILES WRITE
 !====================================================================================
-  subroutine wrP3dS_ss(mblkin,nssin)
-     integer, intent(in),optional :: mblkin
-     integer, intent(in),optional :: nssin
+  subroutine wrP3dS_ss(mblkin,nssin,computin)
+     integer, intent(in),optional :: mblkin,nssin,computin
      character(len=*),parameter :: fname='solT'
      character(len=:),allocatable :: lfname
      character(3) :: cout,cnum
@@ -236,6 +234,7 @@ contains
      character(10) :: cpath
      character(len=*),parameter :: cext='.q'
      integer :: n,l,ll,ii,jj,kk,i,lh,iolen,comid,bcomid,wrcom,nbk,err,mblk,nss
+     integer :: comput
      integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
      integer :: amode
      integer, dimension (4) :: gsizes,lsizes,starts
@@ -249,7 +248,7 @@ contains
         sswrsfg=.false.
      end if
      if(.not.sswrsfg) then
-        ! rpt- Set default option to Multiblock
+        ! rpt- Set default options
         if(present(mblkin)) then
            mblk=mblkin
         else
@@ -260,6 +259,12 @@ contains
         else
            nss=1
         end if
+        if(present(computin)) then
+           comput=computin
+        else
+           comput=1
+        end if
+
         write(cnum,"(i3,a)") nss
         do ii = 1, 3
            l=scan(cnum,' ')
@@ -305,13 +310,20 @@ contains
         wrlen=5*(sslmx+1)
         if(.not.allocated(ssq4)) allocate(ssq4(0:sslmx,5))
 
-        do ll = 0, sslmx; l=lss(ll)
-        ssq4(ll,1)=qa(l,1)
-        do i = 2, 4
-           ssq4(ll,i)=((qa(l,i)/qa(l,1))+umf(i-1))
-        end do
-        ssq4(ll,5)=p(l)
-        end do
+        selectcase(comput)
+        case(0)
+           do ll = 0, sslmx; l=lss(ll)
+           ssq4(ll,:)=qo(l,:)
+           end do
+        case(1)
+           do ll = 0, sslmx; l=lss(ll)
+           ssq4(ll,1)=qa(l,1)
+           do i = 2, 4
+              ssq4(ll,i)=((qa(l,i)/qa(l,1))+umf(i-1))
+           end do
+           ssq4(ll,5)=p(l)
+           end do
+        end select
 
         amode=IOR(MPI_MODE_WRONLY,MPI_MODE_CREATE)
 
@@ -370,6 +382,7 @@ contains
            CALL MPI_FILE_CLOSE(ssq4fh,ierr)
            CALL MPI_TYPE_FREE(ssq4arr,ierr)
            sswrsfg=.false.
+           ssq4flag=.false.
         end if
      end if !sswrsfg
      end if !ssFlag
