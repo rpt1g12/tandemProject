@@ -691,9 +691,6 @@ subroutine flst(mblkin)
       write(*,*) 'Delete previous filelist '//rcout
       open(90,file='out/filelist'//rcout); close(90,status='delete')
       call system('ls out/*'//rcout//'.q -1 > out/filelist'//rcout)
-   end if
-   CALL MPI_BARRIER(icom,ierr)
-   if (myid==foper) then
       open(90,file='out/filelist'//rcout)
       inquire(unit=90,size=l)
       if (l.le.1) then
@@ -702,39 +699,41 @@ subroutine flst(mblkin)
          close(90)
       end if   
    end if
+
    CALL MPI_BARRIER(icom,ierr)
    
    inquire(file='out/filelist'//rcout,exist=fflag)
    if (fflag) then
-      open(90,file='out/filelist'//rcout,shared)
-      lmt=-2
-      do while (stat.ge.0)
-         read(90,*,IOSTAT=stat) 
-         lmt=lmt+1
-      end do
-      close(90)
-      ndata=lmt
+      if (myid==foper) then
+         open(90,file='out/filelist'//rcout,shared)
+         lmt=-2
+         do while (stat.ge.0)
+            read(90,*,IOSTAT=stat) 
+            lmt=lmt+1
+         end do
+         close(90)
+         ndata=lmt
+         l=len('out/sotT')+8+len(trim(rcout))+len('.q')
+      end if
 
-      l=len('out/sotT')+8+len(trim(rcout))+len('.q')
-      allocate(character(l) :: ofiles(0:lmt))
+      CALL MPI_BCAST(ndata,1,MPI_INTEGER4,foper,wrcom,ierr)
+      CALL MPI_BCAST(l,1,MPI_INTEGER4,foper,wrcom,ierr)
+      allocate(character(l) :: ofiles(0:ndata))
       allocate(character(l) :: ofile)
       allocate(times(0:ndata))
 
-      open(90,file='out/filelist'//rcout,shared)
-      do i = 0, lmt
-         read(90,"(a)") ofile
-         ofiles(i)=ofile
-         ctime=(ofile(9:16)//'e0')
-         read(ctime,*) times(i)
-      end do
-      close(90)
-      
-      !do i = 0, lmt
-      !   open(91,file=ofiles(i),access='stream',shared)
-      !       lh=1+(mbk+1)*3+3
-      !       read(91,pos=4*lh+1) res; times(i)=res
-      !   close(91)
-      !end do
+      if (myid==foper) then
+         open(90,file='out/filelist'//rcout)
+         do i = 0, ndata
+            read(90,"(a)") ofile
+            ofiles(i)=ofile
+            ctime=(ofile(9:16)//'e0')
+            read(ctime,*) times(i)
+         end do
+         close(90)
+      end if
+      CALL MPI_BCAST(times,ndata+1,MPI_REAL8,foper,wrcom,ierr)
+      CALL MPI_BCAST(ofiles,l*(ndata+1),MPI_CHAR,foper,wrcom,ierr)
    else
       l=1
       ndata=0
@@ -1013,7 +1012,8 @@ end subroutine flst
      character(:),allocatable :: lfname
      character(3) :: cout,ncout
      character(8) :: ctime
-     character(len=*),parameter :: cext='.qa',cpath='out/'
+     character(:), allocatable :: cext
+     character(len=*),parameter :: cext0='.q',cext1='.qa',cpath='out/'
      integer :: n,l,i,lh,iolen,foper,wrcom,nbk,err,mblk
      integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
      integer :: amode
@@ -1059,6 +1059,7 @@ end subroutine flst
               ncout(l:l)='0'
            end do
            ctime=trim(cname)//ncout
+           allocate(character(len=len(cext1)) :: cext)
         else
            if (nout.le.ndata) then
               write(ctime,"(f8.4)") times(nout)
@@ -1067,10 +1068,15 @@ end subroutine flst
                  if (l==0) exit
                  ctime(l:l)='0'
               end do
+              allocate(character(len=len(cext0)) :: cext)
+              cext=cext0
            else if (nout==ndata+1) then
               ctime='A'
+              allocate(character(len=len(cext1)) :: cext)
            else if (nout==ndata+2) then
               ctime='RMS'
+              allocate(character(len=len(cext1)) :: cext)
+           else if (nout==ndata+2) then
            end if
         end if
 

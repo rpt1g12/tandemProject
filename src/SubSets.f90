@@ -225,8 +225,8 @@ contains
 !====================================================================================
 !=====  SUBSETS PLOT3D Q FILES WRITE
 !====================================================================================
-  subroutine wrP3dS_ss(mblkin,nssin,computin)
-     integer, intent(in),optional :: mblkin,nssin,computin
+  subroutine wrP3dS_ss(mblkin,nssin)
+     integer, intent(in),optional :: mblkin,nssin
      character(len=*),parameter :: fname='solT'
      character(len=:),allocatable :: lfname
      character(3) :: cout,cnum
@@ -234,7 +234,6 @@ contains
      character(10) :: cpath
      character(len=*),parameter :: cext='.q'
      integer :: n,l,ll,ii,jj,kk,i,lh,iolen,comid,bcomid,wrcom,nbk,err,mblk,nss
-     integer :: comput
      integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
      integer :: amode
      integer, dimension (4) :: gsizes,lsizes,starts
@@ -258,11 +257,6 @@ contains
            nss=nssin
         else
            nss=1
-        end if
-        if(present(computin)) then
-           comput=computin
-        else
-           comput=1
         end if
 
         write(cnum,"(i3,a)") nss
@@ -310,12 +304,6 @@ contains
         wrlen=5*(sslmx+1)
         if(.not.allocated(ssq4)) allocate(ssq4(0:sslmx,5))
 
-        selectcase(comput)
-        case(0)
-           do ll = 0, sslmx; l=lss(ll)
-           ssq4(ll,:)=qo(l,:)
-           end do
-        case(1)
            do ll = 0, sslmx; l=lss(ll)
            ssq4(ll,1)=qa(l,1)
            do i = 2, 4
@@ -323,7 +311,6 @@ contains
            end do
            ssq4(ll,5)=p(l)
            end do
-        end select
 
         amode=IOR(MPI_MODE_WRONLY,MPI_MODE_CREATE)
 
@@ -387,4 +374,157 @@ contains
      end if !sswrsfg
      end if !ssFlag
   end subroutine wrP3dS_ss
+!====================================================================================
+!=====  SUBSETS PLOT3D Q FILES WRITE
+!====================================================================================
+  subroutine wrP3dP_ss(nout,mblkin,nssin,cname)
+     integer, intent(in),optional :: mblkin,nssin
+     integer, intent(in) :: nout
+     character(*), intent(in),optional :: cname
+     character(len=*),parameter :: fname='solT'
+     character(len=:),allocatable :: lfname
+     character(3) :: cout,cnum,ncout
+     character(8) :: ctime
+     character(10) :: cpath
+     character(len=*),parameter :: cext='.q'
+     integer :: n,l,ll,ii,jj,kk,i,lh,iolen,comid,bcomid,wrcom,nbk,err,mblk,nss
+     integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
+     integer :: amode
+     integer, dimension (4) :: gsizes,lsizes,starts
+     integer(k4) :: ibuf
+     real   (k4) :: rbuf
+
+     if (ssFlag) then
+        ! rpt- Set default options
+        if(present(mblkin)) then
+           mblk=mblkin
+        else
+           mblk=1
+        end if
+        if(present(nssin)) then
+           nss=nssin
+        else
+           nss=1
+        end if
+
+        write(cnum,"(i3,a)") nss
+        do ii = 1, 3
+           l=scan(cnum,' ')
+           if (l==0) exit
+           cnum(l:l)='0'
+        end do
+        cpath='out/ss'//cnum//'/'
+
+        selectcase(mblk);
+        case(1)
+           cout=''
+           wrcom=sscom
+           nbk=mbk
+        case(0)
+           write(cout,"(a,i2)") 'b',mb
+           do i = 0, 1
+              l=scan(cout,' ')
+              if (l==0) exit
+              cout(l:l)='0'
+           end do
+           wrcom=ssbcom
+           nbk=0
+        case default
+           if(ssid==0) write(*,*) 'Wrong multiblock option! Aborting...'
+           CALL MPI_ABORT(icom,err,ierr)
+        end select
+
+        if(present(cname)) then
+           write(ncout,"(i3)") nout
+           do i = 0, 2
+              l=scan(ncout,' ')
+              if (l==0) exit
+              ncout(l:l)='0'
+           end do
+           ctime=trim(cname)//ncout
+        else
+           if (nout.le.ndata) then
+              write(ctime,"(f8.4)") times(nout)
+              do i = 0, 8
+                 l=scan(ctime,' ')
+                 if (l==0) exit
+                 ctime(l:l)='0'
+              end do
+           else if (nout==ndata+1) then
+              ctime='A'
+           else if (nout==ndata+2) then
+              ctime='RMS'
+           end if
+        end if
+
+        ! rpt- Ranks and Size in SubSet communicator
+        call MPI_COMM_RANK(wrcom,comid,ierr)
+        bcomid=bssid
+
+        l=len(cpath)+len(fname)+len(trim(adjustl(ctime)))+len(trim(cout))+len(cext)
+        allocate(character(len=l) :: lfname)
+        lfname=cpath//trim(fname)//trim(adjustl(ctime))//trim(cout)//cext
+        if(comid==0) CALL MPI_FILE_DELETE(lfname,info,ierr)
+
+        wrlen=5*(sslmx+1)
+        if(.not.allocated(ssq4)) allocate(ssq4(0:sslmx,5))
+
+        do ll = 0, sslmx; l=lss(ll)
+           ssq4(ll,:)=qo(l,:)
+        end do
+
+        amode=IOR(MPI_MODE_WRONLY,MPI_MODE_CREATE)
+
+        CALL MPI_TYPE_EXTENT(MPI_INTEGER4,iolen,ierr)
+        if (.not.ssq4flag) then
+           gsizes(:)=(/ssSize(:),5/)
+           lsizes(:)=(/ssLSize(:),5/)
+           starts(:)=(/ssStr(:),0/)
+           CALL MPI_TYPE_CREATE_SUBARRAY(4,gsizes,lsizes,starts,&
+                           MPI_ORDER_FORTRAN,MPI_REAL4,ssq4arr,ierr) 
+           CALL MPI_TYPE_COMMIT(ssq4arr,ierr)
+           ssq4flag=.true.
+        end if
+        
+        CALL MPI_FILE_OPEN(wrcom,lfname ,amode ,info ,ssq4fh,ierr)
+
+        lh=0
+        if (comid==0) then
+         ibuf=nbk+1; offset=lh*iolen          ! Number of blocks
+         CALL MPI_FILE_WRITE_AT(ssq4fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+         do l = 0, nbk
+            mm=l+(1-mblk)*mb
+            ibuf=ssGSzs(mm,1); offset=lh*iolen ! IMax
+            CALL MPI_FILE_WRITE_AT(ssq4fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+            ibuf=ssGSzs(mm,2); offset=lh*iolen ! JMax
+            CALL MPI_FILE_WRITE_AT(ssq4fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+            ibuf=ssGSzs(mm,3); offset=lh*iolen ! KMax
+            CALL MPI_FILE_WRITE_AT(ssq4fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+         end do
+        end if
+        l=(1-mblk)*mb
+        lhmb(l)=1+(nbk+1)*3
+        do mm = 0, nbk-1
+           lhmb(mm+1)=lhmb(mm)+4+5*ssGSzs(mm,1)*ssGSzs(mm,2)*ssGSzs(mm,3)
+        end do
+        if (bcomid==0) then
+           lh=lhmb(mb)
+            rbuf=amachoo; offset=lh*iolen ! Mach Number
+            CALL MPI_FILE_WRITE_AT(ssq4fh,offset,rbuf,1,MPI_REAL4,ista,ierr); lh=lh+1
+            rbuf=aoa    ; offset=lh*iolen ! AoA
+            CALL MPI_FILE_WRITE_AT(ssq4fh,offset,rbuf,1,MPI_REAL4,ista,ierr); lh=lh+1
+            rbuf=reoo   ; offset=lh*iolen ! Reynolds Number
+            CALL MPI_FILE_WRITE_AT(ssq4fh,offset,rbuf,1,MPI_REAL4,ista,ierr); lh=lh+1
+            rbuf=timo   ; offset=lh*iolen ! Time
+            CALL MPI_FILE_WRITE_AT(ssq4fh,offset,rbuf,1,MPI_REAL4,ista,ierr); lh=lh+1
+        end if
+        disp=(lhmb(mb)+4)*iolen
+        CALL MPI_FILE_SET_VIEW(ssq4fh,disp,MPI_REAL4,ssq4arr,'native',info,ierr)
+        CALL MPI_FILE_WRITE_ALL(ssq4fh,ssq4,wrlen,MPI_REAL4,ista,ierr)
+        if (comid==0) then
+           write(*,"('Subset Solution written! T= ',8a)") trim(ctime)//trim(cout) 
+        end if
+        CALL MPI_FILE_CLOSE(ssq4fh,ierr)
+     end if !ssFlag
+  end subroutine wrP3dP_ss
 end module subsets
