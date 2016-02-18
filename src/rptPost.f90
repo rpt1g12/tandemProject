@@ -783,11 +783,13 @@ end subroutine flst
        end do
           qa(:,:)=0
        do n=0,ndata
-       if (myid==foper) then
-          write(*,"(f5.1,'% Averaged',a)") real(n)*100.0e0/real(ndata),cout
-       end if
+       !if (myid==foper) then
+          if (mod(n,25)==0) then
+             write(*,"('Block ',i2,x,f5.1,'% Averaged',a)")&
+             mb,real(n)*100.0e0/real(ndata),cout
+          end if
+       !end if
           call rdP3dS(n,fmblk)
-          !call p3dread(gsflag=0,nout=n)
           qa(:,:)=qa(:,:)+delt(n)*qo(:,:)
        end do
     end if
@@ -833,8 +835,9 @@ end subroutine flst
           qa(:,:)=qo(:,:)
           qb(:,:)=0
        do n=0,ndata
-          if (myid==foper) then
-             write(*,"(f5.1,'% Done',a)") real(n)*100.0e0/real(ndata),cout
+          if (mod(n,25)==0) then
+             write(*,"('Block ',i2,x,f5.1,'% Done',a)")&
+             mb,real(n)*100.0e0/real(ndata),cout
           end if
           !call p3dread(gsflag=0,nout=n)
           call rdP3dS(n,fmblk)
@@ -1008,7 +1011,7 @@ end subroutine flst
      integer, intent(in),optional :: mblkin
      integer, intent(in) :: nout
      character(*), intent(in),optional :: cname
-     character(*),parameter :: fname='sol'
+     character(*),parameter :: fname='solT'
      character(:),allocatable :: lfname
      character(3) :: cout,ncout
      character(8) :: ctime
@@ -1060,6 +1063,7 @@ end subroutine flst
            end do
            ctime=trim(cname)//ncout
            allocate(character(len=len(cext1)) :: cext)
+           cext=cext1
         else
            if (nout.le.ndata) then
               write(ctime,"(f8.4)") times(nout)
@@ -1073,10 +1077,11 @@ end subroutine flst
            else if (nout==ndata+1) then
               ctime='A'
               allocate(character(len=len(cext1)) :: cext)
+              cext=cext1
            else if (nout==ndata+2) then
               ctime='RMS'
               allocate(character(len=len(cext1)) :: cext)
-           else if (nout==ndata+2) then
+              cext=cext1
            end if
         end if
 
@@ -1131,7 +1136,11 @@ end subroutine flst
               else if(nout==ndata+2) then
                  write(*,"('RMS Solution read!')") 
               else
-                 write(*,"('Solution read! T= ',f8.4)") times(nout)
+                 if (present(cname)) then
+                    write(*,*) lfname//" Read!"
+                 else
+                    write(*,"('Solution read! T= ',f8.4)") times(nout)
+                 end if
               end if
            end if
 

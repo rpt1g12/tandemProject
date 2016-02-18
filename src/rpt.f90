@@ -428,8 +428,9 @@ contains
 !===================================================================================
 !=====  PLOT3D Q FILES READ
 !===================================================================================
-  subroutine rdP3dS(nout,mblkin)
+  subroutine rdP3dS(nout,mblkin,verbin)
      integer, intent(in) :: nout
+     logical, intent(in), optional ::verbin
      integer, intent(in),optional :: mblkin
      character(len=*),parameter :: fname='solT'
      character(len=:),allocatable :: lfname
@@ -442,12 +443,18 @@ contains
      integer, dimension (4) :: gsizes,lsizes,starts
      integer(k4) :: ibuf
      real   (k4) :: rbuf
+     logical :: verb
 
         ! rpt- Set default option to Multiblock
         if(present(mblkin)) then
            mblk=mblkin
         else
            mblk=1
+        end if
+        if(present(verbin)) then
+           verb=verbin
+        else
+           verb=.false.
         end if
 
         selectcase(mblk);
@@ -526,7 +533,7 @@ contains
            disp=(lhmb(mb)+4)*iolen
            CALL MPI_FILE_SET_VIEW(q4fh,disp,MPI_REAL4,q4arr,'native',info,ierr)
            CALL MPI_FILE_READ_ALL(q4fh,q4,wrlen,MPI_REAL4,ista,ierr)
-           if (myid==foper) then
+           if ((myid==foper).and.(verb)) then
               if (nout==ndata+1) then
                  write(*,"('AVG Solution read!')") 
               else if(nout==ndata+2) then

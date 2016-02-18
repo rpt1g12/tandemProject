@@ -51,8 +51,8 @@ if (intgflag) then
               myid,sum(aintg),lcintg
 end if
 
-do n = 0, ndata
-   call rdP3dS(n,fmblk)
+do n = 0, 32
+   call rdP3dP(n,fmblk)
    call wrP3dP_ss(n,fmblk)
 end do
 
@@ -145,47 +145,56 @@ end if
 
 !==COMUPTE VORTICITY + Q
 if (fcurl==1) then
-   !if (allocated(fout)) deallocate(fout)
-   !if (.not.allocated(fout)) allocate(fout(0:lmx,1))
-   !if (mb==7) then
-   if(myid==7.and.fintg) open (unit=7, file='out/intp1.dat')
-   !if(myid==7) open (unit=17, file='out/p1.dat')
-   !if(myid==7) open (unit=18, file='out/p2.dat')
    do n = 0, ndata
-      !call qcriterion(n);
-      !call getCurl(n);
-      call rdP3dS(n,fmblk)
-      !call rdP3dP(n,fmblk,'Q+W')
-      if(intgflag) varr(:)=qo(:,5)
-      call integrate
-      if(myid==7.and.fintg) write(7,"(es15.7,x,es15.7)") times(n),ra0
-      !if (myid==7) then
-      !   ra0=0;ra1=0
-      !   do k = 0, 50
-      !      do i = 0, 100; ll=indx2(i,k,1); l=lwall(ll)
-      !         ra0=ra0+area(ll)
-      !         ra1=ra1+p(l)*wnor(ll,2)*area(ll)
-      !      end do
-      !   end do
-      !   write(17,"(es15.7,x,es15.7)") timo,ra1/ra0
-      !   ra0=0;ra1=0
-      !   do k = 50, 100
-      !      do i = 0, 100; ll=indx2(i,k,1); l=lwall(ll)
-      !         ra0=ra0+area(ll)
-      !         ra1=ra1+p(l)*wnor(ll,2)*area(ll)
-      !      end do
-      !   end do
-      !   write(18,"(es15.7,x,es15.7)") timo,ra1/ra0
-      !end if
-      !fout(:,1:3)=qo(:,2:4)
-      !call wrP3dF('Omega',n,3,fmblk)
+      call qcriterion(n);
+      call getCurl(n);
+      call wrP3dP(n,fmblk,'Q+W')
    end do
-   if(myid==7.and.fintg) close(7)
-   !if (myid==7) then
-   !   close(17);close(18)
-   !end if
-   !end if
 end if
+
+!==INTEGRATION
+!if (fcurl==1) then
+!   !if (allocated(fout)) deallocate(fout)
+!   !if (.not.allocated(fout)) allocate(fout(0:lmx,1))
+!   !if (mb==7) then
+!   if(myid==7.and.fintg) open (unit=7, file='out/intp1.dat')
+!   !if(myid==7) open (unit=17, file='out/p1.dat')
+!   !if(myid==7) open (unit=18, file='out/p2.dat')
+!   do n = 0, ndata
+!      !call qcriterion(n);
+!      !call getCurl(n);
+!      call rdP3dS(n,fmblk)
+!      !call rdP3dP(n,fmblk,'Q+W')
+!      if(intgflag) varr(:)=qo(:,5)
+!      call integrate
+!      if(myid==7.and.fintg) write(7,"(es15.7,x,es15.7)") times(n),ra0
+!      !if (myid==7) then
+!      !   ra0=0;ra1=0
+!      !   do k = 0, 50
+!      !      do i = 0, 100; ll=indx2(i,k,1); l=lwall(ll)
+!      !         ra0=ra0+area(ll)
+!      !         ra1=ra1+p(l)*wnor(ll,2)*area(ll)
+!      !      end do
+!      !   end do
+!      !   write(17,"(es15.7,x,es15.7)") timo,ra1/ra0
+!      !   ra0=0;ra1=0
+!      !   do k = 50, 100
+!      !      do i = 0, 100; ll=indx2(i,k,1); l=lwall(ll)
+!      !         ra0=ra0+area(ll)
+!      !         ra1=ra1+p(l)*wnor(ll,2)*area(ll)
+!      !      end do
+!      !   end do
+!      !   write(18,"(es15.7,x,es15.7)") timo,ra1/ra0
+!      !end if
+!      !fout(:,1:3)=qo(:,2:4)
+!      !call wrP3dF('Omega',n,3,fmblk)
+!   end do
+!   if(myid==7.and.fintg) close(7)
+!   !if (myid==7) then
+!   !   close(17);close(18)
+!   !end if
+!   !end if
+!end if
 
 !==WRITE WSS+Cf+Cp
 if (fwss==1) then
@@ -311,6 +320,7 @@ if (fstrip) then
 end if
 
 !call probCirc
+
 !!==== SHIFT RESTART SOLUTION
 !fflag=.true.
 !call rdRsta

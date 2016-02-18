@@ -377,7 +377,7 @@ contains
 !====================================================================================
 !=====  SUBSETS PLOT3D Q FILES WRITE
 !====================================================================================
-  subroutine wrP3dP_ss(nout,mblkin,nssin,cname)
+  subroutine wrP3dP_ss(nout,mblkin,cname,nssin)
      integer, intent(in),optional :: mblkin,nssin
      integer, intent(in) :: nout
      character(*), intent(in),optional :: cname
