@@ -1,0 +1,12 @@
+#iflag	gflag
+1	1
+#mbk	bkx	bky	bkz
+5	3	2	1
+#IN lxibk,letbk,lzebk
+ilxibk	120	320	360
+iletbk	120	360
+ilzebk	300
+#OUT lxibk,letbk,lzebk
+olxibk	120	320	360
+oletbk	120	360
+olzebk	100

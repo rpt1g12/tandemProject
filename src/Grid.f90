@@ -424,7 +424,7 @@ if(myid==mo(mb)) then
 
 end if
 
-   deallocate(xx,yy,zz,zs,xp,yp,xq,yq,pxi,qet)
+   deallocate(xx,yy,zz,zs,xp,yp,xq,yq,pxi,qet,hslo,vslo)
 
  end subroutine gridaerofoil
 

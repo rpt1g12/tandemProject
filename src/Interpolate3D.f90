@@ -11,7 +11,6 @@
  use rpt
  use rptinter
  implicit none
- logical :: iflag,gflag
  real(nr) :: tol
 
 
@@ -23,31 +22,39 @@
 
     mpro=npro-1; icom=MPI_COMM_WORLD; info=MPI_INFO_NULL
     wts=MPI_WTIME()
-    iflag=.true.;gflag=.true.
 
     allocate(lxim(0:mpro),letm(0:mpro),lzem(0:mpro),lpos(0:mpro),vmpi(0:mpro))
-    allocate(ista(MPI_STATUS_SIZE,12))
+    ll=max(npro,12); allocate(ista(MPI_STATUS_SIZE,ll),ireq(ll))
 
-   call setup(210,315,210,210,90,100)
+    inquire(iolength=ll) real(1.0,kind=ieee32); nrecs=ll
+    inquire(iolength=ll) real(1.0,kind=ieee64); nrecd=ll
+
+
+   call interSetUp
+   call setup(1)
 lxii=lxi;leti=let;lzei=lze
 lxiio=lxio;letio=leto;lzeio=lzeo
 allocate(qb(0:lmx,5))
 call prepareArrays
-     allocate(xyz2(0:lmx,3),ixis(0:lmx,3))
-if (gflag) then
-call getGrid
+allocate(xyz2(0:lmx,3),ixis(0:lmx,3))
+if (igflag) then
+     call getGrid
      do i = 1, 3
         xyz2(:,i)=ss(:,i)
      end do
-call writeGrid
+     call wrGrid
+     call wrP3dG
 else
-call readGrid
+     call rdGrid
+     do i = 1, 3
+        xyz2(:,i)=ss(:,i)
+     end do
 end if
 
 call deallocateArrays
 
 if (iflag) then
-   call setup(160,320,160,160,80,100)
+   call setup(0)
    color=mb;ncom=mb
    call prepareArrays
    call getGrid
@@ -61,7 +68,7 @@ if (iflag) then
    ra0 = minval(yaco,1)
    CALL MPI_ALLREDUCE(ra0,tol,1,MPI_REAL8,MPI_MIN,ncom,ierr)
    tol=abs(1.0_nr/tol**(1.0_nr/3.0_nr))
-   call readRestart
+   call rdRsta
    if (myid==0) then
    write(*,"('Last time step was at:',f7.4)") timo
    end if
@@ -87,8 +94,13 @@ if (iflag) then
    
    
    call deallocateArrays
-   call setup(210,315,210,210,90,100)
-   call writeRestart
+   call setup(1)
+       allocate(fout(0:lmx,5))
+       fout(:,:)=qb(:,:)
+       call wrP3dF('inter',0,5)
+       deallocate(fout)
+   call wrIRsta
+
     if(myid==mo(mb)) then
        write(*,*) "Finished",mb
     end if

@@ -696,6 +696,33 @@ contains
   end subroutine rdGrid
 
 !====================================================================================
+!=====  WRITE RAW GRID
+!====================================================================================
+  subroutine wrGrid()
+     integer(kind=MPI_OFFSET_KIND) :: wrlen,disp
+     integer :: fh,amode,garr
+     integer, dimension (4) :: gsizes,lsizes,starts
+
+     wrlen=3*(lmx+1)
+     amode=IOR(MPI_MODE_WRONLY,MPI_MODE_CREATE)
+
+     gsizes(:)=(/mbijkl(:),3/)
+     lsizes(:)=(/mpijkl(:),3/)
+     starts(:)=(/mpijks(:),0/)
+     CALL MPI_TYPE_CREATE_SUBARRAY(4,gsizes,lsizes,starts,MPI_ORDER_FORTRAN,MPI_REAL8,garr,ierr) 
+     CALL MPI_TYPE_COMMIT(garr,ierr)
+     
+     disp=0
+
+     CALL MPI_FILE_OPEN(bcom,cgrid,amode,info,fh,ierr)
+     CALL MPI_FILE_SET_VIEW(fh,disp,MPI_REAL8,garr,'native',info,ierr)
+     CALL MPI_FILE_WRITE_ALL(fh,ss,wrlen,MPI_REAL8,ista,ierr)
+     CALL MPI_FILE_CLOSE(fh,ierr)
+     CALL MPI_TYPE_FREE(garr,ierr)
+
+  end subroutine wrGrid
+
+!====================================================================================
 ! ====SET UP FORCING PARAMETERS
 !====================================================================================
  subroutine forceup
