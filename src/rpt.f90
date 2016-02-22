@@ -479,13 +479,13 @@ contains
         end select
 
         if (nout==ndata+1) then
-           l=len('out/solA'//trim(cout)//'.qa')
+           l=len('out/solTA'//trim(cout)//'.qa')
            allocate(character(len=l) :: lfname)
-           lfname='out/solA'//trim(cout)//'.qa'
+           lfname='out/solTA'//trim(cout)//'.qa'
         elseif (nout==ndata+2) then
-           l=len('out/solRMS'//trim(cout)//'.qa')
+           l=len('out/solTRMS'//trim(cout)//'.qa')
            allocate(character(len=l) :: lfname)
-           lfname='out/solRMS'//trim(cout)//'.qa'
+           lfname='out/solTRMS'//trim(cout)//'.qa'
         else 
            l=len(ofiles(nout))
            allocate(character(len=l) :: lfname)

@@ -40,7 +40,7 @@ if (ssFlag) then
       ssxyz4(ll,:)=ss(l,:)
    end do
 end if
-call wrP3dG_ss(fmblk)
+!call wrP3dG_ss(fmblk)
 ispost=.true.
 !
 call getMetrics
@@ -51,10 +51,10 @@ if (intgflag) then
               myid,sum(aintg),lcintg
 end if
 
-do n = 0, 32
-   call rdP3dP(n,fmblk)
-   call wrP3dP_ss(n,fmblk)
-end do
+!do n = 0, 32
+!   call rdP3dP(n,fmblk)
+!   call wrP3dP_ss(n,fmblk)
+!end do
 
 !===== COMPUTE AVERAGE VALUES IF NOT AVAILABLE YET
 if (favg==1) then
@@ -143,7 +143,7 @@ if (fwplus==1) then
    end if
 end if
 
-!==COMUPTE VORTICITY + Q
+!==COMUPTE Q+W
 if (fcurl==1) then
    do n = 0, ndata
       call qcriterion(n);
@@ -198,24 +198,23 @@ end if
 
 !==WRITE WSS+Cf+Cp
 if (fwss==1) then
-   if (allocated(fout)) deallocate(fout)
-   if (.not.allocated(fout)) allocate(fout(0:lmx,5))
       call gettw(ndata+1)
       ra0=two/(amachoo**2)
-      do i = 1, 3
-         fout(:,i)=0
+      qo(:,1)=0
+      do i = 2, 4
+         qo(:,i)=0
          if (wflag) then
             do m = 0, lcwall; l=lwall(m)
-               fout(l,i)=tw(m,i)
-               if (i==1) then
+               qo(l,i)=tw(m,i-1)
+               if (i==2) then
                ra1=DOT_PRODUCT(tw(m,:),wtan(m,:))
-               fout(l,4)=ra1*ra0
+               qo(l,1)=ra1*ra0
                end if
             end do
          end if
       end do
-      fout(:,5)=(p(:)-poo)*ra0
-      call wrP3dF('tw+Cf+Cp',n,5,fmblk)
+      qo(:,5)=(p(:)-poo)*ra0
+      call wrP3dP(n,fmblk,'Cf+tw+Cp')
 end if
 
 !==COMPUTE Cf 

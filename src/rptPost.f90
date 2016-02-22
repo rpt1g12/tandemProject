@@ -1158,7 +1158,7 @@ end subroutine flst
      integer, intent(in),optional :: mblkin
      integer, intent(in) :: nout
      character(*), intent(in),optional :: cname
-     character(*),parameter :: fname='sol'
+     character(*),parameter :: fname='solT'
      character(:),allocatable :: lfname
      character(3) :: cout,ncout
      character(8) :: ctime
