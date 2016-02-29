@@ -34,6 +34,7 @@ integer, dimension(:), allocatable :: olximb,oletmb,olzemb
 integer, dimension(:), allocatable :: olxibk,oletbk,olzebk
 logical :: iflag,igflag
  character(20) :: icrestart
+ integer(ni) :: niter
 contains
 
 subroutine interSetUp()
@@ -46,10 +47,7 @@ subroutine interSetUp()
     read(9,*) mbk,bkx,bky,bkz
 
     iflag=(i1==1);igflag=(i2==1)
-    allocate(lxibk(0:bkx-1),letbk(0:bky-1),lzebk(0:bkz-1))
-    allocate(ilximb(0:mbk),iletmb(0:mbk),ilzemb(0:mbk))
     allocate(ilxibk(0:bkx-1),iletbk(0:bky-1),ilzebk(0:bkz-1))
-    allocate(olximb(0:mbk),oletmb(0:mbk),olzemb(0:mbk))
     allocate(olxibk(0:bkx-1),oletbk(0:bky-1),olzebk(0:bkz-1))
 
     read(9,*) cinput !Input
@@ -62,22 +60,6 @@ subroutine interSetUp()
     read(9,*) cinput,olzebk(0:bkz-1) ! # points in zeta per plane
     close(9)
 
-    ! Use input data to fill old arrays
-    do k = 0, bkz-1
-       do j = 0, bky-1
-          do i = 0, bkx-1; l=k*(bkx*bky)+j*bkx+i
-             ilximb(l)=ilxibk(i)
-             iletmb(l)=iletbk(j)
-             ilzemb(l)=ilzebk(k)
-             
-             olximb(l)=olxibk(i)
-             oletmb(l)=oletbk(j)
-             olzemb(l)=olzebk(k)
-          end do
-       end do
-    end do
-    ilze0 = ilzebk(0)
-    olze0 = olzebk(0)
 
 end subroutine interSetUp
 !====================================================================================
@@ -120,17 +102,39 @@ end subroutine interSetUp
     abc(:,1)=(/a10,a12,a13,a14,a15,a16/)
     abc(:,2)=(/a20,a21,a23,a24,a25,a26/)
 
+    ll=3+5*(ndata+1)
+    !allocate(times(0:ndata),cfilet(-1:ndata),ctecplt(-1:ndata),varm(0:1,0:mpro),varmin(ll),varmax(ll))
     allocate(lximb(0:mbk),letmb(0:mbk),lzemb(0:mbk),lhmb(0:mbk),mo(0:mbk),npc(0:mbk,3))
+    if (.not.allocated(lxibk)) allocate(lxibk(0:bkx-1),letbk(0:bky-1),lzebk(0:bkz-1))
 
     call inputext
 
     selectcase(io)
-    case(0); lximb=ilximb;letmb=iletmb;lzemb=ilzemb;
-             lxibk=ilxibk;letbk=iletbk;lzemb=ilzebk
-    case(1); lximb=olximb;letmb=oletmb;lzemb=olzemb
-             lxibk=olxibk;letbk=oletbk;lzebk=olzebk
+    case(0); 
+       lxibk(:)=ilxibk(:)
+       letbk(:)=iletbk(:)
+       lzebk(:)=ilzebk(:)
+    case(1);
+       lxibk(:)=olxibk(:)
+       letbk(:)=oletbk(:)
+       lzebk(:)=olzebk(:)
     end select
 
+    ! Use input data to fill old arrays
+    do k = 0, bkz-1
+       do j = 0, bky-1
+          do i = 0, bkx-1; l=k*(bkx*bky)+j*bkx+i
+             lximb(l)=lxibk(i)
+             letmb(l)=letbk(j)
+             lzemb(l)=lzebk(k)
+             
+             npc(l,1)=1
+             npc(l,2)=1
+             npc(l,3)=1
+          end do
+       end do
+    end do
+    lze0 = lzebk(0)
 
 !===== DOMAIN DECOMPOSITION & BOUNDARY INFORMATION
 
@@ -148,7 +152,6 @@ end subroutine interSetUp
     no(2)=mb/100; no(1)=mod(mb,100)/10; no(0)=mod(mb,10)
     cno=achar(no+48); cnzone=cno(2)//cno(1)//cno(0)
     czone='zone'//cnzone;
-    coutput='out/output'//cnzone//'.plt'
     cgrid='misc/grid'//cnzone//'.dat';
     crestart='rsta/restart'//cnzone//'.dat'
     icrestart='irsta/restart'//cnzone//'.dat'
@@ -156,8 +159,6 @@ end subroutine interSetUp
     no(4)=myid/10000; no(3)=mod(myid,10000)/1000;
     no(2)=mod(myid,1000)/100; no(1)=mod(myid,100)/10; no(0)=mod(myid,10)
     cno=achar(no+48); cnnode=cno(4)//cno(3)//cno(2)//cno(1)//cno(0)
-    cdata='data/data'//cnnode//'.dat';
-    cturb='misc/turb'//cnnode//'.dat'
 
     call domdcomp
 
@@ -259,13 +260,6 @@ end subroutine interSetUp
     lpos(mp)=lpos(mp-kp)+(lximb(mm)+1)*(letmb(mm)+1)*(lzem(mp-kp)+1)
              end do;
           end do;
-       end do
- end do
-
-    allocate(lio(0:let,0:lze))
- do k=0,lze; kp=k*(leto+1)*(lxio+1)
- do j=0,let; jp=j*(lxio+1)
-    lio(j,k)=jp+kp
  end do
  end do
 
@@ -279,18 +273,18 @@ end subroutine interSetUp
     kbegin(0)=0
     ! setup i-start indices
     do i=1,npc(mb,1)
-       mp=mo(mb)+i
-       ibegin(i)=ibegin(i-1)+lxim(mp-1)+1
+    mp=mo(mb)+i
+    ibegin(i)=ibegin(i-1)+lxim(mp-1)+1
     end do
     ! setup j-start indices
     do j=1,npc(mb,2)
-       mp=mo(mb)+j*npc(mb,1)
-       jbegin(j)=jbegin(j-1)+letm(mp-1)+1
+    mp=mo(mb)+j*npc(mb,1)
+    jbegin(j)=jbegin(j-1)+letm(mp-1)+1
     end do
     ! setup k-start indices
     do k=1,npc(mb,3)
-       mp=mo(mb)+k*npc(mb,1)*npc(mb,2)
-       kbegin(k)=kbegin(k-1)+lzem(mp-1)+1
+    mp=mo(mb)+k*npc(mb,1)*npc(mb,2)
+    kbegin(k)=kbegin(k-1)+lzem(mp-1)+1
     end do
 
     ! rpt- #Points in block per direction
@@ -309,17 +303,21 @@ end subroutine interSetUp
 !====================================================================================
  subroutine deallocateArrays
 
- deallocate(iit,idsgnl,lsgnl)
- deallocate(qo,qa,de,xim,etm,zem,rr,ss,p,yaco,varr)
- deallocate(lximb,letmb,lzemb,lhmb,mo,npc)
- deallocate(mxc,ran,sit,ait,xit,yit,zit)
- deallocate(drva1,drva2,drva3)
- deallocate(drvb1,drvb2,drvb3)
- deallocate(send1,send2,send3)
- deallocate(recv1,recv2,recv3)
- deallocate(cm1,cm2,cm3)
- deallocate(xu,yu,xl,yl,li,sa,sb,lio)
- deallocate(ibegin,jbegin,kbegin)
+ if(allocated(iit)) deallocate(iit,idsgnl,lsgnl)
+ if(allocated(qo)) deallocate(qo,qa,de)
+ if(allocated(xim)) deallocate(xim,etm,zem,rr,ss)
+ if(allocated(p)) deallocate(p,yaco,varr)
+ if(allocated(lximb)) deallocate(lximb,letmb,lzemb,lhmb,mo,npc)
+ if(allocated(mxc)) deallocate(mxc,ran,sit,ait,xit,yit,zit)
+ if(allocated(drva1)) deallocate(drva1,drva2,drva3)
+ if(allocated(drvb1)) deallocate(drvb1,drvb2,drvb3)
+ if(allocated(send1)) deallocate(send1,send2,send3)
+ if(allocated(recv1)) deallocate(recv1,recv2,recv3)
+ if(allocated(cm1)) deallocate(cm1,cm2,cm3)
+ if(allocated(xu)) deallocate(xu,yu,xl,yl,li,sa,sb)
+ if(allocated(lio)) deallocate (lio)
+ if(allocated(ibegin)) deallocate(ibegin,jbegin,kbegin)
+ if(allocated(rpex))deallocate(rpex,sbcc)
  if(allocated(q8)) deallocate(q8)
  if(allocated(xyz4)) deallocate(xyz4)
  if(allocated(fout)) deallocate(fout)
@@ -371,7 +369,7 @@ end subroutine interSetUp
  do nn=1,3
  select case(nn)
        case(1); is=0; ie=is+lxi;
-       case(2); is=lxi+1; ie=is+let; 
+       case(2); is=lxi+1; ie=is+let;
        case(3); is=lxi+let+2; ie=is+lze
  end select
  do ip=0,1; np=nbc(ip,nn)
@@ -386,6 +384,13 @@ end subroutine interSetUp
     call penta(yu(:,:),yl(:,:),albef(:,:,ns),albef(:,:,ne),alphf,betf,is,ie)
  end do
 
+    allocate(lio(0:let,0:lze))
+ do k=0,lze; kp=k*(leto+1)*(lxio+1)
+ do j=0,let; jp=j*(lxio+1)
+    lio(j,k)=jp+kp
+ end do
+ end do
+
   end subroutine prepareArrays
 
 !====================================================================================
@@ -395,10 +400,15 @@ end subroutine interSetUp
 
     call makegrid
     call MPI_BARRIER(icom,ierr)
-    call rdGrid
-       allocate(xyz4(0:lmx,3))
-       xyz4(:,:)=ss(:,:)
 
+    call rdGrid
+    allocate(xyz4(0:lmx,3))
+    xyz4(:,:)=ss(:,:)
+
+    call MPI_BARRIER(icom,ierr)
+ if(myid==mo(mb)) then
+    open(9,file=cgrid); close(9,status='delete')
+ end if
   end subroutine getGrid
 
 
@@ -423,9 +433,6 @@ end subroutine interSetUp
      allocate(yxi(0:ltomb-1),yet(0:ltomb-1),yze(0:ltomb-1))
      allocate(zxi(0:ltomb-1),zet(0:ltomb-1),zze(0:ltomb-1))
 
-     !xxi=qo(:,1);xet=qo(:,2);xze=qo(:,3)
-     !yxi=qa(:,1);yet=qa(:,2);yze=qa(:,3)
-     !zxi=de(:,1);zet=de(:,2);zze=de(:,3)
  !===== COMPUTE METRICS
      xim(:,1)=qa(:,2)*de(:,3)-de(:,2)*qa(:,3)
      xim(:,2)=de(:,2)*qo(:,3)-qo(:,2)*de(:,3)
@@ -437,8 +444,8 @@ end subroutine interSetUp
      zem(:,2)=de(:,1)*qo(:,2)-qo(:,1)*de(:,2)
      zem(:,3)=qo(:,1)*qa(:,2)-qa(:,1)*qo(:,2)
     
- !===== COMPUTE JACOBIAN
-     yaco(:)=3/(qo(:,1)*xim(:,1)+qo(:,2)*etm(:,1)+qo(:,3)*zem(:,1)&
+
+    yaco(:)=three/(qo(:,1)*xim(:,1)+qo(:,2)*etm(:,1)+qo(:,3)*zem(:,1)&
                +qa(:,1)*xim(:,2)+qa(:,2)*etm(:,2)+qa(:,3)*zem(:,2)&
                +de(:,1)*xim(:,3)+de(:,2)*etm(:,3)+de(:,3)*zem(:,3))
 
@@ -508,6 +515,191 @@ end subroutine interSetUp
  end subroutine getMetrics
 
 !====================================================================================
+!=====READ RESTART FILE
+!====================================================================================
+ subroutine readRestart
+
+    open(9,file=crestart,access='stream',shared); lh=0
+    read(9,pos=nr*lh+1) niter; lh=lh+1
+    read(9,pos=nr*lh+1) ndt; lh=lh+1
+    read(9,pos=nr*lh+1) dt; lh=lh+1
+    read(9,pos=nr*lh+1) dts; lh=lh+1
+    read(9,pos=nr*lh+1) dte; lh=lh+1
+    read(9,pos=nr*lh+1) timo; lh=lh+1
+    lp=lpos(myid)+lh
+    if ((tsam-timo)/tsam<0.05e0) then
+       tsam=timo
+    end if
+ do m=1,5; lq=(m-1)*ltomb
+ do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+    read(9,pos=nr*(lp+lq+lio(j,k))+1) qo(l:l+lxi,m)
+ end do; end do
+ end do
+    close(9)
+ end subroutine readRestart
+
+!====================================================================================
+!=====  READ RAW RESTART
+!====================================================================================
+  subroutine rdIRsta()
+     integer(kind=MPI_OFFSET_KIND) :: wrlen,disp,offset
+     integer :: fh,amode,qarr,iolen
+     integer, dimension (4) :: gsizes,lsizes,starts
+     real(k8) :: rbuf
+     integer(k4) :: ibuf
+
+      if (myid==0) then
+         write(*,"('Reading restart file..')") 
+      end if
+
+     wrlen=5*(lmx+1)
+     amode=MPI_MODE_RDONLY
+     CALL MPI_TYPE_EXTENT(MPI_REAL8,iolen,ierr)
+
+     gsizes(:)=(/mbijkl(:),5/)
+     lsizes(:)=(/mpijkl(:),5/)
+     starts(:)=(/mpijks(:),0/)
+     CALL MPI_TYPE_CREATE_SUBARRAY(4,gsizes,lsizes,starts,MPI_ORDER_FORTRAN,MPI_REAL8,qarr,ierr) 
+     CALL MPI_TYPE_COMMIT(qarr,ierr)
+     
+
+     CALL MPI_FILE_OPEN(bcom,crestart,amode,info,fh,ierr)
+     lh=0
+
+         offset=lh*iolen ! Iteration Number
+         CALL MPI_FILE_READ_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1; niter=ibuf
+         offset=lh*iolen ! 10*(n/10)+1
+         CALL MPI_FILE_READ_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1; ndt=ibuf
+         offset=lh*iolen ! Timestep
+         CALL MPI_FILE_READ_AT(fh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1; dt=rbuf
+         offset=lh*iolen ! ?
+         CALL MPI_FILE_READ_AT(fh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1; dts=rbuf
+         offset=lh*iolen ! ?
+         CALL MPI_FILE_READ_AT(fh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1; dte=rbuf
+         offset=lh*iolen ! time
+         CALL MPI_FILE_READ_AT(fh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1; timo=rbuf
+
+     disp=lh*iolen
+     CALL MPI_FILE_SET_VIEW(fh,disp,MPI_REAL8,qarr,'native',info,ierr)
+     CALL MPI_FILE_READ_ALL(fh,qo,wrlen,MPI_REAL8,ista,ierr)
+     CALL MPI_FILE_CLOSE(fh,ierr)
+     CALL MPI_TYPE_FREE(qarr,ierr)
+
+
+  end subroutine rdIRsta
+!====================================================================================
+!=====READ GRID
+!====================================================================================
+ subroutine readGrid
+
+         open(9,file='data/grid'//cnzone,access='stream',shared); lh=0
+         lp=lpos(myid)
+      do m=1,3; lq=(m-1)*ltomb
+      do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+         read(9,pos=nr*(lp+lq+lio(j,k))+1) xyz2(l:l+lxi,m)
+      end do; end do
+      end do
+         close(9)
+ end subroutine readGrid
+!====================================================================================
+!=====WRITE GRID
+!====================================================================================
+ subroutine writeGrid
+
+         open(9,file='data/grid'//cnzone,access='stream',shared); lh=0
+         lp=lpos(myid)
+      do m=1,3; lq=(m-1)*ltomb
+      do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+         write(9,pos=nr*(lp+lq+lio(j,k))+1) xyz2(l:l+lxi,m)
+      end do; end do
+      end do
+         close(9)
+ end subroutine writeGrid
+!====================================================================================
+!=====  READ RAW GRID
+!====================================================================================
+  subroutine rdIGrid()
+     integer(kind=MPI_OFFSET_KIND) :: wrlen,disp
+     integer :: fh,amode,garr
+     integer, dimension (4) :: gsizes,lsizes,starts
+     character(16) :: cout
+
+     cout='data/grid'//cnzone
+
+     wrlen=3*(lmx+1)
+     amode=MPI_MODE_RDONLY
+
+     gsizes(:)=(/mbijkl(:),3/)
+     lsizes(:)=(/mpijkl(:),3/)
+     starts(:)=(/mpijks(:),0/)
+     CALL MPI_TYPE_CREATE_SUBARRAY(4,gsizes,lsizes,starts,MPI_ORDER_FORTRAN,MPI_REAL8,garr,ierr) 
+     CALL MPI_TYPE_COMMIT(garr,ierr)
+     
+     disp=0
+
+     CALL MPI_FILE_OPEN(bcom,cout,amode,info,fh,ierr)
+     CALL MPI_FILE_SET_VIEW(fh,disp,MPI_REAL8,garr,'native',info,ierr)
+     CALL MPI_FILE_READ_ALL(fh,xyz2,wrlen,MPI_REAL8,ista,ierr)
+     CALL MPI_FILE_CLOSE(fh,ierr)
+     CALL MPI_TYPE_FREE(garr,ierr)
+
+     if(myid==mo(mb)) CALL MPI_FILE_DELETE(cout,info,ierr)
+  end subroutine rdIGrid
+
+!====================================================================================
+!=====  WRITE RAW GRID
+!====================================================================================
+  subroutine wrIGrid()
+     integer(kind=MPI_OFFSET_KIND) :: wrlen,disp
+     integer :: fh,amode,garr
+     integer, dimension (4) :: gsizes,lsizes,starts
+     character(16) :: cout
+
+     cout='data/grid'//cnzone
+
+     wrlen=3*(lmx+1)
+     amode=IOR(MPI_MODE_WRONLY,MPI_MODE_CREATE)
+
+     gsizes(:)=(/mbijkl(:),3/)
+     lsizes(:)=(/mpijkl(:),3/)
+     starts(:)=(/mpijks(:),0/)
+     CALL MPI_TYPE_CREATE_SUBARRAY(4,gsizes,lsizes,starts,MPI_ORDER_FORTRAN,MPI_REAL8,garr,ierr) 
+     CALL MPI_TYPE_COMMIT(garr,ierr)
+     
+     disp=0
+
+     CALL MPI_FILE_OPEN(bcom,cout,amode,info,fh,ierr)
+     CALL MPI_FILE_SET_VIEW(fh,disp,MPI_REAL8,garr,'native',info,ierr)
+     CALL MPI_FILE_WRITE_ALL(fh,xyz2,wrlen,MPI_REAL8,ista,ierr)
+     CALL MPI_FILE_CLOSE(fh,ierr)
+     CALL MPI_TYPE_FREE(garr,ierr)
+
+  end subroutine wrIGrid
+!====================================================================================
+!=====WRITE RESTART FILE
+!====================================================================================
+ subroutine writeRestart
+
+         open(9,file='i'//crestart,access='stream',shared); lh=0
+      if(myid==mo(mb)) then
+         write(9,pos=nr*lh+1) n; lh=lh+1
+         write(9,pos=nr*lh+1) ndt; lh=lh+1
+         write(9,pos=nr*lh+1) dt; lh=lh+1
+         write(9,pos=nr*lh+1) dts; lh=lh+1
+         write(9,pos=nr*lh+1) dte; lh=lh+1
+         write(9,pos=nr*lh+1) timo; lh=lh+1
+      else
+         lh=lh+6
+      end if
+         lp=lpos(myid)+lh
+      do m=1,5; lq=(m-1)*ltomb
+      do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
+         write(9,pos=nr*(lp+lq+lio(j,k))+1) qb(l:l+lxi,m)
+      end do; end do
+      end do
+         close(9)
+ end subroutine writeRestart
+!====================================================================================
 !=====COMPUTE VARIABLE DERIVATIVES
 !====================================================================================
  subroutine getDeri(n)
@@ -520,8 +712,8 @@ end subroutine interSetUp
      if(.not.allocated(fzexi))allocate(fzexi(0:ltomb-1),fzeet(0:ltomb-1))
      if(.not.allocated(fzeetxi))allocate(fzeetxi(0:ltomb-1))
 
-     varr=qa(:,n); call joinBlock; f=lvarr
-     rr(:,1)=qa(:,n)
+     varr=qo(:,n); call joinBlock; f=lvarr
+     rr(:,1)=qo(:,n)
      m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
      varr=rr(:,1); call joinBlock; fxi=lvarr
      varr=rr(:,2); call joinBlock; fet=lvarr
@@ -542,6 +734,7 @@ end subroutine interSetUp
 
  end subroutine getDeri
     
+
 !====================================================================================
 !=====COMPUTE VARIABLE DERIVATIVES
 !====================================================================================
@@ -568,6 +761,7 @@ end subroutine interSetUp
  end if
 
 do k = 0, lzei
+   write(*,*) myid,k
    do j = 0, leti
       do i = 0, lxii;l2=indx4(i,j,k,1)
          xs(:)=(/xyz2(l2,1),xyz2(l2,2),xyz2(l2,3)/)
@@ -579,10 +773,6 @@ do k = 0, lzei
              qb(l2,n)=outside(n)
          elseif (xs(2)>bounds(1,2)) then
              qb(l2,n)=outside(n)
-         !elseif (xs(3)<bounds(0,3)) then
-         !    qb(l2,n)=outside(n)
-         !elseif (xs(3)>bounds(1,3)) then
-         !    qb(l2,n)=outside(n)
          else
            if (n==1) then
                  if (i==0) then
@@ -751,7 +941,7 @@ end do
         CALL MPI_FILE_OPEN(bcom,icrestart,amode,info,qfh,ierr)
         lh=0
         if (myid==mo(mb)) then
-            ibuf=n; offset=lh*iolen ! Iteration Number
+            ibuf=niter; offset=lh*iolen ! Iteration Number
             CALL MPI_FILE_WRITE_AT(qfh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
             ibuf=ndt; offset=lh*iolen ! ?
             CALL MPI_FILE_WRITE_AT(qfh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
@@ -788,7 +978,7 @@ end do
 
  do k = 0, lze
     do j = 0, let
-       do i = 0, lxi; l=indx3(i,j,k,1)
+       do i = 0, lxi; l=indx5(i,j,k,1)
           lp=i+lio(j,k)+lpos(myid)
           lvarr2(lp)=varr(l)
        end do
@@ -798,6 +988,21 @@ end do
  CALL MPI_ALLREDUCE(lvarr2,lvarr,ltomb,MPI_REAL8,MPI_SUM,ncom,ierr)
     
  end subroutine joinBlock
+
+!====================================================================================
+!=====COPY OVER SPAN
+!====================================================================================
+ subroutine spanCopy()
+ integer :: lmx2,lmxdif
+
+ lmx2=size(qb(:,1))
+ lmxdif=lmx2-lmx
+ write(*,*) lmx,lmx2,lmxdif
+
+            qb(0:lmx,:)=qo(0:lmx,:)
+            qb(lmx+1:lmx2,:)=qo(0:lmxdif,:)
+    
+ end subroutine spanCopy
 
 !===== FUNCTION FOR MAIN INDEX TRANSFORMATION IN 3D
 
@@ -810,8 +1015,8 @@ end do
 
 
  end function indx5
-
 !===== FUNCTION FOR MAIN INDEX TRANSFORMATION IN 3D
+
  function indx4(i,j,k,nn) result(lm)
 
  integer,intent(in) :: i,j,k,nn
@@ -906,34 +1111,34 @@ end do
  fetxi101=fetxi(l101);fzexi101=fzexi(l101);fzeet101=fzeet(l101);fzeetxi101=fzeetxi(l101);
  fetxi111=fetxi(l111);fzexi111=fzexi(l111);fzeet111=fzeet(l111);fzeetxi111=fzeetxi(l111);
 
- f00=ihermite(f000,fxi000,f100,fxi100,xi0,xi1,xi);
- f10=ihermite(f010,fxi010,f110,fxi110,xi0,xi1,xi);
- fet00=ihermite(fet000,fetxi000,fet100,fetxi100,xi0,xi1,xi);
- fet10=ihermite(fet010,fetxi010,fet110,fetxi110,xi0,xi1,xi);
- f0=ihermite(f00,fet00,f10,fet10,et0,et1,et);
- fzeet00=ihermite(fzeet000,fzeetxi000,fzeet100,fzeetxi100,xi0,xi1,xi);
- fzeet10=ihermite(fzeet010,fzeetxi010,fzeet110,fzeetxi110,xi0,xi1,xi);
+ f00=fhermite(f000,fxi000,f100,fxi100,xi0,xi1,xi);
+ f10=fhermite(f010,fxi010,f110,fxi110,xi0,xi1,xi);
+ fet00=fhermite(fet000,fetxi000,fet100,fetxi100,xi0,xi1,xi);
+ fet10=fhermite(fet010,fetxi010,fet110,fetxi110,xi0,xi1,xi);
+ f0=fhermite(f00,fet00,f10,fet10,et0,et1,et);
+ fzeet00=fhermite(fzeet000,fzeetxi000,fzeet100,fzeetxi100,xi0,xi1,xi);
+ fzeet10=fhermite(fzeet010,fzeetxi010,fzeet110,fzeetxi110,xi0,xi1,xi);
 
- f01=ihermite(f001,fxi001,f101,fxi101,xi0,xi1,xi);
- f11=ihermite(f011,fxi011,f111,fxi111,xi0,xi1,xi);
- fet01=ihermite(fet001,fetxi001,fet101,fetxi101,xi0,xi1,xi);
- fet11=ihermite(fet011,fetxi011,fet111,fetxi111,xi0,xi1,xi);
- f1=ihermite(f01,fet01,f11,fet11,et0,et1,et);
- fzeet01=ihermite(fzeet001,fzeetxi001,fzeet101,fzeetxi101,xi0,xi1,xi);
- fzeet11=ihermite(fzeet011,fzeetxi011,fzeet111,fzeetxi111,xi0,xi1,xi);
+ f01=fhermite(f001,fxi001,f101,fxi101,xi0,xi1,xi);
+ f11=fhermite(f011,fxi011,f111,fxi111,xi0,xi1,xi);
+ fet01=fhermite(fet001,fetxi001,fet101,fetxi101,xi0,xi1,xi);
+ fet11=fhermite(fet011,fetxi011,fet111,fetxi111,xi0,xi1,xi);
+ f1=fhermite(f01,fet01,f11,fet11,et0,et1,et);
+ fzeet01=fhermite(fzeet001,fzeetxi001,fzeet101,fzeetxi101,xi0,xi1,xi);
+ fzeet11=fhermite(fzeet011,fzeetxi011,fzeet111,fzeetxi111,xi0,xi1,xi);
 
- fze00=ihermite(fze000,fzexi000,fze100,fzexi100,xi0,xi1,xi);
- fze10=ihermite(fze010,fzexi010,fze110,fzexi110,xi0,xi1,xi);
- fze01=ihermite(fze001,fzexi001,fze101,fzexi101,xi0,xi1,xi);
- fze11=ihermite(fze011,fzexi011,fze111,fzexi111,xi0,xi1,xi);
- fze0=ihermite(fze00,fzeet00,fze10,fzeet10,et0,et1,et);
- fze1=ihermite(fze01,fzeet01,fze11,fzeet11,et0,et1,et);
- fs=ihermite(f0,fze0,f1,fze1,ze0,ze1,ze);
+ fze00=fhermite(fze000,fzexi000,fze100,fzexi100,xi0,xi1,xi);
+ fze10=fhermite(fze010,fzexi010,fze110,fzexi110,xi0,xi1,xi);
+ fze01=fhermite(fze001,fzexi001,fze101,fzexi101,xi0,xi1,xi);
+ fze11=fhermite(fze011,fzexi011,fze111,fzexi111,xi0,xi1,xi);
+ fze0=fhermite(fze00,fzeet00,fze10,fzeet10,et0,et1,et);
+ fze1=fhermite(fze01,fzeet01,fze11,fzeet11,et0,et1,et);
+ fs=fhermite(f0,fze0,f1,fze1,ze0,ze1,ze);
 
  end function htrilinr
 
 !===== FUNCTION FOR INTERFACE POINTS
- function ihermite(k1,k2,k3,k4,x0,x1,x) result(y)
+ function fhermite(k1,k2,k3,k4,x0,x1,x) result(y)
 
  real(nr) :: y
  integer, intent(in) :: x0,x1
@@ -950,6 +1155,6 @@ end do
     d=(fx**3-fx**2);
     y=a*k1+b*l*k2+c*k3+d*l*k4;
  
- end function ihermite
+ end function fhermite
 
 end module rptinter

@@ -22,8 +22,10 @@
 
     mpro=npro-1; icom=MPI_COMM_WORLD; info=MPI_INFO_NULL
     wts=MPI_WTIME()
+    !iflag=.true.;igflag=.true.
 
     allocate(lxim(0:mpro),letm(0:mpro),lzem(0:mpro),lpos(0:mpro),vmpi(0:mpro))
+
     ll=max(npro,12); allocate(ista(MPI_STATUS_SIZE,ll),ireq(ll))
 
     inquire(iolength=ll) real(1.0,kind=ieee32); nrecs=ll
@@ -33,28 +35,35 @@
    call interSetUp
    call setup(1)
 lxii=lxi;leti=let;lzei=lze
+write(*,*) myid,lxi,let,lze
 lxiio=lxio;letio=leto;lzeio=lzeo
 allocate(qb(0:lmx,5))
 call prepareArrays
-allocate(xyz2(0:lmx,3),ixis(0:lmx,3))
-if (igflag) then
-     call getGrid
-     do i = 1, 3
-        xyz2(:,i)=ss(:,i)
-     end do
-     call wrGrid
-     call wrP3dG
-else
-     call rdGrid
-     do i = 1, 3
-        xyz2(:,i)=ss(:,i)
-     end do
-end if
+   allocate(xyz2(0:lmx,3),ixis(0:lmx,3))
+   if (igflag) then
+       call getGrid
+        do i = 1, 3
+           xyz2(:,i)=ss(:,i)
+        end do
+       !call wrIGrid
+       call writeGrid
+       call wrP3dG
+   else
+      !call rdIGrid
+      call readGrid
+!        do i = 1, 3
+!           ss(:,i)=xyz2(:,i)
+!        end do
+!      call wrP3dG
+   end if
+   call rdRsta
+   ndati=ndata;call wrP3dS
 
 call deallocateArrays
 
 if (iflag) then
    call setup(0)
+   write(*,*) myid,lxi,let,lze
    color=mb;ncom=mb
    call prepareArrays
    call getGrid
@@ -68,7 +77,7 @@ if (iflag) then
    ra0 = minval(yaco,1)
    CALL MPI_ALLREDUCE(ra0,tol,1,MPI_REAL8,MPI_MIN,ncom,ierr)
    tol=abs(1.0_nr/tol**(1.0_nr/3.0_nr))
-   call rdRsta
+   call rdIRsta
    if (myid==0) then
    write(*,"('Last time step was at:',f7.4)") timo
    end if
@@ -87,20 +96,21 @@ if (iflag) then
    outside(1)=rhooo
    outside(2:4)=0.0_nr
    outside(5)=poo*hamm1/rhooo
-   do n = 1, 5
-      call getDeri(n)
-      call interpolate(n,tol)
-   end do
+   !do n = 1, 5
+   !   call getDeri(n)
+   !   call interpolate(n,tol)
+   !end do
+   call spanCopy
    
    
    call deallocateArrays
    call setup(1)
+   call prepareArrays
        allocate(fout(0:lmx,5))
        fout(:,:)=qb(:,:)
        call wrP3dF('inter',0,5)
        deallocate(fout)
    call wrIRsta
-
     if(myid==mo(mb)) then
        write(*,*) "Finished",mb
     end if
