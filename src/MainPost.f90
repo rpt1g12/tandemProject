@@ -40,7 +40,7 @@ if (ssFlag) then
       ssxyz4(ll,:)=ss(l,:)
    end do
 end if
-!call wrP3dG_ss(fmblk)
+call wrP3dG_ss(fmblk)
 ispost=.true.
 !
 call getMetrics
@@ -51,10 +51,10 @@ if (intgflag) then
               myid,sum(aintg),lcintg
 end if
 
-!do n = 0, 32
-!   call rdP3dP(n,fmblk)
-!   call wrP3dP_ss(n,fmblk)
-!end do
+do n = 0, ndata
+   call rdP3dP(n,fmblk)
+   call wrP3dP_ss(n,fmblk)
+end do
 
 !===== COMPUTE AVERAGE VALUES IF NOT AVAILABLE YET
 if (favg==1) then
