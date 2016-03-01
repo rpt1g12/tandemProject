@@ -38,14 +38,12 @@ contains
      ssFlag=.true.
      do m = 1, 2
      if (ssFlag) then
-        if ( &
-           ((mpijke(m).ge.ssRange(m,1)).and.&
+        if (((mpijke(m).ge.ssRange(m,1)).and.&
             (mpijks(m).lt.ssRange(m,1))).or.&
            ((mpijks(m).ge.ssRange(m,1)).and.&
             (mpijke(m).le.ssRange(m,2))).or.&
            ((mpijks(m).le.ssRange(m,2)).and.&
-            (mpijke(m).gt.ssRange(m,2)))&
-           ) then
+            (mpijke(m).gt.ssRange(m,2)))) then
             ssFlag=.true.
             color=1
         else

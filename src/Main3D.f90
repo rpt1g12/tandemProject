@@ -547,6 +547,7 @@
   end if
 
     ndati=-1; nsigi=-1; dtsum=zero
+    ndati_ss=-1;
  do while(timo<tmax.and.(dt/=zero.or.n<=2))
 
 !----- FILTERING & RE-INITIALISING
@@ -610,6 +611,10 @@
     nout=0; res=tsam+(ndati+1)*(tmax-tsam)/ndata
  if((timo-res)*(timo+dt-res)<=zero) then
     nout=1; ndati=ndati+1
+ end if
+    nout_ss=0; res=tsam+(ndati_ss+1)*(1.0e0/ssFreq)
+ if((timo-res)*(timo+dt-res)<=zero) then
+    nout_ss=1; ndati_ss=ndati_ss+1
  end if
  end if
 
@@ -973,7 +978,7 @@
  !  end do
  !   dtsum=0; qb(:,:)=0
  !end if
- if(mod(n,ssFreq)==0) then
+ if(nout_ss==1) then
     call wrP3dS_ss
  end if
  if(nout==1) then
