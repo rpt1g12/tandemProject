@@ -4,7 +4,7 @@ nscrn-nsgnl	1		100
 ndata		30
 nkrk            4
 nviscous	1
-nsmf		0
+nsmf		1
 nfskp           0
 nrestart        0
 nextrabc-gcic   0       0

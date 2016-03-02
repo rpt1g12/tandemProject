@@ -339,16 +339,12 @@
 
     call rdGrid
     if (output==1) then
-       allocate(xyz4(0:lmx,3),ssxyz4(0:sslmx,3),lss(0:sslmx))
+       allocate(xyz4(0:lmx,3))
        xyz4(:,:)=ss(:,:)
        if (ssFlag) then
           ll=0
-          do kk = ssGStr(3)-mpijks(3),ssGEnd(3)-mpijks(3)
-             do jj = ssGStr(2)-mpijks(2),ssGEnd(2)-mpijks(2)
-                do ii = ssGStr(1)-mpijks(1),ssGEnd(1)-mpijks(1);l=indx3(ii,jj,kk,1);lss(ll)=l
-                   ssxyz4(ll,:)=ss(l,:);ll=ll+1;
-                end do
-             end do
+          do ll = 0, sslmx; l=lss(ll)
+             ssxyz4(ll,:)=ss(l,:)
           end do
        end if
     end if
