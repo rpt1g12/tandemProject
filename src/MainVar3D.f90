@@ -194,6 +194,7 @@
  integer (k4) :: sslmx,nss,tss,ssFreq
  integer (k4) :: sscom,ssbcom,ssid,bssid,ssnp
  integer (k4) :: color
+ integer (k4) :: nout_ss,ndati_ss
  integer :: ssq4arr,ssq4fh
  logical :: ssq4flag=.false.
  logical :: sswrsfg=.false.

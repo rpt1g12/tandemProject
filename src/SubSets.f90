@@ -38,14 +38,12 @@ contains
      ssFlag=.true.
      do m = 1, 2
      if (ssFlag) then
-        if ( &
-           ((mpijke(m).ge.ssRange(m,1)).and.&
+        if (((mpijke(m).ge.ssRange(m,1)).and.&
             (mpijks(m).lt.ssRange(m,1))).or.&
            ((mpijks(m).ge.ssRange(m,1)).and.&
             (mpijke(m).le.ssRange(m,2))).or.&
            ((mpijks(m).le.ssRange(m,2)).and.&
-            (mpijke(m).gt.ssRange(m,2)))&
-           ) then
+            (mpijke(m).gt.ssRange(m,2)))) then
             ssFlag=.true.
             color=1
         else
@@ -241,7 +239,7 @@ contains
      real   (k4) :: rbuf
 
      if (ssFlag) then
-     if (wrsfg) then
+     if (sswrsfg) then
         CALL MPI_FILE_WRITE_ALL_END(ssq4fh,ssq4,ista,ierr)
         CALL MPI_FILE_CLOSE(ssq4fh,ierr)
         sswrsfg=.false.
@@ -304,13 +302,13 @@ contains
         wrlen=5*(sslmx+1)
         if(.not.allocated(ssq4)) allocate(ssq4(0:sslmx,5))
 
-           do ll = 0, sslmx; l=lss(ll)
-           ssq4(ll,1)=qa(l,1)
-           do i = 2, 4
-              ssq4(ll,i)=((qa(l,i)/qa(l,1))+umf(i-1))
-           end do
-           ssq4(ll,5)=p(l)
-           end do
+        do ll = 0, sslmx; l=lss(ll)
+        ssq4(ll,1)=qa(l,1)
+        do i = 2, 4
+           ssq4(ll,i)=((qa(l,i)/qa(l,1))+umf(i-1))
+        end do
+        ssq4(ll,5)=p(l)
+        end do
 
         amode=IOR(MPI_MODE_WRONLY,MPI_MODE_CREATE)
 

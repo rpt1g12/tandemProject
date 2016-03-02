@@ -38,7 +38,7 @@ contains
  integer, intent(in) :: ilxi0,ilxi1,ilxi2,ilet0,ilet1,ilze0 
 !===== INPUT PARAMETERS
 
-    open(9,file='inputo.dat',shared)
+    open(9,file='inputo.dat')
     read(9,*) cinput,mbk
     read(9,*) cinput,nts
     read(9,*) cinput,nscrn,nsgnl
@@ -290,7 +290,7 @@ contains
     call makegrid
     call MPI_BARRIER(icom,ierr)
 
-    open(9,file=cgrid,access='stream',shared)
+    open(9,file=cgrid,access='stream')
     lp=lpos(myid)
  do nn=1,3; lq=(nn-1)*ltomb
  do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
@@ -373,7 +373,7 @@ contains
 !====================================================================================
  subroutine readRestart
 
-    open(9,file=crestart,access='stream',shared); lh=0
+    open(9,file=crestart,access='stream'); lh=0
     read(9,pos=nr*lh+1) n; lh=lh+1
     read(9,pos=nr*lh+1) ndt; lh=lh+1
     read(9,pos=nr*lh+1) dt; lh=lh+1
@@ -398,7 +398,7 @@ contains
 !====================================================================================
  subroutine readGrid
 
-         open(9,file='data/grid'//cnzone,access='stream',shared); lh=0
+         open(9,file='data/grid'//cnzone,access='stream'); lh=0
          lp=lpos(myid)
       do m=1,3; lq=(m-1)*ltomb
       do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
@@ -412,7 +412,7 @@ contains
 !====================================================================================
  subroutine writeGrid
 
-         open(9,file='data/grid'//cnzone,access='stream',shared); lh=0
+         open(9,file='data/grid'//cnzone,access='stream'); lh=0
          lp=lpos(myid)
       do m=1,3; lq=(m-1)*ltomb
       do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
@@ -426,7 +426,7 @@ contains
 !====================================================================================
  subroutine writeRestart
 
-         open(9,file='i'//crestart,access='stream',shared); lh=0
+         open(9,file='i'//crestart,access='stream'); lh=0
       if(myid==mo(mb)) then
          write(9,pos=nr*lh+1) ni; lh=lh+1
          write(9,pos=nr*lh+1) ndti; lh=lh+1
