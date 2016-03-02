@@ -235,7 +235,7 @@
  real :: rdis,xpos,ypos
  integer :: fintg,atk
 
-!===== ADITIONAL INPUTO VARIABLES BY RPT
+!===== ADITIONAL INPUT VARIABLES BY RPT
  integer(k4)  :: nto,iwrec
  integer(k4)  :: forcing,LES
  real(k8) :: tgustd,tguste

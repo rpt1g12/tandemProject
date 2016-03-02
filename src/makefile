@@ -10,7 +10,7 @@ FC	= mpif90
 FLAGS	= -O5 -o
 OBJN	= MainVar3D.f90 Subroutineso.f90 Subroutines3D.f90 Grid.f90 SingleTurbulence3D.f90 rpt.f90 Main3D.f90
 OBJPS	= MainVar3D.f90 Subroutineso.f90 Subroutines3D.f90 Grid.f90 SingleTurbulence3D.f90 rpt.f90 rptPost.f90 SubSets.f90 MainPost.f90
-OBJI	= MainVar3D.f90 Subroutineso.f90 Subroutines3D.f90 GridSingle.f90 SingleTurbulence3D.f90 rpt.f90 rptInter.f90 Interpolate3D.f90
+OBJI	= MainVar3D.f90 Subroutineso.f90 Subroutines3D.f90 Grid.f90 SingleTurbulence3D.f90 rpt.f90 rptInter.f90 Interpolate3D.f90
 all:
 	make new
 post:
