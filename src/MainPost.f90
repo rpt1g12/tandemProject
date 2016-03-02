@@ -51,10 +51,10 @@ if (intgflag) then
               myid,sum(aintg),lcintg
 end if
 
-do n = 0, ndata
-   call rdP3dP(n,fmblk)
-   call wrP3dP_ss(n,fmblk)
-end do
+!do n = 0, ndata
+!   call rdP3dP(n,fmblk)
+!   call wrP3dP_ss(n,fmblk)
+!end do
 
 !===== COMPUTE AVERAGE VALUES IF NOT AVAILABLE YET
 if (favg==1) then
