@@ -219,12 +219,6 @@ if(myid==mo(mb)) then
       ip=lxise(2,0); im=lxibk(2)
       tmpa=px(3,n);sha=she1;tmpb=px(5,n);shb=sml
       call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
-      selectcase(n)
-      case(1,2)
-      ip=lxise(2,0); im=lxibk(2)
-      tmpa=px(3,n);sha=she1;tmpb=px(5,n);shb=pxi(ip+100)
-      call gridf(xp(:,n),pxi,tmpa,tmpb,sha,shb,lxit,im,ip)
-      end select
    !--3-bl Refinement
    !  ip=lxise(2,0); im=blll(1)
    !  tmpa=px(3,n);sha=she1;tmpb=px(3,n)+bly(0,1);shb=sml
