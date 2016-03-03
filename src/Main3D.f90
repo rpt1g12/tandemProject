@@ -494,7 +494,8 @@
  case(1)
    call wrP3dG
    call wrP3dG_ss
-   deallocate(xyz4,ssxyz4)
+   deallocate(xyz4)
+   if(allocated(ssxyz4)) deallocate(ssxyz4)
  end select
 
 
