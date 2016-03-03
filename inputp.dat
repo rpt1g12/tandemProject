@@ -3,9 +3,9 @@ let0-to-bky	120	360           !lett=480
 lze0-to-bkz	100                   !pts x plane = 384k
 nbody-nthick	2	2
 ngridv		1
-npcx		1	1	1
-npcy		1	1
-npcz		1
+npcx		3	8	9
+npcy		6	18
+npcz		4
 nito-nits-litr	0	1	10
 smgrid-domlen	0.0075e0 		10.0e0
 ximod-etamod	0.3e0		0.05e0
