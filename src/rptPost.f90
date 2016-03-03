@@ -20,8 +20,8 @@ contains
 !===== INPUT PARAMETERS
 
     open(9,file='inputo.dat')
-    read(9,*) cinput,mbk
-    read(9,*) cinput,nts,nto,iwrec
+    read(9,*) cinput,mbk,bkx,bky,bkz
+    read(9,*) cinput,nts,nto
     read(9,*) cinput,nscrn,nsgnl
     read(9,*) cinput,ndata
     read(9,*) cinput,nkrk
@@ -29,6 +29,7 @@ contains
     read(9,*) cinput,nsmf
     read(9,*) cinput,nfskp
     read(9,*) cinput,nrestart
+    read(9,*) cinput,nextrabc,nextgcic
     read(9,*) cinput,reoo,tempoo
     read(9,*) cinput,amach1,amach2,amach3
     read(9,*) cinput,wtemp
@@ -57,17 +58,16 @@ contains
     close(9)
 
     cinput=cinput; fltk=pi*fltk; fltkbc=pi*fltkbc
-    rhooo=1; poo=1/gam; aoo=sqrt(gam*poo/rhooo); amachoo=sqrt(amach1**2+amach2**2+amach3**2)
-    srefoo=111.0_k8/tempoo; srefp1dre=(srefoo+1)/reoo; sqrtrema=sqrt(reoo*amachoo); sqrtremai=1/sqrtrema
+    rhooo=one; poo=one/gam; aoo=sqrt(gam*poo/rhooo); amachoo=sqrt(amach1*amach1+amach2*amach2+amach3*amach3)
+    srefoo=111/tempoo; srefp1dre=(srefoo+one)/reoo; sqrtrema=sqrt(reoo*amachoo); sqrtremai=one/sqrtrema
     uoo(1)=amach1*aoo; uoo(2)=amach2*aoo; uoo(3)=amach3*aoo
-    ! rpt-Initialising the record count 
-    nwrec=0
 
     abc(:,0)=(/a01,a02,a03,a04,a05,a06/)
     abc(:,1)=(/a10,a12,a13,a14,a15,a16/)
     abc(:,2)=(/a20,a21,a23,a24,a25,a26/)
 
     allocate(lximb(0:mbk),letmb(0:mbk),lzemb(0:mbk),lhmb(0:mbk),mo(0:mbk),npc(0:mbk,3))
+    allocate(lxibk(0:bkx-1),letbk(0:bky-1),lzebk(0:bkz-1))
 
     call inputext
     if(fparallel==0) npc(:,:)=1
@@ -151,12 +151,21 @@ contains
 
 !===== SUBDOMAIN SIZES & WRITING START POSITIONS IN OUTPUT FILE
 
-    lxim(myid)=lxi; letm(myid)=let; lzem(myid)=lze
- do mp=0,mpro
-    call MPI_BCAST(lxim(mp),1,MPI_INTEGER,mp,icom,ierr)
-    call MPI_BCAST(letm(mp),1,MPI_INTEGER,mp,icom,ierr)
-    call MPI_BCAST(lzem(mp),1,MPI_INTEGER,mp,icom,ierr)
+ if(myid==0) then
+    lxim(0)=lxi; letm(0)=let; lzem(0)=lze
+ do mp=1,mpro
+    itag=1; call MPI_RECV(lxim(mp),1,MPI_INTEGER4,mp,itag,icom,ista,ierr)
+    itag=2; call MPI_RECV(letm(mp),1,MPI_INTEGER4,mp,itag,icom,ista,ierr)
+    itag=3; call MPI_RECV(lzem(mp),1,MPI_INTEGER4,mp,itag,icom,ista,ierr)
  end do
+ else; itag=myid
+    itag=1; call MPI_SEND(lxi,1,MPI_INTEGER4,0,itag,icom,ierr)
+    itag=2; call MPI_SEND(let,1,MPI_INTEGER4,0,itag,icom,ierr)
+    itag=3; call MPI_SEND(lze,1,MPI_INTEGER4,0,itag,icom,ierr)
+ end if
+    call MPI_BCAST(lxim(:),npro,MPI_INTEGER4,0,icom,ierr)
+    call MPI_BCAST(letm(:),npro,MPI_INTEGER4,0,icom,ierr)
+    call MPI_BCAST(lzem(:),npro,MPI_INTEGER4,0,icom,ierr)
 
     ltomb=(lxio+1)*(leto+1)*(lzeo+1)
 
@@ -223,6 +232,8 @@ contains
     mpijkl=(/lxi,let,lze/)+1
     ! rpt- Starts in proccessor per direction
     mpijks=(/ibegin(mpc(1)),jbegin(mpc(2)),kbegin(mpc(3))/)
+    ! rpt- Ends in proccessor per direction
+    mpijke=mpijks+(/lxi,let,lze/)
 
 !===== ALLOCATION OF MAIN ARRAYS
 
@@ -266,20 +277,6 @@ contains
     pbcot(j,nt)=sum(pbco(0:ii,j,nt))
  end do; end do
 
-!===== EXTRA COEFFICIENTS FOR GCBC/GCIC
-
-    cbca(:,:)=0;                cbca(1,1:2)=albed(1:2,0,0);
-    cbca(2,1:3)=albed(0:2,1,0); cbca(3,1:3)=albed(-1:1,2,0)
- if(mbci>=4) then
-    cbca(3,4)=albed(2,2,0)
- do i=4,mbci
-          cbca(i,i-3:i)=(/beta,alpha,one,alpha/);
-          if(i<mbci) cbca(i,i+1)=beta
- end do
- end if
-    rbci(:)=0; rbci(1:3)=(/one,albed(-1,1,0),albed(-2,2,0)/)
-    call mtrxi(cbca,cbcs,1,mbci); sbci(:)=-matmul(cbcs(:,:),rbci(:))
-
 !===== PENTADIAGONAL MATRICES FOR DIFFERENCING & FILETERING
 
  do nn=1,3
@@ -316,15 +313,15 @@ contains
  subroutine getMetrics
  !===== COMPUTE INVERSE METRICS
      rr(:,1)=ss(:,1)
-     m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+    m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
      qo(:,1)=rr(:,1); qo(:,2)=rr(:,2); qo(:,3)=rr(:,3)
  
      rr(:,1)=ss(:,2)
-     m=2; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+    m=2; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
      qa(:,1)=rr(:,1); qa(:,2)=rr(:,2); qa(:,3)=rr(:,3)
  
      rr(:,1)=ss(:,3)
-     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+    m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
      de(:,1)=rr(:,1); de(:,2)=rr(:,2); de(:,3)=rr(:,3)
  
      allocate(xyz(0:lmx,3))
@@ -343,7 +340,7 @@ contains
      zem(:,3)=qo(:,1)*qa(:,2)-qa(:,1)*qo(:,2)
     
  !===== COMPUTE JACOBIAN
-     yaco(:)=3/(qo(:,1)*xim(:,1)+qo(:,2)*etm(:,1)+qo(:,3)*zem(:,1)&
+    yaco(:)=three/(qo(:,1)*xim(:,1)+qo(:,2)*etm(:,1)+qo(:,3)*zem(:,1)&
                +qa(:,1)*xim(:,2)+qa(:,2)*etm(:,2)+qa(:,3)*zem(:,2)&
                +de(:,1)*xim(:,3)+de(:,2)*etm(:,3)+de(:,3)*zem(:,3))
 
@@ -352,20 +349,62 @@ contains
     if (fintg) then
        call intgUp(rdis,xpos,ypos,atk)
     end if
-    nprob=10
-    call probUp(nprob,(/0.0_k8,0.3_k8/),(/1.0_k8,0.6_k8/))
+    !nprob=10
+    !call probUp(nprob,(/0.0_k8,0.3_k8/),(/1.0_k8,0.6_k8/))
 
  do nn=1,3; do ip=0,1; i=ip*ijk(1,nn)
  do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
  do j=0,ijk(2,nn); jk=kp+j; l=indx3(i,j,k,nn)
  select case(nn)
- case(1); rv(:)=yaco(l)*xim(l,:); fctr=1/sqrt(rv(1)**2+rv(2)**2+rv(3)**2); cm1(jk,:,ip)=fctr*rv(:)
- case(2); rv(:)=yaco(l)*etm(l,:); fctr=1/sqrt(rv(1)**2+rv(2)**2+rv(3)**2); cm2(jk,:,ip)=fctr*rv(:)
- case(3); rv(:)=yaco(l)*zem(l,:); fctr=1/sqrt(rv(1)**2+rv(2)**2+rv(3)**2); cm3(jk,:,ip)=fctr*rv(:)
+ case(1); rv(:)=yaco(l)*xim(l,:); fctr=one/sqrt(rv(1)*rv(1)+rv(2)*rv(2)+rv(3)*rv(3)); cm1(jk,:,ip)=fctr*rv(:)
+ case(2); rv(:)=yaco(l)*etm(l,:); fctr=one/sqrt(rv(1)*rv(1)+rv(2)*rv(2)+rv(3)*rv(3)); cm2(jk,:,ip)=fctr*rv(:)
+ case(3); rv(:)=yaco(l)*zem(l,:); fctr=one/sqrt(rv(1)*rv(1)+rv(2)*rv(2)+rv(3)*rv(3)); cm3(jk,:,ip)=fctr*rv(:)
  end select
  end do
  end do
  end do; end do
+
+ !===== EXTRA COEFFICIENTS FOR GCBC/GCIC
+ 
+     cbca(:,:)=zero; cbca(1,1:2)=albed(1:2,0,0);
+     cbca(2,1:3)=albed(0:2,1,0); cbca(3,1:3)=albed(-1:1,2,0)
+  if(mbci>=4) then
+     cbca(3,4)=albed(2,2,0)
+     do i=4,mbci
+        cbca(i,i-3:i)=(/beta,alpha,one,alpha/);
+        if(i<mbci) then; cbca(i,i+1)=beta; end if
+     end do
+  end if
+     rbci(:)=zero; rbci(1:3)=(/one,albed(-1,1,0),albed(-2,2,0)/)
+     call mtrxi(cbca,cbcs,1,mbci); sbci(:)=-matmul(cbcs(:,:),rbci(:))
+     ! rpt- New added
+  !???????????????????
+     fctr=pi/(mbci+1); res=zero
+  do i=1,mbci; res=res+one
+     sbci(i)=half*sbci(i)*(one+cos(res*fctr))
+  end do
+     lp=-1; ll=-1; rr(:,1)=zero
+  do nn=1,3; do ip=0,1; np=nbc(ip,nn); i=ip*ijk(1,nn); iq=1-2*ip
+     if((np-10)*(np-20)*(np-25)*(np-30)==0) then
+        do k=0,ijk(3,nn); do j=0,ijk(2,nn); l=indx3(i,j,k,nn)
+        if((np-20)*(np-25)==0) then
+           lp=lp+1; call extrabcc(de(lp,1))
+        end if
+           ll=ll+1; res=one/yaco(l); rr(l,1)=rr(l,1)+one; rr(ll,2)=res; rr(ll,3)=l+sml
+        do ii=1,mbci; l=indx3(i+iq*ii,j,k,nn)
+           ll=ll+1; rr(l,1)=rr(l,1)+one; rr(ll,2)=res*sbci(ii); rr(ll,3)=l+sml
+        end do
+        end do; end do
+     end if
+  end do; end do
+     lq=ll; allocate(rpex(0:lp),sbcc(0:lq))
+  do ll=0,lp
+     rpex(ll)=de(ll,1)
+  end do
+  do ll=0,lq; l=rr(ll,3)
+     sbcc(ll)=rr(ll,2)/rr(l,1)
+  end do
+  !???????????????????
  end subroutine getMetrics
 
 !====================================================================================
@@ -509,19 +548,19 @@ contains
 
         rr(:,1)=qo(:,2)
         m=1; call mpigo(ntdrv,nrone,n45no,m);
-        call deriv(3,1); call deriv(2,1); call deriv(1,1)
+        call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
         de(:,2)=de(:,2)+rr(:,1)*xim(:,3)+rr(:,2)*etm(:,3)+rr(:,3)*zem(:,3)
         de(:,3)=de(:,3)-rr(:,1)*xim(:,2)-rr(:,2)*etm(:,2)-rr(:,3)*zem(:,2)
 
         rr(:,1)=qo(:,3)
         m=2; call mpigo(ntdrv,nrone,n45no,m);
-        call deriv(3,1); call deriv(2,1); call deriv(1,1)
+        call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
         de(:,3)=de(:,3)+rr(:,1)*xim(:,1)+rr(:,2)*etm(:,1)+rr(:,3)*zem(:,1)
         de(:,1)=de(:,1)-rr(:,1)*xim(:,3)-rr(:,2)*etm(:,3)-rr(:,3)*zem(:,3)
 
         rr(:,1)=qo(:,4)
         m=3; call mpigo(ntdrv,nrone,n45no,m);
-        call deriv(3,1); call deriv(2,1); call deriv(1,1)
+        call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
         de(:,1)=de(:,1)+rr(:,1)*xim(:,2)+rr(:,2)*etm(:,2)+rr(:,3)*zem(:,2)
         de(:,2)=de(:,2)-rr(:,1)*xim(:,1)-rr(:,2)*etm(:,1)-rr(:,3)*zem(:,1)
 
@@ -549,19 +588,19 @@ contains
      de(:,4)=qo(:,4)
  
      rr(:,1)=de(:,2)
-     m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     m=2; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
      txx(:)=yaco(:)*(xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3))
      hzz(:)=yaco(:)*(xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3))
      tzx(:)=yaco(:)*(xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3))
  
      rr(:,1)=de(:,3)
-     m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     m=3; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
      txy(:)=yaco(:)*(xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3))
      tyy(:)=yaco(:)*(xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3))
      hxx(:)=yaco(:)*(xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3))
  
      rr(:,1)=de(:,4)
-     m=4; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1); call deriv(2,1); call deriv(1,1)
+     m=4; call mpigo(ntdrv,nrone,n45no,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
      hyy(:)=yaco(:)*(xim(:,1)*rr(:,1)+etm(:,1)*rr(:,2)+zem(:,1)*rr(:,3))
      tyz(:)=yaco(:)*(xim(:,2)*rr(:,1)+etm(:,2)*rr(:,2)+zem(:,2)*rr(:,3))
      tzz(:)=yaco(:)*(xim(:,3)*rr(:,1)+etm(:,3)*rr(:,2)+zem(:,3)*rr(:,3))
@@ -652,9 +691,6 @@ subroutine flst(mblkin)
       write(*,*) 'Delete previous filelist '//rcout
       open(90,file='out/filelist'//rcout); close(90,status='delete')
       call system('ls out/*'//rcout//'.q -1 > out/filelist'//rcout)
-   end if
-   CALL MPI_BARRIER(icom,ierr)
-   if (myid==foper) then
       open(90,file='out/filelist'//rcout)
       inquire(unit=90,size=l)
       if (l.le.1) then
@@ -663,39 +699,41 @@ subroutine flst(mblkin)
          close(90)
       end if   
    end if
+
    CALL MPI_BARRIER(icom,ierr)
    
    inquire(file='out/filelist'//rcout,exist=fflag)
    if (fflag) then
-      open(90,file='out/filelist'//rcout,shared)
-      lmt=-2
-      do while (stat.ge.0)
-         read(90,*,IOSTAT=stat) 
-         lmt=lmt+1
-      end do
-      close(90)
-      ndata=lmt
+      if (myid==foper) then
+         open(90,file='out/filelist'//rcout,shared)
+         lmt=-2
+         do while (stat.ge.0)
+            read(90,*,IOSTAT=stat) 
+            lmt=lmt+1
+         end do
+         close(90)
+         ndata=lmt
+         l=len('out/sotT')+8+len(trim(rcout))+len('.q')
+      end if
 
-      l=len('out/sotT')+8+len(trim(rcout))+len('.q')
-      allocate(character(l) :: ofiles(0:lmt))
+      CALL MPI_BCAST(ndata,1,MPI_INTEGER4,foper,wrcom,ierr)
+      CALL MPI_BCAST(l,1,MPI_INTEGER4,foper,wrcom,ierr)
+      allocate(character(l) :: ofiles(0:ndata))
       allocate(character(l) :: ofile)
       allocate(times(0:ndata))
 
-      open(90,file='out/filelist'//rcout,shared)
-      do i = 0, lmt
-         read(90,"(a)") ofile
-         ofiles(i)=ofile
-         ctime=(ofile(9:16)//'e0')
-         read(ctime,*) times(i)
-      end do
-      close(90)
-      
-      !do i = 0, lmt
-      !   open(91,file=ofiles(i),access='stream',shared)
-      !       lh=1+(mbk+1)*3+3
-      !       read(91,pos=4*lh+1) res; times(i)=res
-      !   close(91)
-      !end do
+      if (myid==foper) then
+         open(90,file='out/filelist'//rcout)
+         do i = 0, ndata
+            read(90,"(a)") ofile
+            ofiles(i)=ofile
+            ctime=(ofile(9:16)//'e0')
+            read(ctime,*) times(i)
+         end do
+         close(90)
+      end if
+      CALL MPI_BCAST(times,ndata+1,MPI_REAL8,foper,wrcom,ierr)
+      CALL MPI_BCAST(ofiles,l*(ndata+1),MPI_CHAR,foper,wrcom,ierr)
    else
       l=1
       ndata=0
@@ -744,12 +782,15 @@ end subroutine flst
           delt(n)=fctr*(times(n+1)-times(n-1))
        end do
           qa(:,:)=0
+       nn=ndata*0.05_k8
        do n=0,ndata
-       if (myid==foper) then
-          write(*,"(f5.1,'% Averaged',a)") real(n)*100.0e0/real(ndata),cout
-       end if
+       !if (myid==foper) then
+          if (mod(n,nn)==0) then
+             write(*,"('Block ',i2,x,f5.1,'% Averaged',a)")&
+             mb,real(n)*100.0e0/real(ndata),cout
+          end if
+       !end if
           call rdP3dS(n,fmblk)
-          !call p3dread(gsflag=0,nout=n)
           qa(:,:)=qa(:,:)+delt(n)*qo(:,:)
        end do
     end if
@@ -779,6 +820,8 @@ end subroutine flst
     end select
 
     if (fflag) then
+       if(.not.allocated(fout)) allocate(fout(0:lmx,6))
+       fout(:,:)=0
        if (myid==foper) then
           write(*,"('Total amout of data: ',i3,a)") ndata,cout
        end if
@@ -791,17 +834,21 @@ end subroutine flst
           delt(n)=fctr*(times(n+1)-times(n-1))
        end do
           call rdP3dS(ndata+1,fmblk)
-          !call p3dread(gsflag=0,nout=ndata+1)
           qa(:,:)=qo(:,:)
           qb(:,:)=0
+       nn=ndata*0.05_k8
        do n=0,ndata
-          if (myid==foper) then
-             write(*,"(f5.1,'% Done',a)") real(n)*100.0e0/real(ndata),cout
+          if (mod(n,nn)==0) then
+             write(*,"('Block ',i2,x,f5.1,'% Done',a)")&
+             mb,real(n)*100.0e0/real(ndata),cout
           end if
-          !call p3dread(gsflag=0,nout=n)
           call rdP3dS(n,fmblk)
           de(:,:)=(qo(:,:)-qa(:,:))
           qb(:,:)=qb(:,:)+delt(n)*de(:,:)*de(:,:)
+          fout(:,1:3)=qb(:,2:4)
+          fout(:,4)=fout(:,4)+delt(n)*de(:,2)*de(:,3)
+          fout(:,5)=fout(:,5)+delt(n)*de(:,2)*de(:,4)
+          fout(:,6)=fout(:,6)+delt(n)*de(:,3)*de(:,4)
        end do
        qb(:,:)=sqrt(qb(:,:))
     end if
@@ -970,11 +1017,12 @@ end subroutine flst
      integer, intent(in),optional :: mblkin
      integer, intent(in) :: nout
      character(*), intent(in),optional :: cname
-     character(*),parameter :: fname='sol'
+     character(*),parameter :: fname='solT'
      character(:),allocatable :: lfname
      character(3) :: cout,ncout
      character(8) :: ctime
-     character(len=*),parameter :: cext='.qa',cpath='out/'
+     character(:), allocatable :: cext
+     character(len=*),parameter :: cext0='.q',cext1='.qa',cpath='out/'
      integer :: n,l,i,lh,iolen,foper,wrcom,nbk,err,mblk
      integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
      integer :: amode
@@ -1020,6 +1068,8 @@ end subroutine flst
               ncout(l:l)='0'
            end do
            ctime=trim(cname)//ncout
+           allocate(character(len=len(cext1)) :: cext)
+           cext=cext1
         else
            if (nout.le.ndata) then
               write(ctime,"(f8.4)") times(nout)
@@ -1028,10 +1078,16 @@ end subroutine flst
                  if (l==0) exit
                  ctime(l:l)='0'
               end do
+              allocate(character(len=len(cext0)) :: cext)
+              cext=cext0
            else if (nout==ndata+1) then
               ctime='A'
+              allocate(character(len=len(cext1)) :: cext)
+              cext=cext1
            else if (nout==ndata+2) then
               ctime='RMS'
+              allocate(character(len=len(cext1)) :: cext)
+              cext=cext1
            end if
         end if
 
@@ -1086,7 +1142,11 @@ end subroutine flst
               else if(nout==ndata+2) then
                  write(*,"('RMS Solution read!')") 
               else
-                 write(*,"('Solution read! T= ',f8.4)") times(nout)
+                 if (present(cname)) then
+                    write(*,*) lfname//" Read!"
+                 else
+                    write(*,"('Solution read! T= ',f8.4)") times(nout)
+                 end if
               end if
            end if
 
@@ -1104,7 +1164,7 @@ end subroutine flst
      integer, intent(in),optional :: mblkin
      integer, intent(in) :: nout
      character(*), intent(in),optional :: cname
-     character(*),parameter :: fname='sol'
+     character(*),parameter :: fname='solT'
      character(:),allocatable :: lfname
      character(3) :: cout,ncout
      character(8) :: ctime

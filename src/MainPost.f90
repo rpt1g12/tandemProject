@@ -9,6 +9,7 @@
  use subroutines3d
  use problemcase
  use rpt
+ use subsets
  use rptpost
  implicit none
  character(20) :: cformat
@@ -23,13 +24,23 @@
     mpro=npro-1; icom=MPI_COMM_WORLD; info=MPI_INFO_NULL
 
     allocate(lxim(0:mpro),letm(0:mpro),lzem(0:mpro),lpos(0:mpro),vmpi(0:mpro))
-    allocate(ista(MPI_STATUS_SIZE,12))
 
+    ll=max(npro,12); allocate(ista(MPI_STATUS_SIZE,ll),ireq(ll))
+
+    inquire(iolength=ll) real(1.0,kind=ieee32); nrecs=ll
+    inquire(iolength=ll) real(1.0,kind=ieee64); nrecd=ll
 call setup
+call ssSetUp
 call flst(fmblk)
    
 !! RPT-READ X,Y,Z COORDINATES
 call rdP3dG(fmblk)
+if (ssFlag) then
+   do ll = 0, sslmx; l=lss(ll)
+      ssxyz4(ll,:)=ss(l,:)
+   end do
+end if
+call wrP3dG_ss(fmblk)
 ispost=.true.
 !
 call getMetrics
@@ -39,11 +50,12 @@ if (intgflag) then
               ' using ',i4,' elements')") &
               myid,sum(aintg),lcintg
 end if
-!call spongeup
-!allocate(fout(0:lmx,2))
-!fout(:,1)=de(:,1); fout(:,2)=de(:,2)*de(:,1)
-!
-!call wrP3dF('sponge',0,2,fmblk)
+
+!do n = 0, ndata
+!   call rdP3dP(n,fmblk)
+!   call wrP3dP_ss(n,fmblk)
+!end do
+
 !===== COMPUTE AVERAGE VALUES IF NOT AVAILABLE YET
 if (favg==1) then
    call p3daverage
@@ -64,6 +76,7 @@ end if
 if (fwrms==1) then
    qo(:,:)=qb(:,:)
    call wrP3dP(ndata+2,fmblk)
+   call wrP3dF('Rij',ndata+1,6,fmblk)
 end if
 
 !===COMPUTE FORCE COEFFICIENT
@@ -102,7 +115,7 @@ if (floc==1) then
       write(7,"('t uprime')") 
       do n = 0, ndata
          res=0
-         call p3dread(0,n)
+         call rdP3dS(n,fmblk)
          res=(qo(l,2)-qa(l,2))
          write(7,"(f10.5,f10.5)") times(n),res
       end do
@@ -113,7 +126,7 @@ end if
 !==COMPUTE WALL DISTANCES
 if (fwplus==1) then
    call getwplus(nvar=ndata+1)
-   if (myid==7) then
+   if (myid==4) then
       open(7,file='out/wplus.dat')
       write(7,"('x y z x+ y+ z+')") 
       do nn = 0, lcwall;l=lwall(nn)
@@ -131,70 +144,78 @@ if (fwplus==1) then
    end if
 end if
 
-!==COMUPTE VORTICITY + Q
+!==COMUPTE Q+W
 if (fcurl==1) then
-   !if (allocated(fout)) deallocate(fout)
-   !if (.not.allocated(fout)) allocate(fout(0:lmx,1))
-   !if (mb==7) then
-   if(myid==7.and.fintg) open (unit=7, file='out/intp1.dat')
-   !if(myid==7) open (unit=17, file='out/p1.dat')
-   !if(myid==7) open (unit=18, file='out/p2.dat')
    do n = 0, ndata
-      !call qcriterion(n);
-      !call getCurl(n);
-      call rdP3dS(n,fmblk)
-      !call rdP3dP(n,fmblk,'Q+W')
-      if(intgflag) varr(:)=qo(:,5)
-      call integrate
-      if(myid==7.and.fintg) write(7,"(es15.7,x,es15.7)") times(n),ra0
-      !if (myid==7) then
-      !   ra0=0;ra1=0
-      !   do k = 0, 50
-      !      do i = 0, 100; ll=indx2(i,k,1); l=lwall(ll)
-      !         ra0=ra0+area(ll)
-      !         ra1=ra1+p(l)*wnor(ll,2)*area(ll)
-      !      end do
-      !   end do
-      !   write(17,"(es15.7,x,es15.7)") timo,ra1/ra0
-      !   ra0=0;ra1=0
-      !   do k = 50, 100
-      !      do i = 0, 100; ll=indx2(i,k,1); l=lwall(ll)
-      !         ra0=ra0+area(ll)
-      !         ra1=ra1+p(l)*wnor(ll,2)*area(ll)
-      !      end do
-      !   end do
-      !   write(18,"(es15.7,x,es15.7)") timo,ra1/ra0
-      !end if
-      !fout(:,1:3)=qo(:,2:4)
-      !call wrP3dF('Omega',n,3,fmblk)
+      call qcriterion(n);
+      call getCurl(n);
+      call wrP3dP(n,fmblk,'Q+W')
    end do
-   if(myid==7.and.fintg) close(7)
-   !if (myid==7) then
-   !   close(17);close(18)
-   !end if
-   !end if
 end if
+
+!==INTEGRATION
+!if (fcurl==1) then
+!   !if (allocated(fout)) deallocate(fout)
+!   !if (.not.allocated(fout)) allocate(fout(0:lmx,1))
+!   !if (mb==7) then
+!   if(myid==7.and.fintg) open (unit=7, file='out/intp1.dat')
+!   !if(myid==7) open (unit=17, file='out/p1.dat')
+!   !if(myid==7) open (unit=18, file='out/p2.dat')
+!   do n = 0, ndata
+!      !call qcriterion(n);
+!      !call getCurl(n);
+!      call rdP3dS(n,fmblk)
+!      !call rdP3dP(n,fmblk,'Q+W')
+!      if(intgflag) varr(:)=qo(:,5)
+!      call integrate
+!      if(myid==7.and.fintg) write(7,"(es15.7,x,es15.7)") times(n),ra0
+!      !if (myid==7) then
+!      !   ra0=0;ra1=0
+!      !   do k = 0, 50
+!      !      do i = 0, 100; ll=indx2(i,k,1); l=lwall(ll)
+!      !         ra0=ra0+area(ll)
+!      !         ra1=ra1+p(l)*wnor(ll,2)*area(ll)
+!      !      end do
+!      !   end do
+!      !   write(17,"(es15.7,x,es15.7)") timo,ra1/ra0
+!      !   ra0=0;ra1=0
+!      !   do k = 50, 100
+!      !      do i = 0, 100; ll=indx2(i,k,1); l=lwall(ll)
+!      !         ra0=ra0+area(ll)
+!      !         ra1=ra1+p(l)*wnor(ll,2)*area(ll)
+!      !      end do
+!      !   end do
+!      !   write(18,"(es15.7,x,es15.7)") timo,ra1/ra0
+!      !end if
+!      !fout(:,1:3)=qo(:,2:4)
+!      !call wrP3dF('Omega',n,3,fmblk)
+!   end do
+!   if(myid==7.and.fintg) close(7)
+!   !if (myid==7) then
+!   !   close(17);close(18)
+!   !end if
+!   !end if
+!end if
 
 !==WRITE WSS+Cf+Cp
 if (fwss==1) then
-   if (allocated(fout)) deallocate(fout)
-   if (.not.allocated(fout)) allocate(fout(0:lmx,5))
       call gettw(ndata+1)
       ra0=two/(amachoo**2)
-      do i = 1, 3
-         fout(:,i)=0
+      qo(:,1)=0
+      do i = 2, 4
+         qo(:,i)=0
          if (wflag) then
             do m = 0, lcwall; l=lwall(m)
-               fout(l,i)=tw(m,i)
-               if (i==1) then
+               qo(l,i)=tw(m,i-1)
+               if (i==2) then
                ra1=DOT_PRODUCT(tw(m,:),wtan(m,:))
-               fout(l,4)=ra1*ra0
+               qo(l,1)=ra1*ra0
                end if
             end do
          end if
       end do
-      fout(:,5)=(p(:)-poo)*ra0
-      call wrP3dF('tw+Cf+Cp',n,5,fmblk)
+      qo(:,5)=(p(:)-poo)*ra0
+      call wrP3dP(n,fmblk,'Cf+tw+Cp')
 end if
 
 !==COMPUTE Cf 
@@ -299,6 +320,7 @@ if (fstrip) then
 end if
 
 !call probCirc
+
 !!==== SHIFT RESTART SOLUTION
 !fflag=.true.
 !call rdRsta

@@ -389,7 +389,7 @@ contains
      if (fflag) then
         CALL MPI_FILE_OPEN(wrcom,lfname ,amode ,info ,fh,ierr)
 
-          lh=0
+         lh=0
          ibuf=nbk+1; offset=lh*iolen          ! Number of blocks
          CALL MPI_FILE_READ_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
          do l = 0, nbk
@@ -428,8 +428,9 @@ contains
 !===================================================================================
 !=====  PLOT3D Q FILES READ
 !===================================================================================
-  subroutine rdP3dS(nout,mblkin)
+  subroutine rdP3dS(nout,mblkin,verbin)
      integer, intent(in) :: nout
+     logical, intent(in), optional ::verbin
      integer, intent(in),optional :: mblkin
      character(len=*),parameter :: fname='solT'
      character(len=:),allocatable :: lfname
@@ -442,6 +443,7 @@ contains
      integer, dimension (4) :: gsizes,lsizes,starts
      integer(k4) :: ibuf
      real   (k4) :: rbuf
+     logical :: verb
 
         ! rpt- Set default option to Multiblock
         if(present(mblkin)) then
@@ -449,11 +451,16 @@ contains
         else
            mblk=1
         end if
+        if(present(verbin)) then
+           verb=verbin
+        else
+           verb=.false.
+        end if
 
         selectcase(mblk);
         case(1)
            cout=''
-           foper=mo(mb)
+           foper=0
            wrcom=bcom
            nbk=mbk
         case(0)
@@ -472,13 +479,13 @@ contains
         end select
 
         if (nout==ndata+1) then
-           l=len('out/solA'//trim(cout)//'.qa')
+           l=len('out/solTA'//trim(cout)//'.qa')
            allocate(character(len=l) :: lfname)
-           lfname='out/solA'//trim(cout)//'.qa'
+           lfname='out/solTA'//trim(cout)//'.qa'
         elseif (nout==ndata+2) then
-           l=len('out/solRMS'//trim(cout)//'.qa')
+           l=len('out/solTRMS'//trim(cout)//'.qa')
            allocate(character(len=l) :: lfname)
-           lfname='out/solRMS'//trim(cout)//'.qa'
+           lfname='out/solTRMS'//trim(cout)//'.qa'
         else 
            l=len(ofiles(nout))
            allocate(character(len=l) :: lfname)
@@ -526,7 +533,7 @@ contains
            disp=(lhmb(mb)+4)*iolen
            CALL MPI_FILE_SET_VIEW(q4fh,disp,MPI_REAL4,q4arr,'native',info,ierr)
            CALL MPI_FILE_READ_ALL(q4fh,q4,wrlen,MPI_REAL4,ista,ierr)
-           if (myid==foper) then
+           if ((myid==foper).and.(verb)) then
               if (nout==ndata+1) then
                  write(*,"('AVG Solution read!')") 
               else if(nout==ndata+2) then
@@ -577,6 +584,7 @@ contains
 
         if(myid==mo(mb)) CALL MPI_FILE_DELETE(crestart,info,ierr)
         CALL MPI_FILE_OPEN(bcom,crestart,amode,info,qfh,ierr)
+        lh=0
         if (myid==mo(mb)) then
             ibuf=n; offset=lh*iolen ! Iteration Number
             CALL MPI_FILE_WRITE_AT(qfh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
@@ -686,6 +694,33 @@ contains
 
      if(myid==mo(mb)) CALL MPI_FILE_DELETE(cgrid,info,ierr)
   end subroutine rdGrid
+
+!====================================================================================
+!=====  WRITE RAW GRID
+!====================================================================================
+  subroutine wrGrid()
+     integer(kind=MPI_OFFSET_KIND) :: wrlen,disp
+     integer :: fh,amode,garr
+     integer, dimension (4) :: gsizes,lsizes,starts
+
+     wrlen=3*(lmx+1)
+     amode=IOR(MPI_MODE_WRONLY,MPI_MODE_CREATE)
+
+     gsizes(:)=(/mbijkl(:),3/)
+     lsizes(:)=(/mpijkl(:),3/)
+     starts(:)=(/mpijks(:),0/)
+     CALL MPI_TYPE_CREATE_SUBARRAY(4,gsizes,lsizes,starts,MPI_ORDER_FORTRAN,MPI_REAL8,garr,ierr) 
+     CALL MPI_TYPE_COMMIT(garr,ierr)
+     
+     disp=0
+
+     CALL MPI_FILE_OPEN(bcom,cgrid,amode,info,fh,ierr)
+     CALL MPI_FILE_SET_VIEW(fh,disp,MPI_REAL8,garr,'native',info,ierr)
+     CALL MPI_FILE_WRITE_ALL(fh,ss,wrlen,MPI_REAL8,ista,ierr)
+     CALL MPI_FILE_CLOSE(fh,ierr)
+     CALL MPI_TYPE_FREE(garr,ierr)
+
+  end subroutine wrGrid
 
 !====================================================================================
 ! ====SET UP FORCING PARAMETERS

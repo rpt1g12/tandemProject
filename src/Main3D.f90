@@ -9,6 +9,7 @@
  use subroutines3d
  use problemcase
  use rpt
+ use subsets
  implicit none
  real(k8) :: sxpos,sypos,szpos
  integer(k4) :: lsignal,idsignal
@@ -254,6 +255,11 @@
     mpijkl=(/lxi,let,lze/)+1
     ! rpt- Starts in proccessor per direction
     mpijks=(/ibegin(mpc(1)),jbegin(mpc(2)),kbegin(mpc(3))/)
+    ! rpt- Ends in proccessor per direction
+    mpijke=mpijks+(/lxi,let,lze/)
+    
+    ! rpt- SetUp SubSets
+    call ssSetUp
 
 !===== ALLOCATION OF MAIN ARRAYS
     if (output==2) then
@@ -335,6 +341,12 @@
     if (output==1) then
        allocate(xyz4(0:lmx,3))
        xyz4(:,:)=ss(:,:)
+       if (ssFlag) then
+          ll=0
+          do ll = 0, sslmx; l=lss(ll)
+             ssxyz4(ll,:)=ss(l,:)
+          end do
+       end if
     end if
 
     !RPT-FIND POSITION FOR SIGNAL SAMPLING
@@ -481,7 +493,8 @@
  end do
  case(1)
    call wrP3dG
-   deallocate(xyz4)
+   call wrP3dG_ss
+   deallocate(xyz4,ssxyz4)
  end select
 
 
@@ -530,6 +543,7 @@
   end if
 
     ndati=-1; nsigi=-1; dtsum=zero
+    ndati_ss=-1;
  do while(timo<tmax.and.(dt/=zero.or.n<=2))
 
 !----- FILTERING & RE-INITIALISING
@@ -593,6 +607,10 @@
     nout=0; res=tsam+(ndati+1)*(tmax-tsam)/ndata
  if((timo-res)*(timo+dt-res)<=zero) then
     nout=1; ndati=ndati+1
+ end if
+    nout_ss=0; res=tsam+(ndati_ss+1)*(1.0e0/ssFreq)
+ if((timo-res)*(timo+dt-res)<=zero) then
+    nout_ss=1; ndati_ss=ndati_ss+1
  end if
  end if
 
@@ -956,6 +974,9 @@
  !  end do
  !   dtsum=0; qb(:,:)=0
  !end if
+ if(nout_ss==1) then
+    call wrP3dS_ss
+ end if
  if(nout==1) then
       times(ndati)=timo
    if(myid==0) then

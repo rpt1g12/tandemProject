@@ -2,8 +2,8 @@ fparal-mblk	0	1
 favg-w-u	0	0	0
 fcoef-fcf-fcp	0	0	0
 floc		0	
-fwplus		1	
-fqcrit-fwss	0	0
+fwplus		0	
+fqcrit-fwss	0	1
 fcurl		0	
 frms-w		0	0
 fstrip		0

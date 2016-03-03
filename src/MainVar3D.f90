@@ -169,7 +169,7 @@
  real(k8),allocatable,dimension(:,:)  ::  xafor,yafor,bfor
 
 !===== MPI-IO VARIABLES BY RPT
- integer(k4), dimension (3) :: mpc,mbijkl,mpijkl,mpijks
+ integer(k4), dimension (3) :: mpc,mbijkl,mpijkl,mpijks,mpijke
  integer(k4), dimension (:), allocatable :: ibegin,jbegin,kbegin
  integer :: bcom
  integer :: q4arr,q4fh,qarr,qfh
@@ -185,6 +185,21 @@
  logical :: wflag
  real(k8), dimension(:,:), allocatable,target :: xyz
  integer(k4) :: wcom,bwcom
+
+!===== SUBSETS VARIABLES
+ integer (k4), dimension (3,2) :: ssRange
+ integer (k4), dimension (3)   :: ssSize,ssLSize,ssGStr,ssGEnd,ssStr,ssEnd
+ integer (k4), dimension (:,:), allocatable :: ssGSzs
+ integer (k4), dimension (:), allocatable :: lss
+ integer (k4) :: sslmx,nss,tss,ssFreq
+ integer (k4) :: sscom,ssbcom,ssid,bssid,ssnp
+ integer (k4) :: color
+ integer (k4) :: nout_ss,ndati_ss
+ integer :: ssq4arr,ssq4fh
+ logical :: ssq4flag=.false.
+ logical :: sswrsfg=.false.
+ real(k4), dimension(:,:), allocatable :: ssfout,ssxyz4,ssq4
+ logical :: ssFlag=.false.
 
 !===== POST-PROCESSING VARIABLES BY RPT
 
@@ -220,7 +235,7 @@
  real :: rdis,xpos,ypos
  integer :: fintg,atk
 
-!===== ADITIONAL INPUTO VARIABLES BY RPT
+!===== ADITIONAL INPUT VARIABLES BY RPT
  integer(k4)  :: nto,iwrec
  integer(k4)  :: forcing,LES
  real(k8) :: tgustd,tguste
