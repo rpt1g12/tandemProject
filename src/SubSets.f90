@@ -31,7 +31,7 @@ contains
         end do
      end do
 
-     if (tss.le.1) then
+     if (tss.ge.1) then
         do i = 1, 3
            ssSize(i)=ssRange(i,2)-ssRange(i,1)+1
         end do
