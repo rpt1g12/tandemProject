@@ -19,5 +19,6 @@ inflowsignal.dat
 tecplot*
 walltime*
 *batch*
-display
+display*
 *.lay
+*.rsta
