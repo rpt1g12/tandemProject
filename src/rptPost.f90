@@ -782,9 +782,10 @@ end subroutine flst
           delt(n)=fctr*(times(n+1)-times(n-1))
        end do
           qa(:,:)=0
+       nn=ndata*0.05_k8
        do n=0,ndata
        !if (myid==foper) then
-          if (mod(n,25)==0) then
+          if (mod(n,nn)==0) then
              write(*,"('Block ',i2,x,f5.1,'% Averaged',a)")&
              mb,real(n)*100.0e0/real(ndata),cout
           end if
@@ -819,6 +820,8 @@ end subroutine flst
     end select
 
     if (fflag) then
+       if(.not.allocated(fout)) allocate(fout(0:lmx,6))
+       fout(:,:)=0
        if (myid==foper) then
           write(*,"('Total amout of data: ',i3,a)") ndata,cout
        end if
@@ -831,18 +834,21 @@ end subroutine flst
           delt(n)=fctr*(times(n+1)-times(n-1))
        end do
           call rdP3dS(ndata+1,fmblk)
-          !call p3dread(gsflag=0,nout=ndata+1)
           qa(:,:)=qo(:,:)
           qb(:,:)=0
+       nn=ndata*0.05_k8
        do n=0,ndata
-          if (mod(n,25)==0) then
+          if (mod(n,nn)==0) then
              write(*,"('Block ',i2,x,f5.1,'% Done',a)")&
              mb,real(n)*100.0e0/real(ndata),cout
           end if
-          !call p3dread(gsflag=0,nout=n)
           call rdP3dS(n,fmblk)
           de(:,:)=(qo(:,:)-qa(:,:))
           qb(:,:)=qb(:,:)+delt(n)*de(:,:)*de(:,:)
+          fout(:,1:3)=qb(:,2:4)
+          fout(:,4)=fout(:,4)+delt(n)*de(:,2)*de(:,3)
+          fout(:,5)=fout(:,5)+delt(n)*de(:,2)*de(:,4)
+          fout(:,6)=fout(:,6)+delt(n)*de(:,3)*de(:,4)
        end do
        qb(:,:)=sqrt(qb(:,:))
     end if

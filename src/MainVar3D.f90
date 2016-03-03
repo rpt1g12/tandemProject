@@ -199,7 +199,7 @@
  logical :: ssq4flag=.false.
  logical :: sswrsfg=.false.
  real(k4), dimension(:,:), allocatable :: ssfout,ssxyz4,ssq4
- logical :: ssFlag
+ logical :: ssFlag=.false.
 
 !===== POST-PROCESSING VARIABLES BY RPT
 

@@ -76,6 +76,7 @@ end if
 if (fwrms==1) then
    qo(:,:)=qb(:,:)
    call wrP3dP(ndata+2,fmblk)
+   call wrP3dF('Rij',ndata+1,6,fmblk)
 end if
 
 !===COMPUTE FORCE COEFFICIENT
