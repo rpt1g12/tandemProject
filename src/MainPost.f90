@@ -76,7 +76,7 @@ end if
 if (fwrms==1) then
    qo(:,:)=qb(:,:)
    call wrP3dP(ndata+2,fmblk)
-   call wrP3dF('Rij',ndata+1,6,fmblk)
+   call wrP3dF('Rij',0,6,fmblk)
 end if
 
 !===COMPUTE FORCE COEFFICIENT
@@ -146,11 +146,12 @@ end if
 
 !==COMUPTE Q+W
 if (fcurl==1) then
-   do n = 0, ndata
+   !do n = 0, ndata
+      n=ndata+1
       call qcriterion(n);
       call getCurl(n);
       call wrP3dP(n,fmblk,'Q+W')
-   end do
+   !end do
 end if
 
 !==INTEGRATION
@@ -237,36 +238,36 @@ if (fcf==1) then
 end if
 
 !==COMPUTE RMS Cp
-if (fcp==1) then
-   call getCp(ndata+1)
-   qa(:,1)=qo(:,1)
-   qb(:,1)=0
-    if (myid==0) then
-       write(*,"('Total amout of data: ',i3)") ndata
-    end if
-    ! CONSTRUCT THE COEFFICIENTS ARRAY
-       ns=0; ne=ndata; allocate(delt(ns:ne))
-       fctr=half/(times(ne)-times(ns))
-       delt(ns)=fctr*(times(ns+1)-times(ns)); 
-       delt(ne)=fctr*(times(ne)-times(ne-1))
-    do n=ns+1,ne-1
-       delt(n)=fctr*(times(n+1)-times(n-1))
-    end do
-    do n=0,ndata
-       if (myid==0) then
-          write(*,"(f5.1,'% done')") real(n)*100.0e0/real(ndata)
-       end if
-       call getCp(n)
-       de(:,1)=(qo(:,1)-qa(:,1))
-       qb(:,1)=qb(:,1)+delt(n)*de(:,1)*de(:,1)
-    end do
-    qo(:,1)=sqrt(qb(:,1))
-   cinput='Cp'; call wffile(cinput,ndata+2,1)
-   !if (myid==7) then
-   !   varr(:)=qo(:,1)
-   !   call wavg('CpAVG',dir=2,wall=.false.)
-   !end if
-end if
+!if (fcp==1) then
+!   call getCp(ndata+1)
+!   qa(:,1)=qo(:,1)
+!   qb(:,1)=0
+!    if (myid==0) then
+!       write(*,"('Total amout of data: ',i3)") ndata
+!    end if
+!    ! CONSTRUCT THE COEFFICIENTS ARRAY
+!       ns=0; ne=ndata; allocate(delt(ns:ne))
+!       fctr=half/(times(ne)-times(ns))
+!       delt(ns)=fctr*(times(ns+1)-times(ns)); 
+!       delt(ne)=fctr*(times(ne)-times(ne-1))
+!    do n=ns+1,ne-1
+!       delt(n)=fctr*(times(n+1)-times(n-1))
+!    end do
+!    do n=0,ndata
+!       if (myid==0) then
+!          write(*,"(f5.1,'% done')") real(n)*100.0e0/real(ndata)
+!       end if
+!       call getCp(n)
+!       de(:,1)=(qo(:,1)-qa(:,1))
+!       qb(:,1)=qb(:,1)+delt(n)*de(:,1)*de(:,1)
+!    end do
+!    qo(:,1)=sqrt(qb(:,1))
+!   cinput='Cp'; call wffile(cinput,ndata+2,1)
+!   !if (myid==7) then
+!   !   varr(:)=qo(:,1)
+!   !   call wavg('CpAVG',dir=2,wall=.false.)
+!   !end if
+!end if
 
 !==COMPUTE RMS Cf
 !qb(:,1)=0
@@ -320,6 +321,17 @@ if (fstrip) then
 end if
 
 !call probCirc
+!call rdP3dF('Rij',0,6,fmblk)
+!varr=half*(fout(:,1)+fout(:,2)+fout(:,3))
+call rdP3dP(ndata+2,fmblk)
+varr=qo(:,5)
+call getijkMax(4,(/5,8/),(/(i,i=60,140,20)/),(/12,37,62,87,112,137,162,187/))
+call getvalMax(4,(/5,8/),ndata)
+
+!call rdP3dP(ndata+1,fmblk)
+!call getVGrad(ndata+1)
+!call wrP3dF('dUij',0,9,fmblk)
+
 
 !!==== SHIFT RESTART SOLUTION
 !fflag=.true.

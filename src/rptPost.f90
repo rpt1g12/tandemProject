@@ -11,6 +11,7 @@ use problemcase
 use mpi
 use rpt
 
+ real(k4), dimension(:,:,:), allocatable :: myarr
 contains
 
 !====================================================================================
@@ -542,8 +543,6 @@ contains
         implicit none
         integer, intent(in) :: nvar
 
-        !call rdP3dS(nvar,fmblk)
-        !p(:)=qo(:,5)
         de(:,1:3)=0
 
         rr(:,1)=qo(:,2)
@@ -567,12 +566,45 @@ contains
         qo(:,2)=de(:,1)*yaco(:);
         qo(:,3)=de(:,2)*yaco(:);
         qo(:,4)=de(:,3)*yaco(:)
-        !ra0=aoa*pi/180;ra1=cos(ra0);ra2=sin(ra0)
-        !ss(:,1)=de(:,1)!*ra1+de(:,2)*ra2
-        !ss(:,2)=de(:,2)!*ra1-de(:,1)*ra2
-        !ss(:,3)=de(:,3)
 
  end subroutine getCurl
+!====================================================================================
+!===== SUBROUTINE FOR CALCULATING VORTICITY
+!====================================================================================
+ subroutine getVGrad(nvar)
+
+        implicit none
+        integer, intent(in) :: nvar
+
+        if(allocated(fout)) deallocate(fout)
+        allocate(fout(0:lmx,9))
+
+        rr(:,1)=qo(:,2)
+        m=1; call mpigo(ntdrv,nrone,n45no,m);
+        call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+        fout(:,1)=rr(:,1)*xim(:,1)+rr(:,2)*etm(:,1)+rr(:,3)*zem(:,1)
+        fout(:,2)=rr(:,1)*xim(:,2)+rr(:,2)*etm(:,2)+rr(:,3)*zem(:,2)
+        fout(:,3)=rr(:,1)*xim(:,3)+rr(:,2)*etm(:,3)+rr(:,3)*zem(:,3)
+
+        rr(:,1)=qo(:,3)
+        m=2; call mpigo(ntdrv,nrone,n45no,m);
+        call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+        fout(:,4)=rr(:,1)*xim(:,1)+rr(:,2)*etm(:,1)+rr(:,3)*zem(:,1)
+        fout(:,5)=rr(:,1)*xim(:,2)+rr(:,2)*etm(:,2)+rr(:,3)*zem(:,2)
+        fout(:,6)=rr(:,1)*xim(:,3)+rr(:,2)*etm(:,3)+rr(:,3)*zem(:,3)
+
+        rr(:,1)=qo(:,4)
+        m=3; call mpigo(ntdrv,nrone,n45no,m);
+        call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+        fout(:,7)=rr(:,1)*xim(:,1)+rr(:,2)*etm(:,1)+rr(:,3)*zem(:,1)
+        fout(:,8)=rr(:,1)*xim(:,2)+rr(:,2)*etm(:,2)+rr(:,3)*zem(:,2)
+        fout(:,9)=rr(:,1)*xim(:,3)+rr(:,2)*etm(:,3)+rr(:,3)*zem(:,3)
+
+        do m = 1, 9
+           fout(:,m)=fout(:,m)*yaco(:)
+        end do
+
+ end subroutine getVGrad
 !====================================================================================
 !=====COMPUTE Q-CRITERION
 !====================================================================================
@@ -853,163 +885,210 @@ end subroutine flst
        qb(:,:)=sqrt(qb(:,:))
     end if
  end subroutine p3drms
-!====================================================================================
-!=====WRITE AVERAGE RESULTS IN TIME PLOT3D
-!====================================================================================
- subroutine p3dwaverage()
- integer :: n
-
-       if (myid==0) then
-         open(9,file='out/solA.qa'); close(9,status='delete')
-       end if
-       CALL MPI_BARRIER(icom,ierr)
-       open (unit=9, file='out/solA.qa', access='stream')
-       lh=0
-       if (myid==0) then
-        write(9,pos=4*lh+1) mbk+1; lh=lh+1 ! Number of zones
-        do mm = 0, mbk
-           write(9,pos=4*lh+1) int4(lximb(mm)+1); lh=lh+1 ! IMax
-           write(9,pos=4*lh+1) int4(letmb(mm)+1); lh=lh+1 ! JMax
-           write(9,pos=4*lh+1) int4(lzemb(mm)+1); lh=lh+1 ! KMax
-        end do
-        lhmb(mb)=lh
-        do mm = 0, mbk-1
-           lhmb(mm+1)=lhmb(mm)+4+5*(lximb(mm)+1)*(letmb(mm)+1)*(lzemb(mm)+1)
-        end do
-       end if
-        call MPI_BCAST(lhmb,mbk+1,MPI_INTEGER,0,icom,ierr)
-        if (myid==mo(mb)) then
-           lh=lhmb(mb)
-           write(9,pos=4*lh+1) real(amachoo,kind=4); lh=lh+1 ! Mach Number
-           write(9,pos=4*lh+1) real(aoa,kind=4); lh=lh+1  
-           write(9,pos=4*lh+1) real(reoo,kind=4); lh=lh+1 ! Reynolds Number
-           write(9,pos=4*lh+1) real(times(ndata),kind=4); lh=lh+1 ! Time
-        end if
-        lp=lpos(myid)+lhmb(mb)+4
-        ns=1; ne=5
-        do n=ns,ne; lq=(n-ns)*ltomb
-           selectcase(n)
-           case(1,5); varr(:)=qa(:,n)
-           case(2,3,4); varr(:)=qa(:,n)!*qa(:,1)
-           end select
-        do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-          write(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
-        end do; end do
-        end do
-        close(9)
-        CALL MPI_BARRIER(icom,ierr)
-        if (myid==0) then
-           write(*,"('Averaged Solution written!')") 
-        end if
- end subroutine p3dwaverage
-
 
 !====================================================================================
-!=====WRITE RMS RESULTS IN TIME PLOT3D
+!=====  PLOT3D F FILES Read
 !====================================================================================
- subroutine p3dwrms()
- integer :: n
+  subroutine rdP3dF(fname,nout,ndim,mblkin)
+     integer, intent(in),optional :: mblkin
+     integer, intent(in) :: nout,ndim
+     character(len=*), intent(in) :: fname
+     character(len=:),allocatable :: lfname
+     character(3) :: cout,cblk
+     character(len=*),parameter :: cext='.f',cpath='out/'
+     integer :: n,l,i,lh,iolen,foper,wrcom,nbk,err,mblk
+     integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
+     integer :: fh,amode,farr
+     integer(k4) :: ibuf
+     integer, dimension (4) :: gsizes,lsizes,starts
 
-       if (myid==0) then
-         open(9,file='out/solRMS.qa'); close(9,status='delete')
-       end if
-       CALL MPI_BARRIER(icom,ierr)
-       open (unit=9, file='out/solRMS.qa', access='stream',shared)
-       lh=0
-       if (myid==0) then
-        write(9,pos=4*lh+1) mbk+1; lh=lh+1 ! Number of zones
-        do mm = 0, mbk
-           write(9,pos=4*lh+1) int4(lximb(mm)+1); lh=lh+1 ! IMax
-           write(9,pos=4*lh+1) int4(letmb(mm)+1); lh=lh+1 ! JMax
-           write(9,pos=4*lh+1) int4(lzemb(mm)+1); lh=lh+1 ! KMax
+     ! rpt- Set default option to Multiblock
+     if(present(mblkin)) then
+        mblk=mblkin
+     else
+        mblk=1
+     end if
+
+     selectcase(mblk);
+     case(1)
+        cblk=''
+        foper=0
+        wrcom=icom
+        nbk=mbk
+     case(0)
+        write(cblk,"(i2,a)") mb,'n'
+        do i = 0, 1
+           l=scan(cblk,' ')
+           if (l==0) exit
+           cblk(l:l)='0'
         end do
-        lhmb(mb)=lh
-        do mm = 0, mbk-1
-           lhmb(mm+1)=lhmb(mm)+4+5*(lximb(mm)+1)*(letmb(mm)+1)*(lzemb(mm)+1)
-        end do
-       end if
-        call MPI_BCAST(lhmb,mbk+1,MPI_INTEGER,0,icom,ierr)
-        if (myid==mo(mb)) then
-           lh=lhmb(mb)
-           write(9,pos=4*lh+1) real(amachoo,kind=4); lh=lh+1 ! Mach Number
-           write(9,pos=4*lh+1) real(aoa,kind=4); lh=lh+1  
-           write(9,pos=4*lh+1) real(reoo,kind=4); lh=lh+1 ! Reynolds Number
-           write(9,pos=4*lh+1) real(times(ndata),kind=4); lh=lh+1 ! Time
-        end if
-        lp=lpos(myid)+lhmb(mb)+4
-        ns=1; ne=5
-        do n=ns,ne; lq=(n-ns)*ltomb
-           selectcase(n)
-           case(1,5); varr(:)=qb(:,n)
-           case(2,3,4); varr(:)=qb(:,n)!*qa(:,1)
-           end select
-        do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-          write(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
-        end do; end do
-        end do
-        close(9)
-        CALL MPI_BARRIER(icom,ierr)
-        if (myid==0) then
-           write(*,"('RMS Solution written!')") 
-        end if
- end subroutine p3dwrms
-!====================================================================================
-!=====WRITE FUNCTION FILE PLOT3D
-!====================================================================================
- subroutine wffile(fname,nout,ndim)
- integer, intent(in) :: nout,ndim
- character(16), intent(in) :: fname
- character(3) :: cout
- integer :: n,l,i
+        foper=mo(mb)
+        wrcom=bcom
+        nbk=0
+     case default
+        if(myid==0) write(*,*) 'Wrong multiblock option! Aborting...'
+        CALL MPI_ABORT(icom,err,ierr)
+     end select
+     write(cout,"(i3)") nout
+     do i = 0, 2
+        l=scan(cout,' ')
+        if (l==0) exit
+        cout(l:l)='0'
+     end do
+     l=len(cpath)+len(fname)+len(trim(cblk))+len(cout)+len(cext)
+     allocate(character(len=l) :: lfname)
+     lfname=cpath//trim(fname)//trim(cblk)//cout//cext
+
+     if (allocated(fout)) deallocate(fout)
+     if (.not.allocated(fout)) allocate(fout(0:lmx,ndim))
+     wrlen=ndim*(lmx+1)
+     amode=MPI_MODE_RDONLY
+
+     CALL MPI_TYPE_EXTENT(MPI_INTEGER4,iolen,ierr)
+     gsizes(:)=(/mbijkl(:),ndim/)
+     lsizes(:)=(/mpijkl(:),ndim/)
+     starts(:)=(/mpijks(:),0/)
+     CALL MPI_TYPE_CREATE_SUBARRAY(4,gsizes,lsizes,starts,MPI_ORDER_FORTRAN,MPI_REAL4,farr,ierr) 
+     CALL MPI_TYPE_COMMIT(farr,ierr)
+     
+     CALL MPI_FILE_OPEN(wrcom,lfname ,amode ,info ,fh,ierr)
  
-   write(cout,"(i3)") nout
-   do i = 0, 2
-   l=scan(cout,' ')
-   if (l==0) exit
-   cout(l:l)='0'
-   end do
+     lh=0
+     if (myid==foper) then
+      ibuf=nbk+1; offset=lh*iolen          ! Number of blocks
+      CALL MPI_FILE_READ_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+      do l = 0, nbk
+         mm=l+(1-mblk)*mb
+         ibuf=lximb(mm)+1; offset=lh*iolen ! IMax
+         CALL MPI_FILE_READ_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+         ibuf=letmb(mm)+1; offset=lh*iolen ! JMax
+         CALL MPI_FILE_READ_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+         ibuf=lzemb(mm)+1; offset=lh*iolen ! KMax
+         CALL MPI_FILE_READ_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+         ibuf=ndim; offset=lh*iolen        ! #Dimensions
+         CALL MPI_FILE_READ_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
+      end do
+     end if
+     l=(1-mblk)*mb
+     lhmb(l)=1+(nbk+1)*4
+     do mm = 0, nbk-1
+        lhmb(mm+1)=lhmb(mm)+ndim*(lximb(mm)+1)*(letmb(mm)+1)*(lzemb(mm)+1)
+     end do
+     disp=lhmb(mb)*iolen
+     CALL MPI_FILE_SET_VIEW(fh,disp,MPI_REAL4,farr,'native',info,ierr)
+     CALL MPI_FILE_READ_ALL(fh,fout,wrlen,MPI_REAL4,ista,ierr)
+     CALL MPI_FILE_CLOSE(fh,ierr)
+     CALL MPI_TYPE_FREE(farr,ierr)
+     if (myid==foper) then
+        write(*,"(a,' funtion read!')") trim(fname)//cout
+     end if
+  end subroutine rdP3dF
 
-   if (nout==(ndata+1)) then
-      cout='AVG'
-   elseif (nout==(ndata+2)) then
-      cout='RMS'
-   end if
+!===================================================================================
+!=====  PLOT3D Q FILES READ POST AT POSITION
+!===================================================================================
+  subroutine rdP3dPat(nout,blk,nxk,pos,mblkin,cname)
+     integer, intent(in),optional :: mblkin
+     integer, intent(in) :: nout,blk
+     integer, dimension(2), intent(in) :: nxk
+     integer, dimension(3,nxk(1),nxk(2)), intent(in) :: pos
+     character(*), intent(in),optional :: cname
+     character(*),parameter :: fname='solT'
+     character(:),allocatable :: lfname
+     character(3) :: cout,ncout
+     character(8) :: ctime
+     character(:), allocatable :: cext
+     character(len=*),parameter :: cext0='.q',cext1='.qa',cpath='out/'
+     integer :: n,l,i,k,mm,m,lh,iolen,nbk,err,mblk
+     integer :: disp
+     integer(k4) :: ibuf
+     real   (k4) :: rbuf
 
-   if (myid==0) then
-     open(9,file='out/'//trim(fname)//cout//'.f'); close(9,status='delete')
-   end if
-   CALL MPI_BARRIER(icom,ierr)
-   open (unit=9, file='out/'//trim(fname)//cout//'.f', access='stream',shared)
-   lh=0
-   if (myid==0) then
-    write(9,pos=4*lh+1) mbk+1; lh=lh+1 ! Number of zones
-    do mm = 0, mbk
-       write(9,pos=4*lh+1) int4(lximb(mm)+1); lh=lh+1 ! IMax
-       write(9,pos=4*lh+1) int4(letmb(mm)+1); lh=lh+1 ! JMax
-       write(9,pos=4*lh+1) int4(lzemb(mm)+1); lh=lh+1 ! KMax
-       write(9,pos=4*lh+1) int4(ndim); lh=lh+1 ! #dimensions
-    end do
-    lhmb(mb)=lh
-    do mm = 0, mbk-1
-       lhmb(mm+1)=lhmb(mm)+ndim*(lximb(mm)+1)*(letmb(mm)+1)*(lzemb(mm)+1)
-    end do
-   end if
-   call MPI_BCAST(lhmb,mbk+1,MPI_INTEGER,0,icom,ierr)
-   lp=lpos(myid)+lhmb(mb)
-   ns=1; ne=ndim
-   do n=ns,ne; lq=(n-ns)*ltomb
-   varr(:)=qo(:,n)
-   do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
-     write(9,pos=4*(lp+lq+lio(j,k))+1) varr(l:l+lxi) ! 4-Bytes "Stream"
-   end do; end do
-   end do
-   close(9)
-   CALL MPI_BARRIER(icom,ierr)
-   if (myid==0) then
-      write(*,"(a,' funtion written!')") trim(fname)//cout
-   end if
- end subroutine wffile
+        ! rpt- Set default option to Multiblock
+        if(present(mblkin)) then
+           mblk=mblkin
+        else
+           mblk=1
+        end if
 
+        selectcase(mblk);
+        case(1)
+           cout=''
+           nbk=mbk
+        case(0)
+           write(cout,"(a,i2)") 'b',blk
+           do i = 0, 1
+              l=scan(cout,' ')
+              if (l==0) exit
+              cout(l:l)='0'
+           end do
+           nbk=0
+        case default
+           if(myid==0) write(*,*) 'Wrong multiblock option! Aborting...'
+           CALL MPI_ABORT(icom,err,ierr)
+        end select
+
+
+        ! rpt- Set default option to Multiblock
+        if(present(cname)) then
+           write(ncout,"(i3)") nout
+           do i = 0, 2
+              l=scan(ncout,' ')
+              if (l==0) exit
+              ncout(l:l)='0'
+           end do
+           ctime=trim(cname)//ncout
+           allocate(character(len=len(cext1)) :: cext)
+           cext=cext1
+        else
+           if (nout.le.ndata) then
+              write(ctime,"(f8.4)") times(nout)
+              do i = 0, 8
+                 l=scan(ctime,' ')
+                 if (l==0) exit
+                 ctime(l:l)='0'
+              end do
+              allocate(character(len=len(cext0)) :: cext)
+              cext=cext0
+           else if (nout==ndata+1) then
+              ctime='A'
+              allocate(character(len=len(cext1)) :: cext)
+              cext=cext1
+           else if (nout==ndata+2) then
+              ctime='RMS'
+              allocate(character(len=len(cext1)) :: cext)
+              cext=cext1
+           end if
+        end if
+
+        l=len(cpath)+len(fname)+len(trim(adjustl(ctime)))+len(trim(cout))+len(cext)
+        allocate(character(len=l) :: lfname)
+        lfname=cpath//trim(fname)//trim(adjustl(ctime))//trim(cout)//cext
+
+        CALL MPI_TYPE_EXTENT(MPI_INTEGER4,iolen,ierr)
+
+        l=(1-mblk)*nbk
+        lhmb(l)=1+(nbk+1)*3
+        do mm = 0, nbk-1
+           lhmb(mm+1)=lhmb(mm)+4+5*(lximb(mm)+1)*(letmb(mm)+1)*(lzemb(mm)+1)
+        end do
+
+        open(91,file=trim(lfname),access='stream',form='unformatted') 
+        if(.not.allocated(mval)) allocate(mval(nxk(1),nxk(2),5,0:ndata+2))
+        lq=(lximb(blk)+1)*(letmb(blk)+1)*(lzemb(blk)+1)
+        do m = 0, 4
+           disp=(lhmb(blk)+4+lq*m)*iolen
+           do k = 1, nxk(2)
+              do i = 1, nxk(1)
+                 iopos=pos(3,i,k)*(lximb(blk)+1)*(letmb(blk)+1)
+                 iopos=iopos+pos(2,i,k)*(lximb(blk)+1)
+                 iopos=(iopos+pos(1,i,k))*iolen
+                 read(91,pos=disp+iopos+1) mval(i,k,m+1,nout) 
+              end do
+           end do
+        end do
+
+  end subroutine rdP3dPat
 !===================================================================================
 !=====  PLOT3D Q FILES READ POST
 !===================================================================================
@@ -1514,7 +1593,7 @@ implicit none
                do ll = nklprob(1,k,n), nklprob(2,k,n); l=lprob(ll)
                   ra0=ra0+aprob(ll)*varr(l)
                end do
-   CALL MPI_REDUCE(ra0,probze(k,m,n),1,MPI_REAL8,MPI_SUM,0,probcom(n),ierr)
+               CALL MPI_REDUCE(ra0,probze(k,m,n),1,MPI_REAL8,MPI_SUM,0,probcom(n),ierr)
             end do
          else
             ra0=0
@@ -1531,7 +1610,7 @@ implicit none
       end do
       if(myid==mprob(n).and.probflag(n)) then
          write(*,"('Processor ',i2,' writing probe ',i2)") myid,n
-         open (unit=50+n, file='out/circ'//cprob//'.dat')
+         open(unit=50+n, file='out/circ'//cprob//'.dat')
          write(50+n,"('t* circ (',f8.4,',',f8.4,')')") xyprob(1,n),xyprob(2,n)
          do m = 0, ndata
             write(50+n,"(102(es15.7))") times(m),probze(:,m,n)
@@ -1543,6 +1622,198 @@ implicit none
    CALL MPI_BARRIER(icom,ierr)
 
 end subroutine probCirc
+
+subroutine getijkMax(blk,nxk,xs,ks)
+implicit none
+integer, intent(in) :: blk
+integer, dimension(2), intent(in) :: nxk
+integer(k4) , dimension(nxk(1)), intent (in) :: xs
+integer(k4) , dimension(nxk(2)), intent (in) :: ks
+integer(k4) :: pos,mymaxid,flg,flg2
+integer(k4) , dimension(nxk(1),nxk(2)) :: maxflag,maxcom
+integer(k4) , dimension(nxk(2)) :: maxkcom
+real(k4), dimension(0:npc(blk,2)-1) :: val
+real(k4), dimension(3) :: sdval
+integer(k4), dimension(3) :: sdpos
+real(k4), dimension(0:let) :: jvarr
+real(k4) :: rsp0,rsp1
+
+maxflag=0
+color=0
+allocate(maxpos(3,nxk(1),nxk(2)),maxxyz(3,nxk(1),nxk(2)))
+
+   if (mb==blk) then
+      do k = 1, nxk(2)
+         if ((mpijks(3).le.ks(k)).and.(mpijke(3).ge.ks(k))) then
+            do i = 1, nxk(1)
+               if ((mpijks(1).le.xs(i)).and.(mpijke(1).ge.xs(i))) then
+                  maxflag(i,k)=1
+               end if
+            end do
+         end if
+      end do
+      do k = 1, nxk(2)
+        do i = 1, nxk(1)
+           color=maxflag(i,k)
+           call MPI_COMM_SPLIT(bcom,color,myid,maxcom(i,k),ierr)
+        end do
+      end do
+      do k = 1, nxk(2);kk=ks(k)-mpijks(3)
+        do i = 1, nxk(1);ii=xs(i)-mpijks(1)
+           if (maxflag(i,k)==1) then
+              do j = 0, let;ll=indx3(ii,j,kk,1)
+                 jvarr(j)=varr(ll)
+              end do
+              rsp0=maxval(jvarr(:))
+              pos=maxloc(jvarr(:),1)-1
+              CALL MPI_ALLGATHER(rsp0,1,MPI_REAL4,val,1,MPI_REAL4,maxcom(i,k),ierr)
+              rsp1=maxval(val)
+              if (rsp0==rsp1) then
+                 maxpos(1,i,k)=xs(i)
+                 maxpos(2,i,k)=pos+mpijks(2)
+                 maxpos(3,i,k)=ks(k)
+              else 
+                 maxflag(i,k)=0
+              end if
+           end if
+        end do
+      end do
+      do k = 1, nxk(2)
+         do i = 1, nxk(1)
+            call MPI_COMM_FREE(maxcom(i,k),ierr)
+         end do
+      end do
+      do k = 1, nxk(2)
+         l=sum(maxflag(:,k))
+         if (l>0) then
+            color=1
+         else
+            color=MPI_UNDEFINED
+         end if
+         call MPI_COMM_SPLIT(bcom,color,myid,maxkcom(k),ierr)
+         if (color==1) then
+            CALL MPI_COMM_RANK(maxkcom(k),mymaxid,ierr) 
+            if (mymaxid==0) then
+               do i = 1, nxk(1)
+                  if (maxflag(i,k)==1) then
+                      ii=maxpos(1,i,k)-mpijks(1)
+                      jj=maxpos(2,i,k)-mpijks(2)
+                      kk=maxpos(3,i,k)-mpijks(3)
+                      l=indx3(ii,jj,kk,1)
+                      maxxyz(:,i,k)=xyz(l,:)
+                  else
+                     CALL MPI_RECV(maxxyz(1,i,k),3,MPI_REAL4,MPI_ANY_SOURCE,i,&
+                                   maxkcom(k),ista,ierr)
+                     CALL MPI_RECV(maxpos(1,i,k),3,MPI_INTEGER,MPI_ANY_SOURCE,i,&
+                                   maxkcom(k),ista,ierr)
+                  end if
+                  flg=nxk(1)*(k-1)+i
+                  flg2=flg+(nxk(1)*nxk(2))
+                  CALL MPI_SEND(maxpos(1,i,k),3,MPI_INTEGER,0,flg,icom,ierr)
+                  CALL MPI_SEND(maxxyz(1,i,k),3,MPI_REAL4,0,flg2,icom,ierr)
+               end do
+            else
+               do i = 1, nxk(1)
+                  if (maxflag(i,k)==1) then
+                      ii=maxpos(1,i,k)-mpijks(1)
+                      jj=maxpos(2,i,k)-mpijks(2)
+                      kk=maxpos(3,i,k)-mpijks(3)
+                      l=indx3(ii,jj,kk,1)
+                      sdval(:)=xyz(l,:)
+                      sdpos(:)=maxpos(:,i,k)
+                     CALL MPI_SEND(sdval,3,MPI_REAL4,0,i,maxkcom(k),ierr)
+                     CALL MPI_SEND(sdpos,3,MPI_INTEGER,0,i,maxkcom(k),ierr)
+                  end if
+               end do
+            end if
+         end if
+      end do
+   end if
+
+   if (myid==0) then
+      do k = 1, nxk(2)
+         write(*,"(a,x,i2,7x,a,x,i3)") 'nk =',k,'ze =',ks(k)
+         write(*,"(a,7x,a,7x,a,7x,a,7x,a,7x,a)") 'xi','et','ze','x','y','z'
+         do i = 1, nxk(1)
+            flg=nxk(1)*(k-1)+i
+            flg2=flg+(nxk(1)*nxk(2))
+            CALL MPI_RECV(maxpos(1,i,k),3,MPI_INTEGER,MPI_ANY_SOURCE,flg,icom,ista,ierr)
+            CALL MPI_RECV(maxxyz(1,i,k),3,MPI_REAL4,MPI_ANY_SOURCE,flg2,icom,ista,ierr)
+            write(*,"(i3,7x,i3,7x,i3,7x,f7.3,7x,f7.3,7x,f7.3)")&
+            maxpos(1,i,k),maxpos(2,i,k),maxpos(3,i,k),maxxyz(1,i,k),maxxyz(2,i,k),maxxyz(3,i,k)
+         end do
+      end do
+   end if
+
+   ll=3*nxk(1)*nxk(2)
+   CALL MPI_BCAST(maxpos,ll,MPI_INTEGER,0,icom,ierr)
+   CALL MPI_BCAST(maxxyz,ll,MPI_REAL4,0,icom,ierr)
+
+end subroutine getijkMax
+
+subroutine getvalMax(blk,nxk,nout)
+implicit none
+integer, intent(in) :: blk,nout
+integer, dimension(2), intent(in) :: nxk
+   
+   allocate(nose(0:npro-1,2))
+   lq=nout
+   lp=lq/20
+   do m = 0, npro-1
+      nose(m,1)=m*(lq+1)/npro+min(m,mod((lq+1),npro))
+      nose(m,2)=nose(m,1)+(lq+1)/npro+max(0,min(1,mod((lq+1),npro)-1))
+   end do
+   mm=0
+   do m = nose(myid,1), nose(myid,2)
+      mm=mm+1
+      call rdP3dPat(m,blk,nxk,maxpos)
+      if (mod(m,lp)==0) then
+         write(*,"(a,x,i4,x,a,f7.3,x,a)") 'Snap',m,'@',times(m),'read!'
+      end if
+   end do
+   
+   if (myid==0) then
+      do m = 1, npro-1
+         l=nose(m,1);ll=(nose(m,2)-nose(m,1)+1)*nxk(1)*nxk(2)*5
+         CALL MPI_RECV(mval(1,1,1,l),ll,MPI_REAL4,MPI_ANY_SOURCE,m,icom,ista,ierr)
+      end do
+   else
+      l=nose(myid,1);ll=(nose(myid,2)-nose(myid,1)+1)*nxk(1)*nxk(2)*5
+      CALL MPI_SEND(mval(1,1,1,l),ll,MPI_REAL4,0,myid,icom,ierr)
+   end if
+   
+   ll=(ndata+1)*nxk(1)*nxk(2)*5
+   CALL MPI_BCAST(mval,ll,MPI_REAL4,0,icom,ierr)
+   do k = 1, nxk(2)
+      if (myid==k-1) then
+      write(cinput,"(i3)") k
+      cstring='maxpln'//trim(adjustl(cinput))//'.dat'
+      open(unit=100, file=trim(adjustl(cstring)))
+      write(100,"(a,7x)",advance='no') 't'
+      do i = 1, nxk(1)-1
+         write(cinput,"(i3)") i
+         write(100,"(a,7x,a,7x,a,7x,a,7x,a,7x)",advance='no')&
+         'rho'//trim(adjustl(cinput)),'u'//trim(adjustl(cinput)),'v'//trim(adjustl(cinput)),&
+         'w'//trim(adjustl(cinput)),'p'//trim(adjustl(cinput))
+      end do
+         write(cinput,"(i3)") nxk(1)
+         write(100,"(a,7x,a,7x,a,7x,a,7x,a,7x)")&
+         'rho'//trim(adjustl(cinput)),'u'//trim(adjustl(cinput)),'v'//trim(adjustl(cinput)),&
+         'w'//trim(adjustl(cinput)),'p'//trim(adjustl(cinput))
+      do m = 0,ndata
+         write(100,"(es15.7,7x)",advance='no') times(m)
+         do i = 1, nxk(1)-1
+            write(100,"(es15.7,7x,es15.7,7x,es15.7,7x,es15.7,7x,es15.7,7x)",advance='no')&
+            mval(i,k,:,m)
+         end do
+         write(100,"(es15.7,7x,es15.7,7x,es15.7,7x,es15.7,7x,es15.7,7x)")&
+         mval(i,k,:,m)
+      end do
+      write(*,"(a,x,a)") trim(adjustl(cstring)),'written!'
+      close(100)
+      end if
+   end do
+end subroutine getvalMax
 !*****
 
 end module rptpost
