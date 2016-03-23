@@ -814,12 +814,15 @@ end subroutine flst
           delt(n)=fctr*(times(n+1)-times(n-1))
        end do
           qa(:,:)=0
-       nn=ndata*0.05_k8
+       nn=ndata*0.01_k8
+       wts=0
        do n=0,ndata
        !if (myid==foper) then
           if (mod(n,nn)==0) then
-             write(*,"('Block ',i2,x,f5.1,'% Averaged',a)")&
-             mb,real(n)*100.0e0/real(ndata),cout
+             wte=MPI_WTIME(); res=wte-wts
+             write(*,"('Block ',i2,x,f5.1,'% Averaged',a,' took ',f5.1,'s')")&
+             mb,real(n)*100.0e0/real(ndata),cout,res
+             wts=MPI_WTIME()
           end if
        !end if
           call rdP3dS(n,fmblk)
@@ -1756,19 +1759,26 @@ implicit none
 integer, intent(in) :: blk,nout
 integer, dimension(2), intent(in) :: nxk
    
-   allocate(nose(0:npro-1,2))
+   if(.not.allocated(nose)) allocate(nose(0:npro-1,2))
    lq=nout
    lp=lq/20
+   mm=mod((lq+1),npro)
    do m = 0, npro-1
-      nose(m,1)=m*(lq+1)/npro+min(m,mod((lq+1),npro))
-      nose(m,2)=nose(m,1)+(lq+1)/npro+max(0,min(1,mod((lq+1),npro)-1))
+      nose(m,1)=m*((lq+1)/npro)+min(m,mm)
+      nose(m,2)=nose(m,1)+(lq+1)/npro+min(1,mm/(m+1))-1
    end do
+   if (myid==0) then
+   write(*,*) mm
+       do i = 0, npro-1
+          write(*,"(i3,5x,i5,5x,i5,5x,i5)") i,nose(i,:),nose(i,2)-nose(i,1)+1
+       end do
+   end if
    mm=0
    do m = nose(myid,1), nose(myid,2)
       mm=mm+1
       call rdP3dPat(m,blk,nxk,maxpos)
-      if (mod(m,lp)==0) then
-         write(*,"(a,x,i4,x,a,f7.3,x,a)") 'Snap',m,'@',times(m),'read!'
+      if (mod(mm,lp)==0) then
+         write(*,"(a,x,i4,a,x,i4,x,a,f7.3,x,a)") 'Process:',myid,'Snap',m,'@',times(m),'read!'
       end if
    end do
    
