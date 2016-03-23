@@ -198,7 +198,7 @@ end if
 !   !end if
 !end if
 
-!==WRITE WSS+Cf+Cp
+!==WRITE Cf+WSS+Cp
 if (fwss==1) then
       call gettw(ndata+1)
       ra0=two/(amachoo**2)
@@ -328,9 +328,9 @@ varr=qo(:,5)
 call getijkMax(4,(/9,4/),(/(i,i=60,140,10)/),(/12,37,62,87/))
 call getvalMax(4,(/9,4/),ndata)
 
-!call rdP3dP(ndata+1,fmblk)
-!call getVGrad(ndata+1)
-!call wrP3dF('dUij',0,9,fmblk)
+call rdP3dP(ndata+1,fmblk)
+call getVGrad(ndata+1)
+call wrP3dF('dUij',0,9,fmblk)
 
 
 !!==== SHIFT RESTART SOLUTION
