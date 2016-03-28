@@ -1761,7 +1761,6 @@ integer, dimension(2), intent(in) :: nxk
    
    if(.not.allocated(nose)) allocate(nose(0:npro-1,2))
    lq=nout
-   lp=lq/20
    mm=mod((lq+1),npro)
    do m = 0, npro-1
       nose(m,1)=m*((lq+1)/npro)+min(m,mm)
@@ -1773,12 +1772,13 @@ integer, dimension(2), intent(in) :: nxk
           write(*,"(i3,5x,i5,5x,i5,5x,i5)") i,nose(i,:),nose(i,2)-nose(i,1)+1
        end do
    end if
+   lp=(nose(myid,2)-nose(myid,1))/((nose(myid,2)-nose(myid,1))*0.1e0)
    mm=0
    do m = nose(myid,1), nose(myid,2)
       mm=mm+1
       call rdP3dPat(m,blk,nxk,maxpos)
       if (mod(mm,lp)==0) then
-         write(*,"(a,x,i4,a,x,i4,x,a,f7.3,x,a)") 'Process:',myid,'Snap',m,'@',times(m),'read!'
+         write(*,"(a,x,i4,x,a,x,i4,x,a,f7.3,x,a)") 'Process:',myid,'Snap',m,'@',times(m),'read!'
       end if
    end do
    
