@@ -994,13 +994,26 @@ end do
 !====================================================================================
  subroutine spanCopy()
  integer :: lmx2,lmxdif
+ integer :: i,j,k,kk,l,ll,nn,lp
 
- lmx2=size(qb(:,1))
- lmxdif=lmx2-lmx
- write(*,*) lmx,lmx2,lmxdif
+ !lmx2=size(qb(:,1))
+ !lmxdif=lmx2-lmx
+ !write(*,*) lmx,lmx2,lmxdif
+ !write(*,*) myid,mpijkl,lxii,leti,lzei
 
-            qb(0:lmx,:)=qo(0:lmx,:)
-            qb(lmx+1:lmx2,:)=qo(0:lmxdif,:)
+ !           qb(0:lmx,:)=qo(0:lmx,:)
+ !           qb(lmx+1:lmx2,:)=qo(0:lmxdif,:)
+ lp=(lxi+1)*(let+1)-1
+do nn = 1, 5
+   do k = 0, lzei
+      kk=k
+      if (kk>lze) then
+         kk=k-lze
+      end if
+      ll=indx4(0,0,k,1);l=indx3(0,0,kk,1)
+      qb(ll:ll+lp,nn)=qo(l:l+lp,nn)
+   end do
+end do
     
  end subroutine spanCopy
 
