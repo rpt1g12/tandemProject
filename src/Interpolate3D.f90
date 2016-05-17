@@ -36,7 +36,7 @@
    call setup(1)
 lxii=lxi;leti=let;lzei=lze
 write(*,*) myid,lxi,let,lze
-lxiio=lxio;letio=leto;lzeio=lzeo
+lxiio=lxio;letio=leto;lzeio=lzeo;ilmx=lmx
 allocate(qb(0:lmx,5))
 call prepareArrays
    allocate(xyz2(0:lmx,3),ixis(0:lmx,3))
@@ -56,8 +56,9 @@ call prepareArrays
 !        end do
 !      call wrP3dG
    end if
-   call rdRsta
-   ndati=ndata;call wrP3dS
+   !call rdRsta
+   !write(*,*) n,ndt,dt,dts,dte,timo
+   !ndati=ndata;call wrP3dS
 
 call deallocateArrays
 
@@ -100,7 +101,8 @@ if (iflag) then
    !   call getDeri(n)
    !   call interpolate(n,tol)
    !end do
-   call spanCopy
+   !call spanCopy
+   call spanAvg
    
    
    call deallocateArrays

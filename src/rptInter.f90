@@ -34,7 +34,7 @@ integer, dimension(:), allocatable :: olximb,oletmb,olzemb
 integer, dimension(:), allocatable :: olxibk,oletbk,olzebk
 logical :: iflag,igflag
  character(20) :: icrestart
- integer(ni) :: niter
+ integer(ni) :: niter,ilmx
 contains
 
 subroutine interSetUp()
@@ -993,16 +993,42 @@ end do
 !=====COPY OVER SPAN
 !====================================================================================
  subroutine spanCopy()
- integer :: lmx2,lmxdif
+ integer :: i,j,k,kk,l,l2
 
- lmx2=size(qb(:,1))
- lmxdif=lmx2-lmx
- write(*,*) lmx,lmx2,lmxdif
-
-            qb(0:lmx,:)=qo(0:lmx,:)
-            qb(lmx+1:lmx2,:)=qo(0:lmxdif,:)
+ do k = 0, lzei
+    kk=k-(k/lze)*lze
+    if(myid==0)write(*,*) k/lze,kk
+    do j = 0, leti
+       do i = 0, lxii; l=indx4(i,j,k,1); l2=indx3(i,j,kk,1)
+          qb(l,:)=qo(l2,:)
+       end do
+    end do
+ end do
     
  end subroutine spanCopy
+!====================================================================================
+!=====COPY OVER SPAN ITS SPAN-AVERAGE
+!====================================================================================
+ subroutine spanAvg()
+ integer :: i,j,k,kk,l,l2,plmx
+
+ plmx=nbsize(3)-1
+ qa(0:plmx,:)=zero
+ do k = 0, lze; l=k*(plmx+1)
+    qa(0:plmx,:)=qa(0:plmx,:)+qo(l:l+plmx,:)
+ end do
+ ra1=1.0_k8/real(lze+1,k8)
+ qa(0:plmx,:)=qa(0:plmx,:)*ra1
+ do k = 0, lzei
+    if(myid==0)write(*,*) k
+    do j = 0, leti
+       do i = 0, lxii; l=indx4(i,j,k,1); l2=indx3(i,j,0,1)
+          qb(l,:)=qa(l2,:)
+       end do
+    end do
+ end do
+    
+ end subroutine spanAvg
 
 !===== FUNCTION FOR MAIN INDEX TRANSFORMATION IN 3D
 
