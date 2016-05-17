@@ -993,17 +993,20 @@ end do
 !=====COPY OVER SPAN
 !====================================================================================
  subroutine spanCopy()
- integer :: i,j,k,kk,l,l2
+ integer :: lmx2,lmxdif
+ integer :: i,j,k,kk,l,ll,nn,lp
 
- do k = 0, lzei
-    kk=k-(k/lze)*lze
-    if(myid==0)write(*,*) k/lze,kk
-    do j = 0, leti
-       do i = 0, lxii; l=indx4(i,j,k,1); l2=indx3(i,j,kk,1)
-          qb(l,:)=qo(l2,:)
-       end do
-    end do
- end do
+ lp=(lxi+1)*(let+1)-1
+do nn = 1, 5
+   do k = 0, lzei
+      kk=k
+      if (kk>lze) then
+         kk=k-lze
+      end if
+      ll=indx4(0,0,k,1);l=indx3(0,0,kk,1)
+      qb(ll:ll+lp,nn)=qo(l:l+lp,nn)
+   end do
+end do
     
  end subroutine spanCopy
 !====================================================================================
