@@ -350,8 +350,8 @@ contains
     if (fintg) then
        call intgUp(rdis,xpos,ypos,atk)
     end if
-    !nprob=10
-    !call probUp(nprob,(/0.0_k8,0.3_k8/),(/1.0_k8,0.6_k8/))
+    nprob=31
+    call probUp(nprob,(/-0.5_k8,0.15_k8/),(/0.48_k8,0.15_k8/),0.01_k8)
 
  do nn=1,3; do ip=0,1; i=ip*ijk(1,nn)
  do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
@@ -370,7 +370,8 @@ contains
      cbca(:,:)=zero; cbca(1,1:2)=albed(1:2,0,0);
      cbca(2,1:3)=albed(0:2,1,0); cbca(3,1:3)=albed(-1:1,2,0)
   if(mbci>=4) then
-     cbca(3,4)=albed(2,2,0)
+     ii=min(4,mbci)
+     cbca(3,ii)=albed(2,2,0)
      do i=4,mbci
         cbca(i,i-3:i)=(/beta,alpha,one,alpha/);
         if(i<mbci) then; cbca(i,i+1)=beta; end if
@@ -1504,8 +1505,9 @@ implicit none
       ra0=sqrt(dirprob(1)**2+dirprob(2)**2)/(nprob-1)
       rprob=ra0*half
       dirprob(:)=dirprob(:)/(nprob-1)
-      if (present(orprob).and.(orprob<0)) then
+      if (present(orprob)) then
          rprob=orprob
+         if(myid==0) write(*,*) rprob
       end if
    else 
       if (present(orprob)) then
@@ -1527,7 +1529,7 @@ implicit none
    if (rprob<0) then
    ! in development
    else
-      r2prob=rprob**2;ll=-1
+      r2prob=rprob**2;ll=0
       do n = 1, nprob
          nlprob(1,n)=ll
          do k = 0, lze
@@ -1545,7 +1547,7 @@ implicit none
          nlprob(2,n)=ll
       end do
       lcprob=ll
-      if(lcprob.ne.-1) then
+      if(lcprob>0) then
          allocate(lprob(0:lcprob),aprob(0:lcprob),&
                   vprob(0:lcprob))
          do ll = 0, lcprob; l=de(ll,5); lprob(ll)=l
@@ -1570,7 +1572,7 @@ implicit none
          if (probflag(n)) then
             CALL MPI_ALLREDUCE(myid,mprob(n),1,MPI_INTEGER4,MPI_MIN,probcom(n),ierr)
             write(*,*)&
-            myid,mprob(n),n,sum(aprob(nlprob(1,n):nlprob(2,n)))/(lze+1)
+            myid,mprob(n),n,sum(aprob(nlprob(1,n):nlprob(2,n)))/(lze+1),nlprob(1,n),nlprob(2,n)
          end if
       end do
 
@@ -1579,23 +1581,28 @@ implicit none
    
 end subroutine probUp
 
-subroutine probCirc()
+subroutine probCirc(ntotal)
 implicit none
+   integer, intent(in) :: ntotal
    integer :: l,ll,n,m
-   real(k8), dimension (0:lze,0:ndata,nprob) :: probze
+   real(k8), dimension(:,:,:), allocatable :: probze
    character(3) :: cprob
-
-   do m = 0, ndata
-      call rdP3dP(m,fmblk,'Q+W')
+   
+ 
+   do m = 0, ntotal
+      call rdP3dP(m,fmblk)
       varr(:)=qo(:,5)
       do n = 1, nprob
-         probze(:,m,n)=0
          if (probflag(n)) then
+         probze(:,m,n)=0
+         if(.not.allocated(probze)) allocate(probze(0:lze,0:ntotal,nprob))
             do k = 0, lze
             ra0=0
                do ll = nklprob(1,k,n), nklprob(2,k,n); l=lprob(ll)
                   ra0=ra0+aprob(ll)*varr(l)
                end do
+               ra1=sum(aprob(nklprob(1,k,n):nklprob(2,k,n)))
+               ra0=ra0/ra1
                CALL MPI_REDUCE(ra0,probze(k,m,n),1,MPI_REAL8,MPI_SUM,0,probcom(n),ierr)
             end do
          else
@@ -1615,8 +1622,8 @@ implicit none
          write(*,"('Processor ',i2,' writing probe ',i2)") myid,n
          open(unit=50+n, file='out/circ'//cprob//'.dat')
          write(50+n,"('t* circ (',f8.4,',',f8.4,')')") xyprob(1,n),xyprob(2,n)
-         do m = 0, ndata
-            write(50+n,"(102(es15.7))") times(m),probze(:,m,n)
+         do m = 0, ntotal
+            write(50+n,"(202(es15.7))") times(m),probze(:,m,n)
          end do
          close(50+n)
          write(*,"('Finished writing probe ',i2)") n
