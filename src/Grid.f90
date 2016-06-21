@@ -102,7 +102,7 @@ module gridgen
     shs1=ximod*smgrid; ! rpt-LE xi size 
     shs2=etamod*smgrid;! rpt-LE eta size
     she1=shs2          ! rpt-TE size both xi and eta
-    smod(:)=(/4,20/) ! grid size modifiers
+    smod(:)=(/4,15/) ! grid size modifiers
 
     allocate(xx(0:lxit,0:lett),yy(0:lxit,0:lett),zz(0:lxit,0:lett),zs(0:lzebk(0)))
 
@@ -132,12 +132,12 @@ if(myid==mo(mb)) then
 !---Wake Refinement
     nwk(0)=int(lxibk(2)*0.65e0) ! rpt-Wake box #xi points
     nwk(1)=int(letbk(1)*0.35e0) ! rpt-Wake box #eta points
-    nwk2(0)=0.9e0*nwk(0) !rpt-wake refinement in outflow #xi points
-    nwk2(1)=0.5e0*nwk(1) !rpt-wake refinement in outflow #eta points
+    nwk2(0)=0.75e0*nwk(0) !rpt-wake refinement in outflow #xi points
+    nwk2(1)=1.0e0*nwk(1) !rpt-wake refinement in outflow #eta points
     lwk(1)=0.5e0*c1 ! rpt-Wake box size eta direction
     lwk(0)=1.5e0*c1!real(nwk(0)/nwk(1))*lwk(1) ! rpt-Wake box size xi direction
-    lwk2(0)=2.0*lwk(0) !rpt-wake refinement in outflow xi length
-    lwk2(1)=1.0e0*lwk(1) !rpt-wake refinement in outflow eta length
+    lwk2(0)=1.5*lwk(0) !rpt-wake refinement in outflow xi length
+    lwk2(1)=2.0e0*lwk(1) !rpt-wake refinement in outflow eta length
     if (myid==0) then
        write(*,"('Wake box size: xi=',f8.4,' eta=',f8.4)")&
        lwk(0),lwk(1)
@@ -238,7 +238,7 @@ if(myid==mo(mb)) then
    if (n.ne.npy) then !(all but the top boundary)
    !--3-(3+lwk(0)) Trailing edge wake box refinement
      ip=lxise(2,0); im=nwk(0)
-     tmpa=px(3,n);sha=she1;tmpb=px(3,n)+lwk(0);shb=sml
+     tmpa=px(3,n);sha=she1;tmpb=px(3,n)+lwk(0);shb=sml;ra0=sha
      call gridf(xp(:,n),pxi(:,n),tmpa,tmpb,sha,shb,lxit,im,ip)
          if (k==0.and.myid==0) then
             if(n==1) write(*,*) 'mesh size',pxi(ip+im,n)/ra0
@@ -347,7 +347,7 @@ if(myid==mo(mb)) then
       else !(right boundary)
          !-BLOCK0
          !-(2-0.5lwk(1))-2 LE curve-LE
-         im=nwk2(1)
+         im=half*nwk2(1)
          ip=letse(0,1)-im;
          tmpa=py(2,n)-lwk2(1);sha=sml;tmpb=py(2,n);shb=shs2*cos(pi4+delt1)*smod(1)
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
@@ -356,14 +356,23 @@ if(myid==mo(mb)) then
          tmpa=py(0,n);sha=sml;tmpb=py(2,n)-lwk2(1);shb=qet(im,n)
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
          !-BLOCK1
+         !test
+         !ip=letse(1,0); im=half*nwk2(1)
+         !tmpa=py(2,n);sha=shs2*cos(pi4-delt1)*smod(1);ra0=sha
+         !if(myid==0.and.k==0) write(*,*) ip,im 
+         !call cgridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
+         !ip=ip+im; im=nwk2(1)-im;
+         !tmpa=tmpb;sha=shb;ra0=sha
          !!-3-(3+lwk(1)) LE->LE curve
-         ip=letse(1,0); im=nwk2(1);
+         ip=letse(1,0); im=nwk2(1)
          tmpa=py(2,n);sha=shs2*cos(pi4-delt1)*smod(1);ra0=sha
          tmpb=py(2,n)+lwk2(1);shb=sml
+         if(myid==0.and.k==0) write(*,*) ip,im 
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
          !-(3+lwk(1))-5 LE curve->Top
-         ip=ip+im; im=letbk(1)-im
-         tmpa=tmpb;sha=qet(ip,n);tmpb=py(5,n);shb=sml!ra0*24
+         ip=ip+im; im=lett-ip
+         tmpa=tmpb;sha=qet(ip,n);tmpb=py(5,n);shb=ra0*28
+         if(myid==0.and.k==0) write(*,*) ip,im 
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
          if (k==0.and.myid==0) then
             write(*,*) 'mesh size',qet(letse(1,1),n)/ra0
@@ -625,6 +634,25 @@ end if
  end do; end do
 
  end subroutine interKim
+
+!===== SUBROUTINE FOR GRID LINE GENERATION (constant size)
+ subroutine cgridf(x,xxi,xo,xn,dxo,dxn,lxi,mxin,ip)
+
+ integer(k4),intent(in) :: lxi,mxin,ip
+ real(k8),dimension(0:lxi),intent(inout) :: x,xxi
+ real(k8),intent(in) :: xo,dxo
+ real(k8),intent(out) :: xn,dxn
+
+ integer(k4) :: i,ii
+ do i=0,mxin
+    ii=i+ip;
+    xn=xo+dxo*i
+    x(ii)=xn
+    xxi(ii)=dxo
+ end do
+ dxn=dxo
+
+ end subroutine cgridf
 
 !===== FUNCTION FOR HERMITIAN INTERPOLATION (integer entries)
  function hermite(k01,k02,k03,k04,lx,x) result(y)

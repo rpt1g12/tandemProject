@@ -1,18 +1,18 @@
 mbk-bkx-y-z	5	3	2	1
-nts-nto		1		0
-nscrn-nsgnl	20		100
-ndata		30
+nts-nto		0		0
+nscrn-nsgnl	1		100
+ndata		1
 nkrk            4
 nviscous	1
 nsmf		1
 nfskp           0
-nrestart        1
+nrestart        0
 nextrabc-gcic   0       0
 reoo-tempoo	4.0e5		273.0e0
 amach1-2-3	2.81907786e-1		1.02606043e-1		0.0e0 !aoa=20, M=0.3
 wtemp           1.0e0
 cfl             0.95e0
-tmax-timf-tsam  300.0e0       15.0e0       240.0e0
+tmax-timf-tsam  3.0e0       15.0e0       240.0e0
 fltk-bc         0.85e0      0.85e0
 dto             -0.01725e0
 forcing-amfor%	0	0.8e0
