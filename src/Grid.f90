@@ -26,11 +26,11 @@ module gridgen
  real(k8) :: deg1,deg2
 
  real(k8),dimension(0:1,0:1) :: szth,dlth,szsh
- real(k8), dimension(0:1) :: lhbl
+ real(k8), dimension(0:1) :: lhbl,lvbl
  integer(k4),dimension(0:1,0:1) :: szll,wkll
  integer(k4),dimension(0:1) :: nvbl
- integer(k4),dimension(0:1) :: nwk
- real(k8),dimension(0:1) :: lwk
+ integer(k4),dimension(0:1) :: nwk,nwk2
+ real(k8),dimension(0:1) :: lwk,lwk2
 
  contains
 
@@ -128,10 +128,14 @@ if(myid==mo(mb)) then
     if(.not.allocated(degarr)) allocate(degarr(3))
     degarr(:)=(/25_k8,5_k8,15_k8/); degarr(:)=degarr(:)*pi/180_k8
 !---Wake Refinement
-    lwk(0)=3.0e0*c1 ! rpt-Wake box size xi direction
-    lwk(1)=0.5e0*c1 ! rpt-Wake box size eta direction
-    nwk(0)=int(lxibk(2)*0.75e0) ! rpt-Wake box #xi points
+    nwk(0)=int(lxibk(2)*0.65e0) ! rpt-Wake box #xi points
     nwk(1)=int(letbk(1)*0.35e0) ! rpt-Wake box #eta points
+    nwk2(0)=half*nwk(0)
+    nwk2(1)=0.25e0*nwk(1)
+    lwk(1)=0.5e0*c1 ! rpt-Wake box size eta direction
+    lwk(0)=1.5e0*c1!real(nwk(0)/nwk(1))*lwk(1) ! rpt-Wake box size xi direction
+    lwk2(0)=1.5*lwk(0)
+    lwk2(1)=0.5e0*lwk(1)
     if (myid==0) then
        write(*,"('Wake box size: xi=',f8.4,' eta=',f8.4)")&
        lwk(0),lwk(1)
@@ -141,11 +145,15 @@ if(myid==mo(mb)) then
 !---Boundary Layer Refinement
     lhbl(0)=0.15*c1 ! rpt-LE curve bottom-horizontal lenght
     lhbl(1)=0.4*c1 ! rpt-LE curve top-horizontal lenght
+    lvbl(0)=half*lwk(1) ! rpt-LE curve bottom-vertical lenght
+    lvbl(1)=lwk(1) ! rpt-LE curve top-vertical lenght
     nvbl(0)=letbk(0)*0.5e0 ! rpt-#eta points bottom LE curve
     nvbl(1)=nwk(1) ! rpt-#eta points top LE curve
     if (myid==0) then
        write(*,"('BL curve horizontal size: south=',f8.4,' north=',f8.4)")&
        lhbl(0),lhbl(1)
+       write(*,"('BL curve vertical size: south=',f8.4,' north=',f8.4)")&
+       lvbl(0),lvbl(1)
        write(*,"('BL Pts: south=',i4,' north=',i4)")&
        nvbl(0),nvbl(1)
     end if
@@ -235,9 +243,9 @@ if(myid==mo(mb)) then
      call gridf(xp(:,n),pxi(:,n),tmpa,tmpb,sha,shb,lxit,im,ip)
    else !(top boundary)
    !--3-(3+lwk(0)) Trailing edge wake box refinement
-     ip=lxise(2,0); im=half*nwk(0)
+     ip=lxise(2,0); im=nwk2(0)
      tmpa=px(3,n);sha=she1*4;
-     tmpb=px(3,n)+half*lwk(0);shb=sml
+     tmpb=px(3,n)+lwk2(0);shb=sml
      call gridf(xp(:,n),pxi(:,n),tmpa,tmpb,sha,shb,lxit,im,ip)
    !--(3+lwk(0))-5  Wake box->Right boundary
      ip=ip+im; im=lxibk(2)-im
@@ -312,16 +320,16 @@ if(myid==mo(mb)) then
          !-(2-0.5lwk(1))-2 LE curve-LE
          im=nvbl(0)
          ip=letse(0,1)-im;
-         tmpa=py(2,n)-half*lwk(1);sha=sml;tmpb=py(2,n);shb=shs2*cos(pi4+delt1)
+         tmpa=py(2,n)-lvbl(0);sha=sml;tmpb=py(2,n);shb=shs2*cos(pi4+delt1)
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
          !-0-1(2-0.5lwk(1)) Bottom->LE curve
          ip=letse(0,0); im=letbk(0)-im
-         tmpa=py(0,n);sha=sml;tmpb=py(2,n)-half*lwk(1);shb=qet(im,n)
+         tmpa=py(0,n);sha=sml;tmpb=py(2,n)-lvbl(0);shb=qet(im,n)
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
          !-BLOCK1
          !!-3-(3+lwk(1)) LE->LE curve
          ip=letse(1,0); im=nwk(1);
-         tmpa=py(2,n);sha=shs2*cos(pi4-delt1);tmpb=py(2,n)+lwk(1);shb=sml
+         tmpa=py(2,n);sha=shs2*cos(pi4-delt1);tmpb=py(2,n)+lvbl(1);shb=sml
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
          !-(3+lwk(1))-5 LE curve->Top
          ip=ip+im; im=letbk(1)-im
@@ -332,17 +340,17 @@ if(myid==mo(mb)) then
          !-(2-0.5lwk(1))-2 LE curve-LE
          im=nvbl(0)
          ip=letse(0,1)-im;
-         tmpa=py(2,n)-half*lwk(1);sha=sml;tmpb=py(2,n);shb=shs2*cos(pi4+delt1)*15
+         tmpa=py(2,n)-lvbl(0);sha=sml;tmpb=py(2,n);shb=shs2*cos(pi4+delt1)*15
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
          !-0-1(2-0.5lwk(1)) Bottom->LE curve
          ip=letse(0,0); im=letbk(0)-im
-         tmpa=py(0,n);sha=sml;tmpb=py(2,n)-half*lwk(1);shb=qet(im,n)
+         tmpa=py(0,n);sha=sml;tmpb=py(2,n)-lvbl(0);shb=qet(im,n)
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
          !-BLOCK1
          !!-3-(3+lwk(1)) LE->LE curve
-         ip=letse(1,0); im=0.22e0*nwk(1);
+         ip=letse(1,0); im=nwk2(1);
          tmpa=py(2,n);sha=shs2*cos(pi4-delt1)*15;
-         tmpb=py(2,n)+0.1e0;shb=sml
+         tmpb=py(2,n)+lwk2(1);shb=sml
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
          !-(3+lwk(1))-5 LE curve->Top
          ip=ip+im; im=letbk(1)-im
