@@ -76,7 +76,8 @@ module gridgen
  real(k8) :: oxp,oyp
  real(k8) :: tmps,tmpe,tmpc
  real(k8) :: sha,shb,shc
- integer(k4) :: smod,npx,npy,mm,nn
+ integer(k4) :: npx,npy,mm,nn
+ integer(k4), dimension(0:1) :: smod
  integer(k4), dimension(:), allocatable :: linesy,linesx
  real(k8), dimension(:), allocatable :: degarr
  logical :: flag
@@ -101,6 +102,7 @@ module gridgen
     shs1=ximod*smgrid; ! rpt-LE xi size 
     shs2=etamod*smgrid;! rpt-LE eta size
     she1=shs2          ! rpt-TE size both xi and eta
+    smod(:)=(/4,15/) ! grid size modifiers
 
     allocate(xx(0:lxit,0:lett),yy(0:lxit,0:lett),zz(0:lxit,0:lett),zs(0:lzebk(0)))
 
@@ -130,17 +132,21 @@ if(myid==mo(mb)) then
 !---Wake Refinement
     nwk(0)=int(lxibk(2)*0.65e0) ! rpt-Wake box #xi points
     nwk(1)=int(letbk(1)*0.35e0) ! rpt-Wake box #eta points
-    nwk2(0)=half*nwk(0)
-    nwk2(1)=0.25e0*nwk(1)
+    nwk2(0)=half*nwk(0) !rpt-wake refinement in outflow #xi points
+    nwk2(1)=0.5e0*nwk(1) !rpt-wake refinement in outflow #eta points
     lwk(1)=0.5e0*c1 ! rpt-Wake box size eta direction
     lwk(0)=1.5e0*c1!real(nwk(0)/nwk(1))*lwk(1) ! rpt-Wake box size xi direction
-    lwk2(0)=1.5*lwk(0)
-    lwk2(1)=0.5e0*lwk(1)
+    lwk2(0)=1.5*lwk(0) !rpt-wake refinement in outflow xi length
+    lwk2(1)=1.0e0*lwk(1) !rpt-wake refinement in outflow eta length
     if (myid==0) then
        write(*,"('Wake box size: xi=',f8.4,' eta=',f8.4)")&
        lwk(0),lwk(1)
        write(*,"('Wake box Pts: xi=',i4,' eta=',i4)")&
        nwk(0),nwk(1)
+       write(*,"('Wake outflow size: xi=',f8.4,' eta=',f8.4)")&
+       lwk2(0),lwk2(1)
+       write(*,"('Wake outflow Pts: xi=',i4,' eta=',i4)")&
+       nwk2(0),nwk2(1)
     end if
 !---Boundary Layer Refinement
     lhbl(0)=0.15*c1 ! rpt-LE curve bottom-horizontal lenght
@@ -205,31 +211,28 @@ if(myid==mo(mb)) then
 !--HORIZONTAL INTERFACES
    !--X-COORDINATE
    do n = 0,npy
-   if (n.ne.3) then
    !--BLOCK0
    !!--0-2 Left boundary->LE
+   if (n.ne.3) then !(all but top boundary)
       ip=lxise(0,0); im=lxibk(0);
       tmpa=px(0,n);sha=sml;tmpb=px(2,n);shb=shs1
       call gridf(xp(:,n),pxi(:,n),tmpa,tmpb,sha,shb,lxit,im,ip)
+   else !(top boundary)
+      ip=lxise(0,0); im=lxibk(0);
+      tmpa=px(0,n);sha=sml;tmpb=px(2,n);shb=shs1*smod(0)
+      call gridf(xp(:,n),pxi(:,n),tmpa,tmpb,sha,shb,lxit,im,ip)
    end if
+   !--BLOCK1
+   !--2-3 LE->TE (just top/bottom lines)
    select case(n)
    case(0)
-      !--BLOCK1
-      !--2-3 LE->TE (just top/bottom lines)
-         ip=lxise(1,0); im=lxibk(1);
-         tmpa=px(2,n);sha=shs1;tmpb=px(3,n);shb=she1
-         call gridf(xp(:,n),pxi(:,n),tmpa,tmpb,sha,shb,lxit,im,ip)
+      ip=lxise(1,0); im=lxibk(1);
+      tmpa=px(2,n);sha=shs1;tmpb=px(3,n);shb=she1
+      call gridf(xp(:,n),pxi(:,n),tmpa,tmpb,sha,shb,lxit,im,ip)
    case(3)
-      !--BLOCK0
-      !!--0-2 Left boundary->LE
-         ip=lxise(0,0); im=lxibk(0);
-         tmpa=px(0,n);sha=sml;tmpb=px(2,n);shb=shs1*4
-         call gridf(xp(:,n),pxi(:,n),tmpa,tmpb,sha,shb,lxit,im,ip)
-      !--BLOCK1
-      !--2-3 LE-TE (just top/bottom lines)
-         ip=lxise(1,0); im=lxibk(1);
-         tmpa=px(2,n);sha=shs1*4;tmpb=px(3,n);shb=she1*4
-         call gridf(xp(:,n),pxi(:,n),tmpa,tmpb,sha,shb,lxit,im,ip)
+      ip=lxise(1,0); im=lxibk(1);
+      tmpa=px(2,n);sha=shs1*smod(0);tmpb=px(3,n);shb=she1*smod(0)
+      call gridf(xp(:,n),pxi(:,n),tmpa,tmpb,sha,shb,lxit,im,ip)
    end select
    !--BLOCK2
    if (n.ne.npy) then !(all but the top boundary)
@@ -244,13 +247,16 @@ if(myid==mo(mb)) then
    else !(top boundary)
    !--3-(3+lwk(0)) Trailing edge wake box refinement
      ip=lxise(2,0); im=nwk2(0)
-     tmpa=px(3,n);sha=she1*4;
+     tmpa=px(3,n);sha=she1*smod(0);ra0=sha
      tmpb=px(3,n)+lwk2(0);shb=sml
      call gridf(xp(:,n),pxi(:,n),tmpa,tmpb,sha,shb,lxit,im,ip)
    !--(3+lwk(0))-5  Wake box->Right boundary
      ip=ip+im; im=lxibk(2)-im
      tmpa=tmpb;sha=pxi(ip,n);tmpb=px(5,n);shb=sml
      call gridf(xp(:,n),pxi(:,n),tmpa,tmpb,sha,shb,lxit,im,ip)
+         if (k==0.and.myid==0) then
+            write(*,*) 'mesh size',pxi(lxise(2,1),n)/ra0
+         end if
    end if
    end do
 
@@ -338,24 +344,27 @@ if(myid==mo(mb)) then
       else !(right boundary)
          !-BLOCK0
          !-(2-0.5lwk(1))-2 LE curve-LE
-         im=nvbl(0)
+         im=nwk2(1)
          ip=letse(0,1)-im;
-         tmpa=py(2,n)-lvbl(0);sha=sml;tmpb=py(2,n);shb=shs2*cos(pi4+delt1)*15
+         tmpa=py(2,n)-lwk2(1);sha=sml;tmpb=py(2,n);shb=shs2*cos(pi4+delt1)*smod(1)
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
          !-0-1(2-0.5lwk(1)) Bottom->LE curve
          ip=letse(0,0); im=letbk(0)-im
-         tmpa=py(0,n);sha=sml;tmpb=py(2,n)-lvbl(0);shb=qet(im,n)
+         tmpa=py(0,n);sha=sml;tmpb=py(2,n)-lwk2(1);shb=qet(im,n)
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
          !-BLOCK1
          !!-3-(3+lwk(1)) LE->LE curve
          ip=letse(1,0); im=nwk2(1);
-         tmpa=py(2,n);sha=shs2*cos(pi4-delt1)*15;
+         tmpa=py(2,n);sha=shs2*cos(pi4-delt1)*smod(1);ra0=sha
          tmpb=py(2,n)+lwk2(1);shb=sml
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
          !-(3+lwk(1))-5 LE curve->Top
          ip=ip+im; im=letbk(1)-im
-         tmpa=tmpb;sha=qet(ip,n);tmpb=py(5,n);shb=sml
+         tmpa=tmpb;sha=qet(ip,n);tmpb=py(5,n);shb=ra0*24
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
+         if (k==0.and.myid==0) then
+            write(*,*) 'mesh size',qet(letse(1,1),n)/ra0
+         end if
       end if
    end do
 
