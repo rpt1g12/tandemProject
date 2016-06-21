@@ -130,14 +130,14 @@ if(myid==mo(mb)) then
     if(.not.allocated(degarr)) allocate(degarr(3))
     degarr(:)=(/25_k8,0_k8,15_k8/); degarr(:)=degarr(:)*pi/180_k8
 !---Wake Refinement
-    nwk(0)=int(lxibk(2)*0.65e0) ! rpt-Wake box #xi points
-    nwk(1)=int(letbk(1)*0.35e0) ! rpt-Wake box #eta points
+    nwk(0)=int(lxibk(2)*0.45e0) ! rpt-Wake box #xi points
+    nwk(1)=int(letbk(1)*0.4e0) ! rpt-Wake box #eta points
     nwk2(0)=0.75e0*nwk(0) !rpt-wake refinement in outflow #xi points
     nwk2(1)=1.0e0*nwk(1) !rpt-wake refinement in outflow #eta points
     lwk(1)=0.5e0*c1 ! rpt-Wake box size eta direction
     lwk(0)=1.5e0*c1!real(nwk(0)/nwk(1))*lwk(1) ! rpt-Wake box size xi direction
     lwk2(0)=1.5*lwk(0) !rpt-wake refinement in outflow xi length
-    lwk2(1)=2.0e0*lwk(1) !rpt-wake refinement in outflow eta length
+    lwk2(1)=2.5e0*lwk(1) !rpt-wake refinement in outflow eta length
     if (myid==0) then
        write(*,"('Wake box size: xi=',f8.4,' eta=',f8.4)")&
        lwk(0),lwk(1)
@@ -356,13 +356,6 @@ if(myid==mo(mb)) then
          tmpa=py(0,n);sha=sml;tmpb=py(2,n)-lwk2(1);shb=qet(im,n)
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
          !-BLOCK1
-         !test
-         !ip=letse(1,0); im=half*nwk2(1)
-         !tmpa=py(2,n);sha=shs2*cos(pi4-delt1)*smod(1);ra0=sha
-         !if(myid==0.and.k==0) write(*,*) ip,im 
-         !call cgridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
-         !ip=ip+im; im=nwk2(1)-im;
-         !tmpa=tmpb;sha=shb;ra0=sha
          !!-3-(3+lwk(1)) LE->LE curve
          ip=letse(1,0); im=nwk2(1)
          tmpa=py(2,n);sha=shs2*cos(pi4-delt1)*smod(1);ra0=sha
@@ -371,7 +364,7 @@ if(myid==mo(mb)) then
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
          !-(3+lwk(1))-5 LE curve->Top
          ip=ip+im; im=lett-ip
-         tmpa=tmpb;sha=qet(ip,n);tmpb=py(5,n);shb=ra0*28
+         tmpa=tmpb;sha=qet(ip,n);tmpb=py(5,n);shb=ra0*32
          if(myid==0.and.k==0) write(*,*) ip,im 
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
          if (k==0.and.myid==0) then
