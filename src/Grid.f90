@@ -102,7 +102,7 @@ module gridgen
     shs1=ximod*smgrid; ! rpt-LE xi size 
     shs2=etamod*smgrid;! rpt-LE eta size
     she1=shs2          ! rpt-TE size both xi and eta
-    smod(:)=(/4,15/) ! grid size modifiers
+    smod(:)=(/4,20/) ! grid size modifiers
 
     allocate(xx(0:lxit,0:lett),yy(0:lxit,0:lett),zz(0:lxit,0:lett),zs(0:lzebk(0)))
 
@@ -128,15 +128,15 @@ if(myid==mo(mb)) then
     szth(1,0)=szth1; szth(1,1)=szth2+szxt ! rpt-Vertical direction bottom/top boudaries
 !----- CONSTANT ANGLES IN RADIANS
     if(.not.allocated(degarr)) allocate(degarr(3))
-    degarr(:)=(/25_k8,5_k8,15_k8/); degarr(:)=degarr(:)*pi/180_k8
+    degarr(:)=(/25_k8,0_k8,15_k8/); degarr(:)=degarr(:)*pi/180_k8
 !---Wake Refinement
     nwk(0)=int(lxibk(2)*0.65e0) ! rpt-Wake box #xi points
     nwk(1)=int(letbk(1)*0.35e0) ! rpt-Wake box #eta points
-    nwk2(0)=half*nwk(0) !rpt-wake refinement in outflow #xi points
+    nwk2(0)=0.9e0*nwk(0) !rpt-wake refinement in outflow #xi points
     nwk2(1)=0.5e0*nwk(1) !rpt-wake refinement in outflow #eta points
     lwk(1)=0.5e0*c1 ! rpt-Wake box size eta direction
     lwk(0)=1.5e0*c1!real(nwk(0)/nwk(1))*lwk(1) ! rpt-Wake box size xi direction
-    lwk2(0)=1.5*lwk(0) !rpt-wake refinement in outflow xi length
+    lwk2(0)=2.0*lwk(0) !rpt-wake refinement in outflow xi length
     lwk2(1)=1.0e0*lwk(1) !rpt-wake refinement in outflow eta length
     if (myid==0) then
        write(*,"('Wake box size: xi=',f8.4,' eta=',f8.4)")&
@@ -150,7 +150,7 @@ if(myid==mo(mb)) then
     end if
 !---Boundary Layer Refinement
     lhbl(0)=0.15*c1 ! rpt-LE curve bottom-horizontal lenght
-    lhbl(1)=0.4*c1 ! rpt-LE curve top-horizontal lenght
+    lhbl(1)=0.15*c1 ! rpt-LE curve top-horizontal lenght
     lvbl(0)=half*lwk(1) ! rpt-LE curve bottom-vertical lenght
     lvbl(1)=lwk(1) ! rpt-LE curve top-vertical lenght
     nvbl(0)=letbk(0)*0.5e0 ! rpt-#eta points bottom LE curve
@@ -184,7 +184,7 @@ if(myid==mo(mb)) then
     py(2,0)=zero
     py(2,1)=-lwle*sin(delt1)
     py(2,2)=-c1*sin(delt1)
-    py(2,3)=py(2,2)-3.5e0*lhbl(1)
+    py(2,3)=py(2,2)!-3.5e0*lhbl(1)
     py(3,:)=py(2,:)
     py(4,:)=py(2,2)+dlth(1,1)-szth(1,1)
     py(5,:)=py(2,2)+dlth(1,1)
@@ -240,6 +240,9 @@ if(myid==mo(mb)) then
      ip=lxise(2,0); im=nwk(0)
      tmpa=px(3,n);sha=she1;tmpb=px(3,n)+lwk(0);shb=sml
      call gridf(xp(:,n),pxi(:,n),tmpa,tmpb,sha,shb,lxit,im,ip)
+         if (k==0.and.myid==0) then
+            if(n==1) write(*,*) 'mesh size',pxi(ip+im,n)/ra0
+         end if
    !--(3+lwk(0))-5  Wake box->Right boundary
      ip=ip+im; im=lxibk(2)-im
      tmpa=tmpb;sha=pxi(ip,n);tmpb=px(5,n);shb=sml
@@ -360,7 +363,7 @@ if(myid==mo(mb)) then
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
          !-(3+lwk(1))-5 LE curve->Top
          ip=ip+im; im=letbk(1)-im
-         tmpa=tmpb;sha=qet(ip,n);tmpb=py(5,n);shb=ra0*24
+         tmpa=tmpb;sha=qet(ip,n);tmpb=py(5,n);shb=sml!ra0*24
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
          if (k==0.and.myid==0) then
             write(*,*) 'mesh size',qet(letse(1,1),n)/ra0
