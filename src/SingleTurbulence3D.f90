@@ -158,8 +158,8 @@
     if(mb==1) nbce(2)=bcw
     if(mb==4) nbcs(2)=bcw
     ! rpt-Interface condition
-    if(mb==2) nbce(2)=35
-    if(mb==5) nbcs(2)=35
+    !if(mb==2) nbce(2)=35
+    !if(mb==5) nbcs(2)=35
 
  end subroutine domdcomp
 
