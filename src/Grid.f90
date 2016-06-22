@@ -131,7 +131,7 @@ if(myid==mo(mb)) then
     degarr(:)=(/25_k8,0_k8,15_k8/); degarr(:)=degarr(:)*pi/180_k8
 !---Wake Refinement
     nwk(0)=int(lxibk(2)*0.45e0) ! rpt-Wake box #xi points
-    nwk(1)=int(letbk(1)*0.4e0) ! rpt-Wake box #eta points
+    nwk(1)=int(letbk(1)*0.5e0) ! rpt-Wake box #eta points
     nwk2(0)=0.75e0*nwk(0) !rpt-wake refinement in outflow #xi points
     nwk2(1)=1.0e0*nwk(1) !rpt-wake refinement in outflow #eta points
     lwk(1)=0.5e0*c1 ! rpt-Wake box size eta direction
@@ -241,7 +241,7 @@ if(myid==mo(mb)) then
      tmpa=px(3,n);sha=she1;tmpb=px(3,n)+lwk(0);shb=sml;ra0=sha
      call gridf(xp(:,n),pxi(:,n),tmpa,tmpb,sha,shb,lxit,im,ip)
          if (k==0.and.myid==0) then
-            if(n==1) write(*,*) 'mesh size',pxi(ip+im,n)/ra0
+            if(n==1) write(*,*) 'Horz Intfce: mesh size ratio',pxi(ip+im,n)/ra0
          end if
    !--(3+lwk(0))-5  Wake box->Right boundary
      ip=ip+im; im=lxibk(2)-im
@@ -258,7 +258,7 @@ if(myid==mo(mb)) then
      tmpa=tmpb;sha=pxi(ip,n);tmpb=px(5,n);shb=sml
      call gridf(xp(:,n),pxi(:,n),tmpa,tmpb,sha,shb,lxit,im,ip)
          if (k==0.and.myid==0) then
-            write(*,*) 'mesh size',pxi(lxise(2,1),n)/ra0
+            write(*,*) 'Top boundary: mesh size ratio',pxi(lxise(2,1),n)/ra0
          end if
    end if
    end do
@@ -296,13 +296,13 @@ if(myid==mo(mb)) then
     do n=1,2
        yp(lxis,n)=zero;xp(lxis,n)=zero
        ! DETERMINE THE FIRST LL POINTS
-       ll=8 ! "LL" MUST BE EQUAL TO OR LARGER THAN 4.
+       ll=25 ! "LL" MUST BE EQUAL TO OR LARGER THAN 4.
        do i=lxis+1,lxis+ll
           xp(i,n)=xp(i-1,n)+half*shs1; err=1
           do while(abs(err)>sml)
              yp(i,n)=naca(xp(i,n),tmp,thk,n-1)
              err=sqrt((xp(i,n)-xp(i-1,n))**2+(yp(i,n)-yp(i-1,n))**2)/shs1-1;
-             xp(i,n)=xp(i,n)-half**5*err*shs1
+             xp(i,n)=xp(i,n)-half**8*err*shs1
           end do
        end do
        xo=xp(lxis+ll,n); sho=sum(xp(lxis+ll-4:lxis+ll,n)*(/3,-16,36,-48,25/))/12
@@ -360,15 +360,13 @@ if(myid==mo(mb)) then
          ip=letse(1,0); im=nwk2(1)
          tmpa=py(2,n);sha=shs2*cos(pi4-delt1)*smod(1);ra0=sha
          tmpb=py(2,n)+lwk2(1);shb=sml
-         if(myid==0.and.k==0) write(*,*) ip,im 
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
          !-(3+lwk(1))-5 LE curve->Top
          ip=ip+im; im=lett-ip
          tmpa=tmpb;sha=qet(ip,n);tmpb=py(5,n);shb=ra0*32
-         if(myid==0.and.k==0) write(*,*) ip,im 
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
          if (k==0.and.myid==0) then
-            write(*,*) 'mesh size',qet(letse(1,1),n)/ra0
+            write(*,*) 'Right boundary: mesh size ratio',qet(letse(1,1),n)/ra0
          end if
       end if
    end do
