@@ -213,16 +213,20 @@ if(myid==mo(mb)) then
    do n = 0,npy
    !--BLOCK0
    !!--0-2 Left boundary->LE
-   if (n.ne.3) then !(all but top boundary)
+   if (n.eq.0) then !(bottom boundary)
       ip=lxise(0,0); im=lxibk(0);
-      tmpa=px(0,n);sha=250*shs1;tmpb=px(2,n);shb=shs1;ra0=shb
+      tmpa=px(0,n);sha=220*shs1;tmpb=px(2,n);shb=shs1*smod(0);ra0=shb
       call gridf(xp(:,n),pxi(:,n),tmpa,tmpb,sha,shb,lxit,im,ip)
          if (k==0.and.myid==0) then
-            if(n==1) write(*,*) 'Block 0 hztnl: mesh size ratio',pxi(ip,n)/ra0
+            write(*,*) 'Block 0 hztnl: mesh size ratio',pxi(ip,n)/ra0
          end if
-   else !(top boundary)
+   elseif (n.eq.npy) then !(top boundary)
       ip=lxise(0,0); im=lxibk(0);
-      tmpa=px(0,n);sha=250*shs1;tmpb=px(2,n);shb=shs1*smod(0)
+      tmpa=px(0,n);sha=220*shs1;tmpb=px(2,n);shb=shs1*smod(0)
+      call gridf(xp(:,n),pxi(:,n),tmpa,tmpb,sha,shb,lxit,im,ip)
+   else !(horizontal interface)
+      ip=lxise(0,0); im=lxibk(0);
+      tmpa=px(0,n);sha=220*shs1;tmpb=px(2,n);shb=shs1;ra0=shb
       call gridf(xp(:,n),pxi(:,n),tmpa,tmpb,sha,shb,lxit,im,ip)
    end if
    !--BLOCK1
@@ -230,7 +234,7 @@ if(myid==mo(mb)) then
    select case(n)
    case(0)
       ip=lxise(1,0); im=lxibk(1);
-      tmpa=px(2,n);sha=shs1;tmpb=px(3,n);shb=she1
+      tmpa=px(2,n);sha=shs1*smod(0);tmpb=px(3,n);shb=she1*smod(0)
       call gridf(xp(:,n),pxi(:,n),tmpa,tmpb,sha,shb,lxit,im,ip)
    case(3)
       ip=lxise(1,0); im=lxibk(1);
