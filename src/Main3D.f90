@@ -375,6 +375,7 @@
     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
     de(:,1)=rr(:,1); de(:,2)=rr(:,2); de(:,3)=rr(:,3)
 
+!=== Non-Conservative grid metrics formulation ====
     xim(:,1)=qa(:,2)*de(:,3)-de(:,2)*qa(:,3)
     xim(:,2)=de(:,2)*qo(:,3)-qo(:,2)*de(:,3)
     xim(:,3)=qo(:,2)*qa(:,3)-qa(:,2)*qo(:,3)
@@ -385,6 +386,8 @@
     zem(:,2)=de(:,1)*qo(:,2)-qo(:,1)*de(:,2)
     zem(:,3)=qo(:,1)*qa(:,2)-qa(:,1)*qo(:,2)
 
+!=== Conservative grid metrics formulation ====
+!
 !    rr(:,3)=qa(:,2)*ss(:,3); rr(:,2)=qa(:,3)*ss(:,3)
 !    m=1; call mpigo(ntdrv,nrall,n45go,m); call deriv(3,3,m); call deriv(2,2,m); xim(:,m)=rr(:,3)-rr(:,2)
 !    rr(:,3)=de(:,2)*ss(:,1); rr(:,2)=de(:,3)*ss(:,1)
