@@ -3,12 +3,12 @@ let0-to-bky	119	329           !lett=480
 lze0-to-bkz	200                   !pts x plane = 384k
 nbody-nthick	2	2
 ngridv		1
-!npcx		1	3	4
-!npcy		1	3
+!npcx		4	12	16
+!npcy		4	12
 !npcz		1
 nito-nits-litr	0	1	10
 smgrid-domlen	0.0075e0 		10.0e0
-ximod-etamod	0.15e0		0.05e0
+ximod-etamod	0.05e0		0.05e0
 span-wlew-wlea	0.44e0		0.11e0		0.015e0
 gap-chord1-2	1.0e0		1.0e0		1.0e0
 delt1-2(deg)	00.0e0		0.0e0		
@@ -44,3 +44,11 @@ lze0-to-bkz	100                   !pts x plane = 384k
 npcx		6	16	18
 npcy		6	18
 npcz		8
+
+!npcx		1	3	4
+!npcy		1	3
+!npcz		1
+
+!npcx		4	12	16
+!npcy		4	12
+!npcz		1
