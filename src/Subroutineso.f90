@@ -192,6 +192,9 @@
  subroutine movef(dtko,dtk)
 
  real(kind=nr),intent(in) :: dtko,dtk
+ real(kind=nr) :: alphamax
+
+ 
 
  if(nsmf==0) then
     ra0=pi/timf; ra1=ra0*min(timo,timf); ra2=ra0*min(timo+dtko,timf)
@@ -205,11 +208,45 @@
     dfdt=ra0*cos(ra2)
     progmf=half*ra0*(fctr+dtk*dfdt)
     dudtmf(:)=progmf*uoo(:)
+
+    if (tp>0) then
+       call pitch(aoa1)
+    end if
  else
     umf(:)=uoo(:); dudtmf(:)=zero
  end if
 
  end subroutine movef
+
+!=== PITCHING REFERENCE FRAME
+subroutine pitch(alpha)
+real(k8), intent(in) :: alpha
+real(k8), dimension(3) :: upf
+real(k8) :: raoa
+
+raoa=alpha*pi/180
+upf(:)=amachoo*(/cos(raoa),sin(raoa),zero/)-uoo(:)
+
+if (timo+dtk>tps) then
+   ra3=timo-tps
+   ra0=pi/tp; ra1=ra0*min(ra3,tp); ra2=ra0*min(ra3+dtk,tp)   
+
+   fctr=one-cos(ra1)
+   dfdt=ra0*sin(ra2)
+   progmf=half*(fctr+dtk*dfdt);
+   umf(:)=uoo(:)+upf(:)*progmf
+    
+   fctr=sin(ra1)
+   dfdt=ra0*cos(ra2)
+   progmf=half*ra0*(fctr+dtk*dfdt)
+   dudtmf(:)=upf(:)*progmf
+
+   aoa=atan(umf(2)/umf(1))*180/pi
+   
+end if
+   
+end subroutine pitch
+
 
 !===== SUBROUTINE FOR BLASIUS LAMINAR BOUNDARY LAYER
 
