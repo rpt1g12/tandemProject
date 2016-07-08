@@ -257,7 +257,7 @@
  end if
  end do
     ltz=ll; ntz=litr*slit/tla; ra0=pi/szth1
-    !ltz=-1
+    ltz=-1
  if(ltz/=-1) then
     allocate(lctz(0:ltz),atz(0:ltz),tt(0:ntz),vit(0:ltz,3),vito(0:ltz,0:ntz,3)); lp=nrecd*(ltz+1)*(ntz+1)
     do ll=0,ltz; l=de(ll,5); lctz(ll)=l
@@ -301,7 +301,7 @@
     end if
  end if
 
- !if((myid==mo(mbk+1-bkx)).and.(ltz/=-1)) then
+ if(ltz/=-1) then
  if(myid==mo(3)) then
     fctr=one/lze0
     do l=0,lze0
@@ -323,6 +323,7 @@
     end do
     close(9)
  end if
+ end if
 
  end subroutine spongeup
 
@@ -332,28 +333,28 @@
 
  if(ltz/=-1) then ! rpt-ltz=# of points involved in inflow gust
     vit(:,:)=zero
- if(timo>tgusto) then
-    ra0=timo-tgusto+dtk; ra1=slit/uoo(1); ra2=ra0/ra1; ra3=ra0-ra1*int(ra2,kind=ni)
-    is=0; ie=ntz; ii=minloc(abs(tt(:)-ra3),1)-1
- do jj=-2,2
-    ilag(jj)=min(max(ii+jj,is),ie); tlag(jj)=tt(ilag(jj))
- end do
- if(ii-is==0) then; ilag(-2:-1)=(/ie-2,ie-1/); tlag(-2:-1)=tt(ilag(-2:-1))-ra1; end if
- if(ii-is==1) then; ilag(-2)=ie-1; tlag(-2)=tt(ilag(-2))-ra1; end if
- if(ie-ii==1) then; ilag(2)=is+1; tlag(2)=tt(ilag(2))+ra1; end if
- if(ie-ii==0) then; ilag(1:2)=(/is+1,is+2/); tlag(1:2)=tt(ilag(1:2))+ra1; end if
-    alag(:)=ra3-tlag(:)
- do jj=-2,2
-    blag(:)=tlag(jj)-tlag(:); ao=one; bo=one
- do ii=-2,2
- if(ii/=jj) then
-    ao=ao*alag(ii); bo=bo*blag(ii)
- end if
- end do
-    ii=ilag(jj); res=ao/bo
-    vit(:,:)=vit(:,:)+res*vito(:,ii,:)
- end do
- end if
+    if(timo>tgusto) then
+       ra0=timo-tgusto+dtk; ra1=slit/uoo(1); ra2=ra0/ra1; ra3=ra0-ra1*int(ra2,kind=ni)
+       is=0; ie=ntz; ii=minloc(abs(tt(:)-ra3),1)-1
+    do jj=-2,2
+       ilag(jj)=min(max(ii+jj,is),ie); tlag(jj)=tt(ilag(jj))
+    end do
+    if(ii-is==0) then; ilag(-2:-1)=(/ie-2,ie-1/); tlag(-2:-1)=tt(ilag(-2:-1))-ra1; end if
+    if(ii-is==1) then; ilag(-2)=ie-1; tlag(-2)=tt(ilag(-2))-ra1; end if
+    if(ie-ii==1) then; ilag(2)=is+1; tlag(2)=tt(ilag(2))+ra1; end if
+    if(ie-ii==0) then; ilag(1:2)=(/is+1,is+2/); tlag(1:2)=tt(ilag(1:2))+ra1; end if
+       alag(:)=ra3-tlag(:)
+    do jj=-2,2
+       blag(:)=tlag(jj)-tlag(:); ao=one; bo=one
+    do ii=-2,2
+    if(ii/=jj) then
+       ao=ao*alag(ii); bo=bo*blag(ii)
+    end if
+    end do
+       ii=ilag(jj); res=ao/bo
+       vit(:,:)=vit(:,:)+res*vito(:,ii,:)
+    end do
+    end if
  end if
 
  do ll=0,lsz; l=lcsz(ll)
