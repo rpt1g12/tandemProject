@@ -210,7 +210,7 @@
     dudtmf(:)=progmf*uoo(:)
 
     if (tp>0) then
-       call pitch(aoa1)
+       call pitch(aoa0,aoa1)
     end if
  else
     umf(:)=uoo(:); dudtmf(:)=zero
@@ -219,27 +219,38 @@
  end subroutine movef
 
 !=== PITCHING REFERENCE FRAME
-subroutine pitch(alpha)
-real(k8), intent(in) :: alpha
-real(k8), dimension(3) :: upf
-real(k8) :: raoa
+subroutine pitch(alpha0,alpha1)
+real(k8), intent(in) :: alpha0,alpha1
+real(k8), dimension(3) :: dudt,ut,dudt2
+real(k8) :: raoa,daoa,raoa0,dtsdt,ts,tsdt,aoat,aoatdt
+real(k8) :: daoadt
 
-raoa=alpha*pi/180
-upf(:)=amachoo*(/cos(raoa),sin(raoa),zero/)-uoo(:)
+daoa=(alpha1-alpha0)*pi/180
+raoa0=alpha0*pi/180
 
 if (timo+dtk>tps) then
-   ra3=timo-tps
-   ra0=pi/tp; ra1=ra0*min(ra3,tp); ra2=ra0*min(ra3+dtk,tp)   
-
-   fctr=one-cos(ra1)
-   dfdt=ra0*sin(ra2)
-   progmf=half*(fctr+dtk*dfdt);
-   umf(:)=uoo(:)+upf(:)*progmf
+   ra3=timo-tps; 
+   dtsdt=pi/tp ! dts/dt
+   ts=min(dtsdt*ra3,pi) ! Upper bound for ts (0<ts<pi)
+   tsdt=min(dtsdt*(ra3+dtko),pi) ! Upper bound for ts+dtk (0<(ts+dtko)<pi)
+   aoat=raoa0+half*daoa*(1-cos(ts)) ! aoa(t=ts)
+   aoatdt=raoa0+half*daoa*(1-cos(tsdt)) ! aoa(t=ts+dtko)
+   daoadt=half*daoa*dtsdt*sin(tsdt) ! daoa(t=ts+dtko)/dt
+   
+   fctr=half*daoa*dtsdt
+   ut(:)=(/amachoo*cos(aoat),amachoo*sin(aoat),0/) !u(t=ts)
+   dudt(:)=(/-amachoo*fctr*sin(aoatdt)*sin(tsdt),& !du(t=ts+dtko)/dt
+             amachoo*fctr*cos(aoatdt)*sin(tsdt),&  !dv(t=ts+dtko)/dt
+             0/)                                   !dw(t=ts+dtko)/dt
+   umf(:)=ut(:)+dtk*dudt(:) ! Runge-Kutta at t=t+dtk
     
-   fctr=sin(ra1)
-   dfdt=ra0*cos(ra2)
-   progmf=half*ra0*(fctr+dtk*dfdt)
-   dudtmf(:)=upf(:)*progmf
+   dudt(:)=(/-amachoo*fctr*sin(aoat)*sin(ts),& !du(t=ts)/dt
+             amachoo*fctr*cos(aoat)*sin(ts),&  !dv(t=ts)/dt
+             0/)                               !dw(t=ts)/dt
+   dudt2(:)=(/-amachoo*fctr*(cos(aoatdt)*fctr*(sin(tsdt))**2+dtsdt*sin(aoatdt)*cos(tsdt)),& !d2u(t=ts+dtko)/dt2
+              -amachoo*fctr*(sin(aoatdt)*fctr*(sin(tsdt))**2-dtsdt*cos(aoatdt)*cos(tsdt)),& !d2v(t=ts+dtko)/dt2
+             0/)                                                                            !d2w(t=ts+dtko)/dt2
+   dudtmf(:)=dudt(:)+dtk*dudt2(:) ! Runge-Kutta at t=t+dtk
 
    aoa=atan(umf(2)/umf(1))*180/pi
    

@@ -52,7 +52,7 @@
     read(9,*) cinput,forcing,amfor
     ! For pitching aerofoil: aoa1=desired angle,tps=time start pitching
     !                        tp=total time pitching
-    read(9,*) cinput,aoa,aoa1,tps,tp
+    read(9,*) cinput,aoa0,aoa1,tps,tp
     read(9,*) cinput,LES,smago1,smago2
     read(9,*) cinput,output,ogrid,osol,oblock
     close(9)
@@ -65,6 +65,8 @@
     ispost=.false.
     ! rpt-Position of signal sampling
     !sxpos=-1.0_k8;sypos=0.01_k8;szpos=0.005_k8
+    aoa=aoa0! AoA=AoA0
+
 
     abc(:,0)=(/a01,a02,a03,a04,a05,a06/)
     abc(:,1)=(/a10,a12,a13,a14,a15,a16/)
@@ -78,6 +80,7 @@
 
     call inputext
 
+    !raoa=aoa0*pi/180
     ! rpt-Forcing parameters
     !xfor=-(0.5_k8+3*cos(raoa))!cos(delt1)-0.5_k8-1.0_k8+(0.1_k8);
     !yfor=-3*sin(raoa)!-sin(delt1)+(0.129_k8);
