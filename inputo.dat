@@ -16,6 +16,6 @@ tmax-timf-tsam  15.0e0       15.0e0       0.0e0
 fltk-bc         0.85e0      0.85e0
 dto             -0.01725e0
 forcing-amfor%	0	0.8e0
-aoa 		10.0e0 
+aoa0-1-tps-tp	10.0e0	15.0e0	45.0e0	30.0e0 
 LES-smago1-2	0	0.16e0	0.0066e0
 output		1	1	1	1
