@@ -31,85 +31,86 @@ contains
         end do
      end do
 
-     do i = 1, 3
-        ssSize(i)=ssRange(i,2)-ssRange(i,1)+1
-     end do
+     if (tss.ge.1) then
+        do i = 1, 3
+           ssSize(i)=ssRange(i,2)-ssRange(i,1)+1
+        end do
 
-     ssFlag=.true.
-     do m = 1, 2
-     if (ssFlag) then
-        if (((mpijke(m).ge.ssRange(m,1)).and.&
-            (mpijks(m).lt.ssRange(m,1))).or.&
-           ((mpijks(m).ge.ssRange(m,1)).and.&
-            (mpijke(m).le.ssRange(m,2))).or.&
-           ((mpijks(m).le.ssRange(m,2)).and.&
-            (mpijke(m).gt.ssRange(m,2)))) then
-            ssFlag=.true.
-            color=1
-        else
-            ssFlag=.false.
-            color=MPI_UNDEFINED
-        end if
-     end if
-     end do
-
-     ! rpt- Create SubSet communicator 
-      CALL MPI_COMM_SPLIT(icom,color,myid,sscom,ierr)   
-     if (ssFlag) then
-        allocate(ssGSzs(0:mbk,3))
-        ssGSzs(mb,:)=ssSize(:)
-        ssGStr=(/max(mpijks(1),ssRange(1,1)),&
-                   max(mpijks(2),ssRange(2,1)),&
-                   max(mpijks(3),ssRange(3,1))/)
-        ssGEnd=(/min(mpijke(1),ssRange(1,2)),&
-                 min(mpijke(2),ssRange(2,2)),&
-                 min(mpijke(3),ssRange(3,2))/)
-        ssStr=ssGStr-ssRange(:,1)
-        ssEnd=ssGEnd-ssRange(:,1)
-        ssLSize=ssGEnd(:)-ssGStr(:)+1
-        sslmx=(ssLSize(1))*(ssLSize(2))*(ssLSize(3))-1
-        ! rpt- Rank and Sizes for SubSet Communicator
-        call MPI_COMM_RANK(sscom,ssid,ierr)
-        call MPI_COMM_SIZE(sscom,ssnp,ierr)
-        ! rpt- Create SubSet block communicator 
-        CALL MPI_COMM_SPLIT(sscom,mb,myid,ssbcom,ierr)   
-        call MPI_COMM_RANK(ssbcom,bssid,ierr)
-        if ((bssid==0)) then
-           if (ssid==0) then
-              do m = 1, mbk
-               CALL MPI_RECV(ssGSzs(m,:),3,MPI_INTEGER4,MPI_ANY_SOURCE,m,sscom,ista,ierr)
-              end do
+        ssFlag=.true.
+        do m = 1, 2
+        if (ssFlag) then
+           if (((mpijke(m).ge.ssRange(m,1)).and.&
+               (mpijks(m).lt.ssRange(m,1))).or.&
+              ((mpijks(m).ge.ssRange(m,1)).and.&
+               (mpijke(m).le.ssRange(m,2))).or.&
+              ((mpijks(m).le.ssRange(m,2)).and.&
+               (mpijke(m).gt.ssRange(m,2)))) then
+               ssFlag=.true.
+               color=1
            else
-              CALL MPI_SEND(ssGSzs(mb,:),3,MPI_INTEGER4,0,mb,sscom,ierr)
+               ssFlag=.false.
+               color=MPI_UNDEFINED
            end if
         end if
-        CALL MPI_BCAST(ssGSzs,3*(mbk+1),MPI_INTEGER4,0,sscom,ierr)
-        do i = 1, tss
-           write(cnum,"(i3,a)") i
-           do ii = 1, 3
-              l=scan(cnum,' ')
-              if (l==0) exit
-              cnum(l:l)='0'
-           end do
-           chstr='out/ss'//cnum//'/'
-           if (ssid==0) call system('mkdir -p '//chstr)
         end do
-        allocate(ssxyz4(0:sslmx,3),lss(0:sslmx))
-        ll=0
-        do kk = ssGStr(3)-mpijks(3),ssGEnd(3)-mpijks(3)
-           do jj = ssGStr(2)-mpijks(2),ssGEnd(2)-mpijks(2)
-              do ii = ssGStr(1)-mpijks(1),ssGEnd(1)-mpijks(1)
-                 l=indx3(ii,jj,kk,1)
-                 lss(ll)=l
-                 ll=ll+1;
+
+        ! rpt- Create SubSet communicator 
+         CALL MPI_COMM_SPLIT(icom,color,myid,sscom,ierr)   
+        if (ssFlag) then
+           allocate(ssGSzs(0:mbk,3))
+           ssGSzs(mb,:)=ssSize(:)
+           ssGStr=(/max(mpijks(1),ssRange(1,1)),&
+                      max(mpijks(2),ssRange(2,1)),&
+                      max(mpijks(3),ssRange(3,1))/)
+           ssGEnd=(/min(mpijke(1),ssRange(1,2)),&
+                    min(mpijke(2),ssRange(2,2)),&
+                    min(mpijke(3),ssRange(3,2))/)
+           ssStr=ssGStr-ssRange(:,1)
+           ssEnd=ssGEnd-ssRange(:,1)
+           ssLSize=ssGEnd(:)-ssGStr(:)+1
+           sslmx=(ssLSize(1))*(ssLSize(2))*(ssLSize(3))-1
+           ! rpt- Rank and Sizes for SubSet Communicator
+           call MPI_COMM_RANK(sscom,ssid,ierr)
+           call MPI_COMM_SIZE(sscom,ssnp,ierr)
+           ! rpt- Create SubSet block communicator 
+           CALL MPI_COMM_SPLIT(sscom,mb,myid,ssbcom,ierr)   
+           call MPI_COMM_RANK(ssbcom,bssid,ierr)
+           if ((bssid==0)) then
+              if (ssid==0) then
+                 do m = 1, mbk
+                  CALL MPI_RECV(ssGSzs(m,:),3,MPI_INTEGER4,MPI_ANY_SOURCE,m,sscom,ista,ierr)
+                 end do
+              else
+                 CALL MPI_SEND(ssGSzs(mb,:),3,MPI_INTEGER4,0,mb,sscom,ierr)
+              end if
+           end if
+           CALL MPI_BCAST(ssGSzs,3*(mbk+1),MPI_INTEGER4,0,sscom,ierr)
+           do i = 1, tss
+              write(cnum,"(i3,a)") i
+              do ii = 1, 3
+                 l=scan(cnum,' ')
+                 if (l==0) exit
+                 cnum(l:l)='0'
+              end do
+              chstr='out/ss'//cnum//'/'
+              if (ssid==0) call system('mkdir -p '//chstr)
+           end do
+           allocate(ssxyz4(0:sslmx,3),lss(0:sslmx))
+           ll=0
+           do kk = ssGStr(3)-mpijks(3),ssGEnd(3)-mpijks(3)
+              do jj = ssGStr(2)-mpijks(2),ssGEnd(2)-mpijks(2)
+                 do ii = ssGStr(1)-mpijks(1),ssGEnd(1)-mpijks(1)
+                    l=indx3(ii,jj,kk,1)
+                    lss(ll)=l
+                    ll=ll+1;
+                 end do
               end do
            end do
-        end do
-        if (ssid==0) write(*,*) 'SubSets Ready to use!'
-     end if
-
-
-
+           if (ssid==0) write(*,*) 'SubSets Ready to use!'
+        end if
+     else
+       ssFlag=.false.
+     end if !tss
 
   end subroutine ssSetUp
 !====================================================================================
