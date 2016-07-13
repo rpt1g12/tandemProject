@@ -221,7 +221,8 @@
  logical :: fflag
 
  ! Cylinder probes variables
- real(k8), dimension(:,:), allocatable :: xyprob,nlprob
+ real(k8), dimension(:,:), allocatable :: xyprob
+ integer, dimension(:,:), allocatable :: nlprob
  real(k8), dimension(:,:,:), allocatable :: nklprob
  integer, dimension(:), allocatable :: mprob,probcom,lprob
  real(k8), dimension(:), allocatable :: aprob,vprob

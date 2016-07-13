@@ -84,11 +84,12 @@ if (fcoef==1) then
    if (myid==0) then
       open (unit=17, file='out/signalout0.dat')
       open (unit=18, file='out/signalout1.dat')
-      write(17,"(3x,'n',8x,'time',9x,'Cl',9x,'Cd',5x)")  
-      write(18,"(3x,'n',8x,'time',9x,'Cl',9x,'Cd',5x)")  
+      write(17,"(3x,'n',8x,'time',9x,'Clp',9x,'Cdv',5x)")  
+      write(18,"(3x,'n',8x,'time',9x,'Clv',9x,'Cdv',5x)")  
+      write(*,"(3x,'n',8x,'time',9x,'Cdp',9x,'Cdv',5x)")  
    end if
    do n = 0, ndata+favgu
-      call clhpost(ele=1,nvar=n)
+      call clPVpost(nvar=n)
       if (myid==0) then
          ra0=aoa*pi/180;ra1=cos(ra0);ra2=sin(ra0); 
          if(n>ndata) then
@@ -97,9 +98,11 @@ if (fcoef==1) then
             ra3=times(n)
          end if
          write(17,"(i8,f12.5,f12.7,f12.7)") &
-         n,ra3,clh(1,2,1)*ra1-clh(1,1,1)*ra2,clh(1,2,1)*ra2+clh(1,1,1)*ra1
+         n,ra3,cl(1,2)*ra1-cl(1,1)*ra2,cl(1,2)*ra2+cl(1,1)*ra1
          write(18,"(i8,f12.5,f12.7,f12.7)") &
-         n,ra3,clh(1,2,2)*ra1-clh(1,1,2)*ra2,clh(1,2,2)*ra2+clh(1,1,2)*ra1
+         n,ra3,cl(2,2)*ra1-cl(2,1)*ra2,cl(2,2)*ra2+cl(2,1)*ra1
+         write(*,"(i8,f12.5,f12.7,f12.7)") &
+         n,ra3,cl(1,2)*ra2+cl(1,1)*ra1,cl(2,2)*ra2+cl(2,1)*ra1
       end if
    end do
    if(myid==0) close(17)
@@ -320,17 +323,17 @@ if (fstrip) then
   if(mb==7) close(7)
 end if
 
-!call probCirc
+call probCirc(ndata)
 !call rdP3dF('Rij',0,6,fmblk)
 !varr=half*(fout(:,1)+fout(:,2)+fout(:,3))
-call rdP3dP(ndata+2,fmblk)
-varr=qo(:,5)
-call getijkMax(4,(/9,4/),(/(i,i=60,140,10)/),(/12,37,62,87/))
-call getvalMax(4,(/9,4/),ndata)
-
-call rdP3dP(ndata+1,fmblk)
-call getVGrad(ndata+1)
-call wrP3dF('dUij',0,9,fmblk)
+!call rdP3dP(ndata+2,fmblk)
+!varr=qo(:,5)
+!call getijkMax(4,(/9,4/),(/(i,i=60,140,10)/),(/12,37,62,87/))
+!call getvalMax(4,(/9,4/),ndata)
+!
+!call rdP3dP(ndata+1,fmblk)
+!call getVGrad(ndata+1)
+!call wrP3dF('dUij',0,9,fmblk)
 
 
 !!==== SHIFT RESTART SOLUTION

@@ -909,6 +909,51 @@ contains
  
  end subroutine clhpost
 !===================================================================================
+!=====COMPUTE LIFT COEFFICIENT OVER AEROFOILS: DIVIDE PRESSURE AND VISCOUS PARTS
+!===================================================================================
+ subroutine clPVpost(nvar)
+ 
+ use problemcase, only: span,delt1,delt2
+ implicit none
+    
+    integer(k4), intent(in) :: nvar
+    integer(k4) :: bct,bcb,bcw,m,ll,dir
+    real(k8) :: dynp,clp,clv,tcl
+ 
+    clp=0;clv=0;;tcl=0;
+
+    do dir = 1, 2
+       clp=0;clv=0;tcl=0;
+       if (ispost.and.(dir==1)) call gettw(nvar)
+       if (wflag) then
+         ! Compute Dynamic pressure
+         dynp=two/(amachoo*amachoo*span)
+         do ll = 0, lcwall; l=lwall(ll)
+           clp=clp+(p(l)*wnor(ll,dir)*area(ll))
+         end do
+         if (nviscous==1) then
+           if ((.not.ispost).and.(dir==1)) then
+              if(.not.allocated(tw)) allocate(tw(0:lcwall,3))
+              do ll = 0, lcwall; l=lwall(ll)
+                 tw(ll,1)=qa(l,1)*(txx(l)*wnor(ll,1)+txy(l)*wnor(ll,2)+tzx(l)*wnor(ll,3))
+                 tw(ll,2)=qa(l,1)*(txy(l)*wnor(ll,1)+tyy(l)*wnor(ll,2)+tyz(l)*wnor(ll,3))
+              end do
+           end if
+           do ll = 0, lcwall; l=lwall(ll)
+             clv=clv+tw(ll,dir)*area(ll)
+           end do
+         end if
+         clp=clp*dynp
+         clv=clv*dynp
+       end if
+       if(wflag.or.(myid==0)) then
+             CALL MPI_REDUCE(clp,cl(1,dir),1,MPI_REAL8,MPI_SUM,0,wcom,ierr)
+             CALL MPI_REDUCE(clv,cl(2,dir),1,MPI_REAL8,MPI_SUM,0,wcom,ierr)
+       end if
+    end do
+ 
+ end subroutine clPVpost
+!===================================================================================
 !=====COMPUTE LIFT COEFFICIENT OVER AEROFOILS
 !===================================================================================
  subroutine clpost(ele,nvar)
@@ -962,7 +1007,6 @@ contains
  integer(k4) :: nn,ll
 
        call rdP3dS(nvar,fmblk)
-       !call p3dread(gsflag=0,nout=nvar)
        p(:)=qo(:,5)
     if (wflag) then
     ! READ VARIABLES
