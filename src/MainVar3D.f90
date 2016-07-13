@@ -150,6 +150,7 @@
  character(16) :: cgrid
  character(18) :: cdata,cturb
  character(19) :: crestart
+ character(256) :: cstring
 
 !===== INTEGER VARIABLES FOR MPI COMMANDS
 
@@ -173,7 +174,7 @@
  integer(k4), dimension (:), allocatable :: ibegin,jbegin,kbegin
  integer :: bcom
  integer :: q4arr,q4fh,qarr,qfh
- logical :: qflag=.false.,gflag=.false.,q4flag=.false.
+ logical :: qflag=.false.,gflag=.false.,q4flag=.false.,faflag=.false.
  logical :: wrsfg=.false.,wrrfg=.false.
  real(k8), dimension(:,:), allocatable :: q8
  real(k4), dimension(:,:), allocatable :: fout,xyz4,q4
@@ -194,11 +195,12 @@
  integer (k4) :: sslmx,nss,tss,ssFreq
  integer (k4) :: sscom,ssbcom,ssid,bssid,ssnp
  integer (k4) :: color
+ integer (k4) :: nout_ss,ndati_ss
  integer :: ssq4arr,ssq4fh
  logical :: ssq4flag=.false.
  logical :: sswrsfg=.false.
  real(k4), dimension(:,:), allocatable :: ssfout,ssxyz4,ssq4
- logical :: ssFlag
+ logical :: ssFlag=.false.
 
 !===== POST-PROCESSING VARIABLES BY RPT
 
@@ -219,7 +221,8 @@
  logical :: fflag
 
  ! Cylinder probes variables
- real(k8), dimension(:,:), allocatable :: xyprob,nlprob
+ real(k8), dimension(:,:), allocatable :: xyprob
+ integer, dimension(:,:), allocatable :: nlprob
  real(k8), dimension(:,:,:), allocatable :: nklprob
  integer, dimension(:), allocatable :: mprob,probcom,lprob
  real(k8), dimension(:), allocatable :: aprob,vprob
@@ -234,11 +237,18 @@
  real :: rdis,xpos,ypos
  integer :: fintg,atk
 
-!===== ADITIONAL INPUTO VARIABLES BY RPT
+ ! Maximum probe variables
+ real(k4), dimension(:,:,:,:), allocatable :: mval
+ integer(k4) , dimension(:,:,:), allocatable :: maxpos
+ real(k4) , dimension(:,:,:), allocatable :: maxxyz
+ real(k4) :: rout
+ integer(k4), dimension(:,:), allocatable :: nose
+
+!===== ADITIONAL INPUT VARIABLES BY RPT
  integer(k4)  :: nto,iwrec
  integer(k4)  :: forcing,LES
  real(k8) :: tgustd,tguste
- real(k8) :: talphas,talphar,aoa
+ real(k8) :: tps,tp,tpe,aoa0,aoa1,aoa,raoa
  real(k8) :: smago1,smago2
  integer(k4)  :: output,ogrid,osol,oblock
 
