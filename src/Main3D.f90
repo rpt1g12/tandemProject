@@ -346,12 +346,14 @@
     if (output==1) then
        allocate(xyz4(0:lmx,3))
        xyz4(:,:)=ss(:,:)
-       if (ssFlag) then
+       do nn = 1, tss
+       if (ssFlag(nn)) then
           ll=0
-          do ll = 0, sslmx; l=lss(ll)
-             ssxyz4(ll,:)=ss(l,:)
+          do ll = 0, sslmx(nn); l=lss(ll,nn)
+             ssxyz4(ll,:,nn)=ss(l,:)
           end do
        end if
+       end do
     end if
 
     !RPT-FIND POSITION FOR SIGNAL SAMPLING
@@ -501,9 +503,10 @@
  end do
  case(1)
    call wrP3dG
-   call wrP3dG_ss
+   do nn = 1, tss
+      call wrP3dG_ss(fmblk,nn)
+   end do
    deallocate(xyz4)
-   if(allocated(ssxyz4)) deallocate(ssxyz4)
  end select
 
 
@@ -552,7 +555,7 @@
   end if
 
     ndati=-1; nsigi=-1; dtsum=zero
-    ndati_ss=-1;
+    ndati_ss(:)=-1;
  do while(timo<tmax.and.(dt/=zero.or.n<=2))
 
 !----- FILTERING & RE-INITIALISING
@@ -617,10 +620,12 @@
  if((timo-res)*(timo+dt-res)<=zero) then
     nout=1; ndati=ndati+1
  end if
-    nout_ss=0; res=tsam+(ndati_ss+1)*(1.0e0/ssFreq)
- if((timo-res)*(timo+dt-res)<=zero) then
-    nout_ss=1; ndati_ss=ndati_ss+1
- end if
+ do nn = 1, tss
+    nout_ss(nn)=0; res=tsam+(ndati_ss(nn)+1)*(1.0e0/ssFreq(nn))
+    if((timo-res)*(timo+dt-res)<=zero) then
+       nout_ss(nn)=1; ndati_ss(nn)=ndati_ss(nn)+1
+    end if
+ end do
  end if
 
 !----- VISCOUS SHEAR STRESSES & HEAT FLUXES
@@ -986,9 +991,11 @@
  !  end do
  !   dtsum=0; qb(:,:)=0
  !end if
- if(nout_ss==1) then
+ do nn = 1, tss
+ if(nout_ss(nn)==1) then
     call wrP3dS_ss
  end if
+ end do
  if(nout==1) then
       times(ndati)=timo
    if(myid==0) then

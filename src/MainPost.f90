@@ -35,12 +35,11 @@ call flst(fmblk)
    
 !! RPT-READ X,Y,Z COORDINATES
 call rdP3dG(fmblk)
-if (ssFlag) then
-   do ll = 0, sslmx; l=lss(ll)
-      ssxyz4(ll,:)=ss(l,:)
-   end do
+do nn = 1, tss
+if (ssFlag(nn)) then
 end if
-call wrP3dG_ss(fmblk)
+call wrP3dG_ss(fmblk,nn)
+end do
 ispost=.true.
 !
 call getMetrics
@@ -51,9 +50,12 @@ if (intgflag) then
               myid,sum(aintg),lcintg
 end if
 
+
 do n = 0, ndata
    call rdP3dP(n,fmblk)
-   call wrP3dP_ss(n,fmblk)
+   do nn = 1, tss
+      call wrP3dP_ss(n,fmblk,nssin=nn)
+   end do
 end do
 
 !===== COMPUTE AVERAGE VALUES IF NOT AVAILABLE YET
@@ -323,7 +325,7 @@ if (fstrip) then
   if(mb==7) close(7)
 end if
 
-call probCirc(ndata)
+!call probCirc(ndata)
 !call rdP3dF('Rij',0,6,fmblk)
 !varr=half*(fout(:,1)+fout(:,2)+fout(:,3))
 !call rdP3dP(ndata+2,fmblk)
