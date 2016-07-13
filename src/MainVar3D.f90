@@ -248,7 +248,7 @@
  integer(k4)  :: nto,iwrec
  integer(k4)  :: forcing,LES
  real(k8) :: tgustd,tguste
- real(k8) :: talphas,talphar,aoa
+ real(k8) :: tps,tp,tpe,aoa0,aoa1,aoa,raoa
  real(k8) :: smago1,smago2
  integer(k4)  :: output,ogrid,osol,oblock
 
