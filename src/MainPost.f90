@@ -31,14 +31,13 @@
     inquire(iolength=ll) real(1.0,kind=ieee64); nrecd=ll
 call setup
 call ssSetUp
+call ssCheck
 call flst(fmblk)
    
 !! RPT-READ X,Y,Z COORDINATES
 call rdP3dG(fmblk)
-do nn = 1, tss
-if (ssFlag(nn)) then
-end if
-call wrP3dG_ss(fmblk,nn)
+do nss = 1, 1
+   call wrP3dG_ss(fmblk,nss)
 end do
 ispost=.true.
 !
@@ -50,11 +49,10 @@ if (intgflag) then
               myid,sum(aintg),lcintg
 end if
 
-
-do n = 0, ndata
+do n = 0, 5!ndata
    call rdP3dP(n,fmblk)
-   do nn = 1, tss
-      call wrP3dP_ss(n,fmblk,nssin=nn)
+   do nss = 1, 1
+      call wrP3dP_ss(n,fmblk,nss=nss)
    end do
 end do
 
