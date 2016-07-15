@@ -188,9 +188,9 @@
  integer(k4) :: wcom,bwcom
 
 !===== SUBSETS VARIABLES
- integer (k4), dimension (3,2) :: ssRange
- integer (k4), dimension (3)   :: ssSize,ssLSize,ssGStr,ssGEnd,ssStr,ssEnd
- integer (k4), dimension (:,:), allocatable :: ssGSzs
+ integer (k4), dimension (:,:,:), allocatable :: ssRange
+ integer (k4), dimension (:,:), allocatable :: ssSize,ssLSize,ssGStr,ssGEnd,ssStr,ssEnd
+ integer (k4), dimension (:,:,:), allocatable :: ssGSzs
  integer (k4), dimension (:), allocatable :: lss
  integer (k4), dimension (:), allocatable :: lss0,lssn
  integer (k4), dimension (:), allocatable :: sslmx,ssFreq
@@ -201,7 +201,7 @@
  integer, dimension(:), allocatable :: ssq4arr,ssq4fh
  logical, dimension(:), allocatable :: ssFlag
  logical, dimension(:), allocatable :: ssq4flag
- real(k4), dimension(:,:), allocatable :: ssfout,ssxyz4,ssq4
+ real(k4), dimension(:,:), allocatable :: ssxyz4,ssq4
 
 !===== POST-PROCESSING VARIABLES BY RPT
 
