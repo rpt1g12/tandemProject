@@ -36,7 +36,7 @@ call flst(fmblk)
    
 !! RPT-READ X,Y,Z COORDINATES
 call rdP3dG(fmblk)
-do nss = 1, 1
+do nss = 1, tss
    call wrP3dG_ss(fmblk,nss)
 end do
 ispost=.true.
@@ -49,9 +49,9 @@ if (intgflag) then
               myid,sum(aintg),lcintg
 end if
 
-do n = 0, 5!ndata
+do n = 0, 8!ndata
    call rdP3dP(n,fmblk)
-   do nss = 1, 1
+   do nss = 1, tss
       call wrP3dP_ss(n,fmblk,nss=nss)
    end do
 end do

@@ -14,7 +14,7 @@ contains
 !====================================================================================
   subroutine ssSetUp
      implicit none
-     integer :: n,i,j,k,m,ll,idum,l,ii,jj,kk
+     integer :: n,i,j,k,m,ll,idum,gsize,qsize,l,ii,jj,kk
      character(3) :: cnum
      character(10) :: chstr
 
@@ -114,9 +114,11 @@ contains
 
 
      idum=sum(sslmx(:)+1)-1
+     gsize=idum*3-1
+     gsize=idum*5-1
      write(*,*) myid,idum
      !tsslmx=idum
-     allocate(lss(0:idum),ssxyz4(0:idum,3),ssq4(0:idum,5))
+     allocate(lss(0:idum),ssxyz4(0:gsize),ssq4(0:qsize))
      ll=0
      do nss = 1, tss
         if (ssFlag(nss)) then
@@ -140,7 +142,7 @@ contains
               end do
            end do
            lssn(nss)=ll-1
-           if (ssid(nss)==0) write(*,*) 'SubSets Ready to use!'
+           if (ssid(nss)==0) write(*,"(a,i3,a)") 'SubSet ',nss,' Ready to use!'
         end if
      end do
 
@@ -177,9 +179,9 @@ end subroutine ssCheck
      character(3) :: cnum
      character(10) :: cpath
      character(len=*),parameter :: cext='.xyz'
-     integer :: n,l,llss,i,lh,iolen,comid,wrcom,nbk,err,mblk
+     integer :: n,l,llss,i,ii,lh,iolen,comid,wrcom,nbk,err,mblk
      integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
-     integer :: fh,amode,garr
+     integer :: fh,amode,garr,idum
      integer, dimension (4) :: gsizes,lsizes,starts
      integer(k4) :: ibuf
 
@@ -227,8 +229,16 @@ end subroutine ssCheck
         if(comid==0) CALL MPI_FILE_DELETE(lfname,info,ierr)
 
         wrlen=3*(sslmx(nss)+1)
-        do ll = lss0(nss), lssn(nss); l=lss(ll)
-           ssxyz4(ll,:)=ss(l,:)
+        idum=0
+        do i = 1, nss-1
+           idum=idum+3*(sslmx(i)+1)
+        end do
+
+        do i = 1, 3
+           do ll = 0, sslmx(nss); l=lss(ll+lss0(nss))
+              ii=ll+(i-1)*(sslmx(nss)+1)+idum
+              ssxyz4(ii)=ss(l,i)
+           end do
         end do
         amode=IOR(MPI_MODE_WRONLY,MPI_MODE_CREATE)
 
@@ -263,7 +273,7 @@ end subroutine ssCheck
         end do
         disp=lhmb(mb)*iolen
         CALL MPI_FILE_SET_VIEW(fh,disp,MPI_REAL4,garr,'native',info,ierr)
-        CALL MPI_FILE_WRITE_ALL(fh,ssxyz4(lss0(nss),1),wrlen,MPI_REAL4,ista,ierr)
+        CALL MPI_FILE_WRITE_ALL(fh,ssxyz4(idum),wrlen,MPI_REAL4,ista,ierr)
         CALL MPI_FILE_CLOSE(fh,ierr)
         CALL MPI_TYPE_FREE(garr,ierr)
         if (comid==0) then
@@ -285,7 +295,7 @@ end subroutine ssCheck
      character(len=*),parameter :: cext='.q'
      integer :: n,l,ll,llss,ii,jj,kk,i,lh,iolen,comid,bcomid,wrcom,nbk,err,mblk
      integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
-     integer :: amode
+     integer :: amode,idum
      integer, dimension (4) :: gsizes,lsizes,starts
      integer(k4) :: ibuf
      real   (k4) :: rbuf
@@ -342,12 +352,24 @@ end subroutine ssCheck
 
         wrlen=5*(sslmx(nss)+1)
 
-        do ll = lss0(nss), lssn(nss); l=lss(ll)
-        ssq4(ll,1)=qa(l,1)
-        do i = 2, 4
-           ssq4(ll,i)=((qa(l,i)/qa(l,1))+umf(i-1))
+        idum=0
+        do i = 1, nss-1
+           idum=idum+5*(sslmx(i)+1)
         end do
-        ssq4(ll,5)=p(l)
+
+        do ll = 0, sslmx(nss); l=lss(ll+lss0(nss))
+           ii=ll+idum
+           ssq4(ii)=qa(l,1)
+        end do
+        do i = 2, 4
+           do ll = 0, sslmx(nss); l=lss(ll+lss0(nss))
+              ii=ll+(i-1)*(sslmx(nss)+1)+idum
+              ssq4(ii)=((qa(l,i)/qa(l,1))+umf(i-1))
+           end do
+        end do
+        do ll = 0, sslmx(nss); l=lss(ll+lss0(nss))
+           ii=ll+4*(sslmx(nss)+1)+idum
+           ssq4(ii)=p(l)
         end do
 
         amode=IOR(MPI_MODE_WRONLY,MPI_MODE_CREATE)
@@ -397,7 +419,7 @@ end subroutine ssCheck
         end if
         disp=(lhmb(mb)+4)*iolen
         CALL MPI_FILE_SET_VIEW(ssq4fh(nss),disp,MPI_REAL4,ssq4arr(nss),'native',info,ierr)
-        CALL MPI_FILE_WRITE_ALL(ssq4fh(nss),ssq4(lss0(nss),1),wrlen,MPI_REAL4,ista,ierr)
+        CALL MPI_FILE_WRITE_ALL(ssq4fh(nss),ssq4(idum),wrlen,MPI_REAL4,ista,ierr)
         CALL MPI_FILE_CLOSE(ssq4fh(nss),ierr)
         if (comid==0) then
            write(*,"('Subset Solution',i3,' written! T= ',8a)") nss,ctime 
@@ -423,7 +445,7 @@ end subroutine ssCheck
      character(len=*),parameter :: cext='.q'
      integer :: n,l,ll,llss,ii,jj,kk,i,lh,iolen,comid,bcomid,wrcom,nbk,err,mblk
      integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
-     integer :: amode
+     integer :: amode,idum
      integer, dimension (4) :: gsizes,lsizes,starts
      integer(k4) :: ibuf
      real   (k4) :: rbuf
@@ -497,8 +519,16 @@ end subroutine ssCheck
 
         wrlen=5*(sslmx(nss)+1)
 
-        do ll = lss0(nss), lssn(nss); l=lss(ll)
-           ssq4(ll,:)=qo(l,:)
+        idum=0
+        do i = 1, nss-1
+           idum=idum+5*(sslmx(i)+1)
+        end do
+
+        do i = 1, 5
+           do ll = 0, sslmx(nss); l=lss(ll+lss0(nss))
+              ii=ll+(i-1)*(sslmx(nss)+1)+idum
+              ssq4(ii)=qo(l,i)
+           end do
         end do
 
         amode=IOR(MPI_MODE_WRONLY,MPI_MODE_CREATE)
@@ -548,7 +578,7 @@ end subroutine ssCheck
         end if
         disp=(lhmb(mb)+4)*iolen
         CALL MPI_FILE_SET_VIEW(ssq4fh(nss),disp,MPI_REAL4,ssq4arr(nss),'native',info,ierr)
-        CALL MPI_FILE_WRITE_ALL(ssq4fh(nss),ssq4(lss0(nss),1),wrlen,MPI_REAL4,ista,ierr)
+        CALL MPI_FILE_WRITE_ALL(ssq4fh(nss),ssq4(idum),wrlen,MPI_REAL4,ista,ierr)
         if (comid==0) then
            write(*,"('Subset Solution',i3,' written! T= ',8a)") nss,trim(ctime)//trim(cout) 
         end if
