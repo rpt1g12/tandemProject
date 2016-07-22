@@ -115,7 +115,7 @@ contains
 
      idum=sum(sslmx(:)+1)-1
      gsize=idum*3-1
-     gsize=idum*5-1
+     qsize=idum*5-1
      write(*,*) myid,idum
      !tsslmx=idum
      allocate(lss(0:idum),ssxyz4(0:gsize),ssq4(0:qsize))
