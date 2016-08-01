@@ -1,3 +1,6 @@
+maxpln*
+*.mcr
+*.png
 core
 /data/*
 !/data/.info

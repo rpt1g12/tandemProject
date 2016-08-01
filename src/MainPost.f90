@@ -31,7 +31,7 @@
     inquire(iolength=ll) real(1.0,kind=ieee64); nrecd=ll
 call setup
 call ssSetUp
-call ssCheck
+!call ssCheck
 call flst(fmblk)
    
 !! RPT-READ X,Y,Z COORDINATES
@@ -49,7 +49,7 @@ if (intgflag) then
               myid,sum(aintg),lcintg
 end if
 
-do n = 0, 8!ndata
+do n = 0, 100!ndata
    call rdP3dP(n,fmblk)
    do nss = 1, tss
       call wrP3dP_ss(n,fmblk,nss=nss)
