@@ -12,7 +12,7 @@ reoo-tempoo	4.0e5		273.0e0
 amach1-2-3	0.2954423259e0		0.0520944533e0		0.0e0 !aoa=10, M=0.3
 wtemp           1.0e0
 cfl             0.95e
-tmax-timf-tsam  75.0e0       15.0e0       45.0e0
+tmax-timf-tsam  165.0e0       15.0e0       135.0e0
 fltk-bc         0.85e0      0.85e0
 dto             -0.01725e0
 forcing-amfor%	0	0.8e0
