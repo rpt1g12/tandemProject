@@ -197,7 +197,7 @@
  integer (k4), dimension (:), allocatable :: sscom,ssbcom,ssmcom,ssid,bssid,ssnp,ssmb
  integer (k4) :: nss,tss
  integer (k4) :: color
- integer (k4) :: nout_ss,ndati_ss
+ integer (k4), dimension (:), allocatable :: nout_ss,ndati_ss
  integer, dimension(:), allocatable :: ssq4arr,ssq4fh
  logical, dimension(:), allocatable :: ssFlag
  logical, dimension(:), allocatable :: ssq4flag
