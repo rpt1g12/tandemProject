@@ -194,7 +194,7 @@
  integer (k4), dimension (:), allocatable :: lss
  integer (k4), dimension (:), allocatable :: lss0,lssn
  integer (k4), dimension (:), allocatable :: sslmx,ssFreq
- integer (k4), dimension (:), allocatable :: sscom,ssbcom,ssid,bssid,ssnp
+ integer (k4), dimension (:), allocatable :: sscom,ssbcom,ssmcom,ssid,bssid,ssnp,ssmb
  integer (k4) :: nss,tss
  integer (k4) :: color
  integer (k4) :: nout_ss,ndati_ss
