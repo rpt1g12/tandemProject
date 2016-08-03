@@ -14,15 +14,19 @@ contains
 !====================================================================================
   subroutine ssSetUp
      implicit none
-     integer :: n,i,j,k,m,ll,idum,gsize,qsize,l,ii,jj,kk
+     integer :: n,i,j,k,m,ll,idum,gsize,qsize,l,ii,jj,kk,nss
      character(3) :: cnum
      character(10) :: chstr
+     integer :: color
+
+
+     color=0
 
      open(unit=9, file='inputs.dat')
      read(9,*) cinput,tss
 
      ! Allocate SubSet (SS) Flags
-     allocate(ssFlag(tss)) 
+     allocate(ssFlag(tss),nout_ss(tss),ndati_ss(tss)) 
      ! Allocate SS ranges
      allocate(ssRange(3,2,tss))
      ! Allocate SS Sizes, Starts, and Ends
@@ -39,6 +43,11 @@ contains
      allocate(ssq4flag(tss)); ssq4flag(:)=.False.
      ! Allocate array of start and end indices
      allocate(lss0(tss),lssn(tss))
+
+
+     sscom(:)=MPI_UNDEFINED
+     ssbcom(:)=MPI_UNDEFINED
+     ssmcom(:)=MPI_UNDEFINED
 
 
      do nss = 1, tss
@@ -85,6 +94,7 @@ contains
         end if
         end do
 
+
         ! rpt- Create SubSet communicator 
          CALL MPI_COMM_SPLIT(icom,color,myid,sscom(nss),ierr)   
         if (ssFlag(nss)) then
@@ -112,8 +122,11 @@ contains
            ! rpt- Create SubSet masters communicator 
            CALL MPI_COMM_SPLIT(sscom(nss),color,myid,ssmcom(nss),ierr)   
            ! rpt- Number of blocks involved in SubSet
+           if (bssid(nss)==0) then
            call MPI_COMM_SIZE(ssmcom(nss),idum,ierr)
            ssmb(nss)=idum-1
+           end if
+           CALL MPI_BCAST(ssmb(nss),1,MPI_INTEGER4,0,sscom(nss),ierr)
            if ((bssid(nss)==0)) then
               if (ssid(nss)==0) then
                  ssGSzs(:,mb,nss)=ssSize(:,nss)
@@ -165,7 +178,11 @@ contains
            lssn(nss)=ll-1
            if (ssid(nss)==0) write(*,"(a,i3,a)") 'SubSet ',nss,' Ready to use!'
         end if
+        CALL MPI_BARRIER(icom,ierr)
      end do
+
+         if(myid==0) write(*,"('Subsets set-up finished!')") 
+
 
   end subroutine ssSetUp
 !====================================================================================

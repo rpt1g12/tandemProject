@@ -615,9 +615,9 @@
  end if
  do nn = 1, tss
     nout_ss(nn)=0; res=tsam+(ndati_ss(nn)+1)*(1.0e0/ssFreq(nn))
- if((timo-res)*(timo+dt-res)<=zero) then
-       nout_ss(nn)=1; ndati_ss(nn)=ndati_ss(nn)+1
- end if
+    if((timo-res)*(timo+dt-res)<=zero) then
+          nout_ss(nn)=1; ndati_ss(nn)=ndati_ss(nn)+1
+    end if
  end do
  end if
 
