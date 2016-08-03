@@ -56,8 +56,11 @@ call prepareArrays
 !        end do
 !      call wrP3dG
    end if
-   call rdRsta
-   ndati=ndata;call wrP3dS
+   !call rdRsta
+   !!p(:)=gamm1*(qa(:,5)-half*(qa(:,2)*de(:,2)+qa(:,3)*de(:,3)+qa(:,4)*de(:,4)))
+   !p(:)=qa(:,5)
+   !ndati=ndata;call wrP3dS
+   !if(myid==0) write(*,*) n,ndt,dt,dts,dte,timo
 
 call deallocateArrays
 
@@ -79,7 +82,7 @@ if (iflag) then
    tol=abs(1.0_nr/tol**(1.0_nr/3.0_nr))
    call rdIRsta
    if (myid==0) then
-   write(*,"('Last time step was at:',f7.4)") timo
+   write(*,"('Last time step was at:',f10.4)") timo
    end if
 
    ! Get boundary values
@@ -100,7 +103,8 @@ if (iflag) then
    !   call getDeri(n)
    !   call interpolate(n,tol)
    !end do
-   call spanCopy
+   !call spanCopy
+   call spanAvg
    
    
    call deallocateArrays

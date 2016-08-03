@@ -50,7 +50,9 @@
     read(9,*) cinput,fltk,fltkbc
     read(9,*) cinput,dto
     read(9,*) cinput,forcing,amfor
-    read(9,*) cinput,aoa
+    ! For pitching aerofoil: aoa1=desired angle,tps=time start pitching
+    !                        tp=total time pitching
+    read(9,*) cinput,aoa0,aoa1,tps,tp
     read(9,*) cinput,LES,smago1,smago2
     read(9,*) cinput,output,ogrid,osol,oblock
     close(9)
@@ -63,6 +65,8 @@
     ispost=.false.
     ! rpt-Position of signal sampling
     !sxpos=-1.0_k8;sypos=0.01_k8;szpos=0.005_k8
+    aoa=aoa0! AoA=AoA0
+
 
     abc(:,0)=(/a01,a02,a03,a04,a05,a06/)
     abc(:,1)=(/a10,a12,a13,a14,a15,a16/)
@@ -76,12 +80,13 @@
 
     call inputext
 
+    !raoa=aoa0*pi/180
     ! rpt-Forcing parameters
-    xfor=-(0.5_k8+3*cos(aoa*pi/180_k8))!cos(delt1)-0.5_k8-1.0_k8+(0.1_k8);
-    yfor=-3*sin(aoa*pi/180_k8)!-sin(delt1)+(0.129_k8);
-    rfor=5.0e-1
-    amfor=amfor*amachoo/100.0e0
-    tsfor=151.751e0;tefor=200.000e0
+    !xfor=-(0.5_k8+3*cos(raoa))!cos(delt1)-0.5_k8-1.0_k8+(0.1_k8);
+    !yfor=-3*sin(raoa)!-sin(delt1)+(0.129_k8);
+    !rfor=5.0e-1
+    !amfor=amfor*amachoo/100.0e0
+    !tsfor=151.751e0;tefor=200.000e0
 !===== DOMAIN DECOMPOSITION & BOUNDARY INFORMATION
 
     mo(0)=0
@@ -341,12 +346,6 @@
     if (output==1) then
        allocate(xyz4(0:lmx,3))
        xyz4(:,:)=ss(:,:)
-       if (ssFlag) then
-          ll=0
-          do ll = 0, sslmx; l=lss(ll)
-             ssxyz4(ll,:)=ss(l,:)
-          end do
-       end if
     end if
 
     !RPT-FIND POSITION FOR SIGNAL SAMPLING
@@ -375,6 +374,7 @@
     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
     de(:,1)=rr(:,1); de(:,2)=rr(:,2); de(:,3)=rr(:,3)
 
+!=== Non-Conservative grid metrics formulation ====
     xim(:,1)=qa(:,2)*de(:,3)-de(:,2)*qa(:,3)
     xim(:,2)=de(:,2)*qo(:,3)-qo(:,2)*de(:,3)
     xim(:,3)=qo(:,2)*qa(:,3)-qa(:,2)*qo(:,3)
@@ -385,6 +385,8 @@
     zem(:,2)=de(:,1)*qo(:,2)-qo(:,1)*de(:,2)
     zem(:,3)=qo(:,1)*qa(:,2)-qa(:,1)*qo(:,2)
 
+!=== Conservative grid metrics formulation ====
+!
 !    rr(:,3)=qa(:,2)*ss(:,3); rr(:,2)=qa(:,3)*ss(:,3)
 !    m=1; call mpigo(ntdrv,nrall,n45go,m); call deriv(3,3,m); call deriv(2,2,m); xim(:,m)=rr(:,3)-rr(:,2)
 !    rr(:,3)=de(:,2)*ss(:,1); rr(:,2)=de(:,3)*ss(:,1)
@@ -493,7 +495,9 @@
  end do
  case(1)
    call wrP3dG
-   call wrP3dG_ss
+   do nn = 1, tss
+      call wrP3dG_ss(fmblk,nn)
+   end do
    deallocate(xyz4)
    if(allocated(ssxyz4)) deallocate(ssxyz4)
  end select
@@ -539,12 +543,12 @@
 
   ! OUTPUT HEADER
   if (myid==0) then
-  write(*,"(3x,'n',8x,'time',9x,'Cl',9x,'Cd',5x)")  
-  write(*,"('============================================')")
+  write(*,"(3x,'n',8x,'time',9x,'Cl',9x,'Cd',9x,'AoA',9x,'M',5x)")  
+  write(*,"('====================================================================')")
   end if
 
     ndati=-1; nsigi=-1; dtsum=zero
-    ndati_ss=-1;
+    ndati_ss(:)=-1;
  do while(timo<tmax.and.(dt/=zero.or.n<=2))
 
 !----- FILTERING & RE-INITIALISING
@@ -609,10 +613,12 @@
  if((timo-res)*(timo+dt-res)<=zero) then
     nout=1; ndati=ndati+1
  end if
-    nout_ss=0; res=tsam+(ndati_ss+1)*(1.0e0/ssFreq)
+ do nn = 1, tss
+    nout_ss(nn)=0; res=tsam+(ndati_ss(nn)+1)*(1.0e0/ssFreq(nn))
  if((timo-res)*(timo+dt-res)<=zero) then
-    nout_ss=1; ndati_ss=ndati_ss+1
+       nout_ss(nn)=1; ndati_ss(nn)=ndati_ss(nn)+1
  end if
+ end do
  end if
 
 !----- VISCOUS SHEAR STRESSES & HEAT FLUXES
@@ -689,10 +695,13 @@
 !----- OUTPUT N,TIME,CL & CD
   if((mod(n,nscrn)==0).and.nk==1) then
      call clpost(1,ndati) 
+     ! Convert AoA from degrees to radians
+     raoa=aoa*pi/180
      if (myid==0) then
-     ra0=aoa*pi/180;ra1=cos(ra0);ra2=sin(ra0)
-     write(*,"(i8,f12.5,f12.7,f12.7)") &
-     n,timo,cl(1,2)*ra1-cl(1,1)*ra2,cl(1,2)*ra2+cl(1,1)*ra1
+     ra1=cos(raoa);ra2=sin(raoa)
+     ra3=(umf(1)**2+umf(2)**2+umf(3)**2)**half
+     write(*,"(i8,f12.5,f12.7,f12.7,f12.7,f12.7)") &
+     n,timo,cl(1,2)*ra1-cl(1,1)*ra2,cl(1,2)*ra2+cl(1,1)*ra1,aoa,ra3
      end if
   end if
 
@@ -975,9 +984,11 @@
  !  end do
  !   dtsum=0; qb(:,:)=0
  !end if
- if(nout_ss==1) then
-    call wrP3dS_ss
+ do nn = 1, tss
+ if(nout_ss(nn)==1) then
+    call wrP3dS_ss(nss=nn)
  end if
+ end do
  if(nout==1) then
       times(ndati)=timo
    if(myid==0) then

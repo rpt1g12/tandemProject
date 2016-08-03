@@ -257,7 +257,7 @@
  end if
  end do
     ltz=ll; ntz=litr*slit/tla; ra0=pi/szth1
-    !ltz=-1
+    ltz=-1
  if(ltz/=-1) then
     allocate(lctz(0:ltz),atz(0:ltz),tt(0:ntz),vit(0:ltz,3),vito(0:ltz,0:ntz,3)); lp=nrecd*(ltz+1)*(ntz+1)
     do ll=0,ltz; l=de(ll,5); lctz(ll)=l
@@ -301,7 +301,7 @@
     end if
  end if
 
- !if((myid==mo(mbk+1-bkx)).and.(ltz/=-1)) then
+ if(ltz/=-1) then
  if(myid==mo(3)) then
     fctr=one/lze0
     do l=0,lze0
@@ -322,6 +322,7 @@
        write(9,'(es15.7,a)',rec=lp+3*l+4) vito(i,ii,3),achar(10)
     end do
     close(9)
+ end if
  end if
 
  end subroutine spongeup
