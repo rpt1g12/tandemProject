@@ -31,16 +31,14 @@
     inquire(iolength=ll) real(1.0,kind=ieee64); nrecd=ll
 call setup
 call ssSetUp
+!call ssCheck
 call flst(fmblk)
    
 !! RPT-READ X,Y,Z COORDINATES
 call rdP3dG(fmblk)
-if (ssFlag) then
-   do ll = 0, sslmx; l=lss(ll)
-      ssxyz4(ll,:)=ss(l,:)
-   end do
-end if
-call wrP3dG_ss(fmblk)
+do nss = 1, tss
+   call wrP3dG_ss(fmblk,nss)
+end do
 ispost=.true.
 !
 call getMetrics
@@ -53,7 +51,9 @@ end if
 
 do n = 0, ndata
    call rdP3dP(n,fmblk)
-   call wrP3dP_ss(n,fmblk)
+   do nss = 1, tss
+      call wrP3dP_ss(n,fmblk,nss=nss)
+   end do
 end do
 
 !===== COMPUTE AVERAGE VALUES IF NOT AVAILABLE YET
@@ -323,7 +323,10 @@ if (fstrip) then
   if(mb==7) close(7)
 end if
 
-call probCirc(ndata)
+!call probCirc(ndata)
+!call rdP3dF('Rij',0,6,fmblk)
+!varr=half*(fout(:,1)+fout(:,2)+fout(:,3))
+!call rdP3dP(ndata+2,fmblk)
 !call rdP3dF('Rij',0,6,fmblk)
 !varr=half*(fout(:,1)+fout(:,2)+fout(:,3))
 !call rdP3dP(ndata+2,fmblk)
