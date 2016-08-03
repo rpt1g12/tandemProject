@@ -346,14 +346,6 @@
     if (output==1) then
        allocate(xyz4(0:lmx,3))
        xyz4(:,:)=ss(:,:)
-       do nn = 1, tss
-       if (ssFlag(nn)) then
-          ll=0
-          do ll = 0, sslmx(nn); l=lss(ll,nn)
-             ssxyz4(ll,:,nn)=ss(l,:)
-          end do
-       end if
-       end do
     end if
 
     !RPT-FIND POSITION FOR SIGNAL SAMPLING
