@@ -49,7 +49,7 @@ if (intgflag) then
               myid,sum(aintg),lcintg
 end if
 
-do n = 0, 100!ndata
+do n = 0, ndata
    call rdP3dP(n,fmblk)
    do nss = 1, tss
       call wrP3dP_ss(n,fmblk,nss=nss)

@@ -507,6 +507,7 @@
       call wrP3dG_ss(fmblk,nn)
    end do
    deallocate(xyz4)
+   if(allocated(ssxyz4)) deallocate(ssxyz4)
  end select
 
 
@@ -993,7 +994,7 @@
  !end if
  do nn = 1, tss
  if(nout_ss(nn)==1) then
-    call wrP3dS_ss
+    call wrP3dS_ss(nss=nn)
  end if
  end do
  if(nout==1) then
@@ -1001,21 +1002,21 @@
    if(myid==0) then
       write(*,"('===> saving output ',i3,' at time =',f12.8)") ndati,timo
  end if
-   selectcase(output)
+ selectcase(output)
    case(2) ! New Tecplot Style
    qb(:,:)=qa(:,:)
     rr(:,1)=1/qb(:,1)
- do m=1,5
- select case(m)
-     case(1); varr(:)=qb(:,m); 
-     case(2:4); varr(:)=rr(:,1)*qb(:,m)+umf(m-1)
- case(5); varr(:)=gam*gamm1*(qb(:,m)-half*rr(:,1)*(qb(:,2)*qb(:,2)+qb(:,3)*qb(:,3)+qb(:,4)*qb(:,4)))
- end select
-     nn=3+5*ndati+m; write(0,rec=nn) varr(:); !call vminmax(nn)
- end do
+   do m=1,5
+      select case(m)
+          case(1); varr(:)=qb(:,m); 
+          case(2:4); varr(:)=rr(:,1)*qb(:,m)+umf(m-1)
+      case(5); varr(:)=gam*gamm1*(qb(:,m)-half*rr(:,1)*(qb(:,2)*qb(:,2)+qb(:,3)*qb(:,3)+qb(:,4)*qb(:,4)))
+      end select
+          nn=3+5*ndati+m; write(0,rec=nn) varr(:); !call vminmax(nn)
+   end do
    case(1)
       call wrP3dS
-   end select
+ end select
 
 
    !===== GENERATING RESTART DATA FILE

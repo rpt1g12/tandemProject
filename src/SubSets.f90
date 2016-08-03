@@ -26,7 +26,7 @@ contains
      read(9,*) cinput,tss
 
      ! Allocate SubSet (SS) Flags
-     allocate(ssFlag(tss)) 
+     allocate(ssFlag(tss),nout_ss(tss),ndati_ss(tss)) 
      ! Allocate SS ranges
      allocate(ssRange(3,2,tss))
      ! Allocate SS Sizes, Starts, and Ends

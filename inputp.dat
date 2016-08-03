@@ -1,11 +1,11 @@
-lxi0-to-bkx	19	299     119   # lxit=437
-let0-to-bky	19	119           # lett=138
-lze0-to-bkz	192                   # pts x plane = 60.3k
+lxi0-to-bkx	179	299     379   !lxit=860
+let0-to-bky	159	319           !lett=480
+lze0-to-bkz	192                   !pts x plane = 412.8k
 nbody-nthick	2	2
 ngridv		1
-npcx		1	1	1     # 3pcs
-npcy		1	1             # 2pcs
-npcz		2                     # 3*2*4=24pcs/16=>2 nodes
+!npcx		1	3	4	!8pcs
+!npcy		1	3		!4pcs
+!npcz		1			!total=8*4*1=32pcs/16=2 nodes
 nito-nits-litr	0	1	10
 smgrid-domlen	0.0075e0 		10.0e0
 ximod-etamod	0.05e0		0.05e0
