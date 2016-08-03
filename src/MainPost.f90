@@ -323,14 +323,14 @@ end if
 !call probCirc
 !call rdP3dF('Rij',0,6,fmblk)
 !varr=half*(fout(:,1)+fout(:,2)+fout(:,3))
-call rdP3dP(ndata+2,fmblk)
-varr=qo(:,5)
-call getijkMax(4,(/9,4/),(/(i,i=60,140,10)/),(/12,37,62,87/))
-call getvalMax(4,(/9,4/),ndata)
-
-call rdP3dP(ndata+1,fmblk)
-call getVGrad(ndata+1)
-call wrP3dF('dUij',0,9,fmblk)
+!call rdP3dP(ndata+2,fmblk)
+!varr=qo(:,5)
+!call getijkMax(4,(/9,4/),(/(i,i=60,140,10)/),(/12,37,62,87/))
+!call getvalMax(4,(/9,4/),ndata)
+!
+!call rdP3dP(ndata+1,fmblk)
+!call getVGrad(ndata+1)
+!call wrP3dF('dUij',0,9,fmblk)
 
 
 !!==== SHIFT RESTART SOLUTION

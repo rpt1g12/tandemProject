@@ -1,10 +1,10 @@
-fparal-mblk	0	1
+fparal-mblk	1	1
 favg-w-u	1	1	0
 fcoef-fcf-fcp	0	0	0
 floc		0	
 fwplus		1	
-fqcrit-fwss	0	1
-fcurl		1	
+fqcrit-fwss	0	0
+fcurl		0	
 frms-w		0	0
 fstrip		0
 fintg		0	0.2e0	1.0e0	0.6e0	37
