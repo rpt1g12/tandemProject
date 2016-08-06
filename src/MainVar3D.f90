@@ -201,6 +201,7 @@
  integer, dimension(:), allocatable :: ssq4arr,ssq4fh
  logical, dimension(:), allocatable :: ssFlag
  logical, dimension(:), allocatable :: ssq4flag
+ logical, dimension(:,:), allocatable :: ssblocks
  real(k4), dimension(:), allocatable :: ssxyz4,ssq4
 
 !===== POST-PROCESSING VARIABLES BY RPT
