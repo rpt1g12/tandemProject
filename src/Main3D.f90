@@ -496,7 +496,7 @@
  case(1)
    call wrP3dG
    do nn = 1, tss
-      call wrP3dG_ss(fmblk,nn)
+      call wrP3dG_ss(nss=nn)
    end do
    deallocate(xyz4)
    if(allocated(ssxyz4)) deallocate(ssxyz4)
