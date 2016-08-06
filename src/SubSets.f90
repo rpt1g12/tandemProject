@@ -14,9 +14,11 @@ contains
 !====================================================================================
   subroutine ssSetUp
      implicit none
-     integer :: n,i,j,k,m,ll,idum,gsize,qsize,l,ii,jj,kk,nss
+     integer :: n,i,j,k,m,ll,idum,gsize,qsize,l,ii,jj,kk,nss,nn
      character(3) :: cnum
      character(10) :: chstr
+     integer(k4), dimension(:,:,:),allocatable :: gRange
+     integer(k4), dimension(:), allocatable :: mssid
      integer :: color
 
 
@@ -27,15 +29,17 @@ contains
 
      ! Allocate SubSet (SS) Flags
      allocate(ssFlag(tss),nout_ss(tss),ndati_ss(tss)) 
-     allocate(ssblocks(0:mbk,tss))
-     ssblocks(:,:)=.False.
+     allocate(ssblks(0:mbk,tss))
+     ssblks(:,:)=0
+     ssFlag(:)=.False.
      ! Allocate SS ranges
      allocate(ssRange(3,2,tss))
+     allocate(gRange(3,2,tss))
      ! Allocate SS Sizes, Starts, and Ends
      allocate(ssGSzs(3,0:mbk,tss))
      allocate(ssSize(3,tss),ssLSize(3,tss),ssGStr(3,tss),ssGEnd(3,tss),ssStr(3,tss))
      ! Allocate Communicators, ids and # processors
-     allocate(sscom(tss),ssbcom(tss),ssmcom(tss),ssid(tss),bssid(tss),ssnp(tss),ssmb(tss)) 
+     allocate(sscom(tss),ssbcom(tss),ssid(tss),bssid(tss),ssnp(tss),ssmbk(tss),ssmb(tss)) 
      ! Allocate SS lmx array and SS frequencies
      allocate(sslmx(tss),ssFreq(tss))
      sslmx(:)=0;ssFreq(:)=0
@@ -49,30 +53,30 @@ contains
 
      sscom(:)=MPI_UNDEFINED
      ssbcom(:)=MPI_UNDEFINED
-     ssmcom(:)=MPI_UNDEFINED
 
 
      do nss = 1, tss
            read(9,*) cinput,cinput,ssFreq(nss) 
-        do nn = 1, 2+mb
            read(9,*) 
-        end do
-           read(9,*) cinput,ssRange(1,:,nss),ssRange(2,:,nss),ssRange(3,:,nss)
-        do nn = 0, mbk-mb-1
            read(9,*) 
+        do nn = 0, mbk
+           read(9,*) ssblks(nn,nss),gRange(1,:,nss),gRange(2,:,nss),gRange(3,:,nss)
+           if (nn==mb) ssRange(:,:,nss)=gRange(:,:,nss)
+           do i = 1, 3
+              ssGSzs(i,nn,nss)=gRange(i,2,nss)-gRange(i,1,nss)+1
+              if (ssblks(nn,nss)==0) ssGSzs(i,nn,nss)=0
+           end do
         end do
+        ! rpt- Number of blocks involved in SubSet
+        ssmbk(nss)=sum(ssblks(:,nss))-1
      end do
+
 
      do nss = 1, tss
      if (tss.ge.1) then
-        idum=1
-        do i = 1, 3
-           ssSize(i,nss)=ssRange(i,2,nss)-ssRange(i,1,nss)+1
-           if (ssSize(i,nss)<0) ssSize(i,nss)=0
-           idum=idum*ssSize(i,nss)
-        end do
 
-        if (idum==0) then
+        ssSize(:,nss)=ssGSzs(:,mb,nss)
+        if (ssblks(mb,nss)==0) then
            ssFlag(nss)=.false.
            color=MPI_UNDEFINED
         else
@@ -98,7 +102,7 @@ contains
 
 
         ! rpt- Create SubSet communicator 
-         CALL MPI_COMM_SPLIT(icom,color,myid,sscom(nss),ierr)   
+        CALL MPI_COMM_SPLIT(icom,color,myid,sscom(nss),ierr)   
         if (ssFlag(nss)) then
            ssGStr(:,nss)=(/max(mpijks(1),ssRange(1,1,nss)),&
                       max(mpijks(2),ssRange(2,1,nss)),&
@@ -116,55 +120,32 @@ contains
            ! rpt- Create SubSet block communicator 
            CALL MPI_COMM_SPLIT(sscom(nss),mb,myid,ssbcom(nss),ierr)   
            call MPI_COMM_RANK(ssbcom(nss),bssid(nss),ierr)
-           if (bssid(nss)==0) then
-              color=1
-           else 
-              color=MPI_UNDEFINED
-           end if
-           ! rpt- Create SubSet masters communicator 
-           CALL MPI_COMM_SPLIT(sscom(nss),color,myid,ssmcom(nss),ierr)   
-           ! rpt- Number of blocks involved in SubSet
-           if (bssid(nss)==0) then
-              call MPI_COMM_SIZE(ssmcom(nss),idum,ierr)
-              ssmb(nss)=idum-1
-           end if
-           CALL MPI_BCAST(ssmb(nss),1,MPI_INTEGER4,0,sscom(nss),ierr)
-           if ((bssid(nss)==0)) then
-              if (ssid(nss)==0) then
-                 ssGSzs(:,mb,nss)=ssSize(:,nss)
-                 do m = 1, ssmb(nss)
-                    CALL MPI_RECV(idum,1,MPI_INTEGER4,MPI_ANY_SOURCE,&
-                                     MPI_ANY_TAG,sscom(nss),ista,ierr)
-                    ssblocks(idum,nss)=.True.
-                 end do
-                 do m = 1, mbk
-                    if (ssblocks(m,nss)) then
-                    CALL MPI_RECV(ssGSzs(1,m,nss),3,MPI_INTEGER4,MPI_ANY_SOURCE,&
-                                  m,sscom(nss),ista,ierr)
-                    do i = 1, 3
-                       if (ssGSzs(i,m,nss)<0) ssGSzs(i,m,nss)=0
-                    end do
-                    else
-                       ssGSzs(:,m,nss)=0
-                    end if
-                 end do
-              else
-                 CALL MPI_SEND(mb,1,MPI_INTEGER4,0,mb,sscom(nss),ierr)
-                 CALL MPI_SEND(ssSize(1,nss),3,MPI_INTEGER4,0,mb,sscom(nss),ierr)
-              end if
-           end if
-           CALL MPI_BCAST(ssGSzs(:,:,nss),3*(ssmb(nss)+1),MPI_INTEGER4,0,sscom(nss),ierr)
         end if
      else
        ssFlag(nss)=.false.
      end if !tss
      end do !nss=1,tss
 
+     do nss = 1, tss
+        ii=0
+        do while(ii.le.ssmbk(nss))
+           do m = 0, mbk
+              if (ssblks(m,nss)==1) then
+                 ssGSzs(:,ii,nss)=ssGSzs(:,m,nss)
+                 if (mb==m) ssmb(nss)=ii
+                 ii=ii+1
+              end if
+           end do
+        end do
+     end do
+
 
      idum=sum(sslmx(:)+1)-1
-     gsize=idum*3-1
-     qsize=idum*5-1
-     allocate(lss(0:idum),ssxyz4(0:gsize),ssq4(0:qsize))
+     if (idum.ge.0) then
+        gsize=idum*3-1
+        qsize=idum*5-1
+        allocate(lss(0:idum),ssxyz4(0:gsize),ssq4(0:qsize))
+     end if
      ll=0
      do nss = 1, tss
         if (ssFlag(nss)) then
@@ -226,7 +207,7 @@ end subroutine ssCheck
      character(len=*),parameter :: cext='.xyz'
      integer :: n,l,llss,i,ii,lh,iolen,comid,wrcom,nbk,err,mblk
      integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
-     integer :: fh,amode,garr,idum
+     integer :: fh,amode,garr,idum,bid
      integer, dimension (4) :: gsizes,lsizes,starts
      integer(k4) :: ibuf
 
@@ -250,8 +231,8 @@ end subroutine ssCheck
         case(1)
            cout=''
            wrcom=sscom(nss)
-           nbk=ssmb(nss)
-           if (nbk==0) mblk=0
+           nbk=ssmbk(nss)
+           bid=ssmb(nss)
         case(0)
            write(cout,"(i2)") mb
            do i = 0, 1
@@ -261,6 +242,7 @@ end subroutine ssCheck
            end do
            wrcom=ssbcom(nss)
            nbk=0
+           bid=mb
         case default
            if(ssid(nss)==0) write(*,*) 'Wrong multiblock option! Aborting...'
            CALL MPI_ABORT(icom,err,ierr)
@@ -303,7 +285,7 @@ end subroutine ssCheck
          ibuf=nbk+1; offset=lh*iolen          ! Number of blocks
          CALL MPI_FILE_WRITE_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
          do l = 0, nbk
-            mm=l+(1-mblk)*mb
+            mm=l+(1-mblk)*bid
             ibuf=ssGSzs(1,mm,nss); offset=lh*iolen ! IMax
             CALL MPI_FILE_WRITE_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
             ibuf=ssGSzs(2,mm,nss); offset=lh*iolen ! JMax
@@ -312,12 +294,12 @@ end subroutine ssCheck
             CALL MPI_FILE_WRITE_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
          end do
         end if
-        l=(1-mblk)*mb
+        l=(1-mblk)*bid
         lhmb(l)=1+(nbk+1)*3
         do mm = 0, nbk-1
            lhmb(mm+1)=lhmb(mm)+3*(ssGSzs(1,mm,nss))*(ssGSzs(2,mm,nss))*(ssGSzs(3,mm,nss))
         end do
-        disp=lhmb(mb)*iolen
+        disp=lhmb(bid)*iolen
         CALL MPI_FILE_SET_VIEW(fh,disp,MPI_REAL4,garr,'native',info,ierr)
         CALL MPI_FILE_WRITE_ALL(fh,ssxyz4(idum),wrlen,MPI_REAL4,ista,ierr)
         CALL MPI_FILE_CLOSE(fh,ierr)
@@ -341,7 +323,7 @@ end subroutine ssCheck
      character(len=*),parameter :: cext='.q'
      integer :: n,l,ll,llss,ii,jj,kk,i,lh,iolen,comid,bcomid,wrcom,nbk,err,mblk
      integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
-     integer :: amode,idum
+     integer :: amode,idum,bid
      integer, dimension (4) :: gsizes,lsizes,starts
      integer(k4) :: ibuf
      real   (k4) :: rbuf
@@ -366,8 +348,8 @@ end subroutine ssCheck
         case(1)
            cout=''
            wrcom=sscom(nss)
-           nbk=ssmb(nss)
-           if (nbk==0) mblk=0
+           nbk=ssmbk(nss)
+           bid=ssmb(nss)
         case(0)
            write(cout,"(a,i2)") 'b',mb
            do i = 0, 1
@@ -377,6 +359,7 @@ end subroutine ssCheck
            end do
            wrcom=ssbcom(nss)
            nbk=0
+           bid=mb
         case default
            if(ssid(nss)==0) write(*,*) 'Wrong multiblock option! Aborting...'
            CALL MPI_ABORT(icom,err,ierr)
@@ -439,7 +422,7 @@ end subroutine ssCheck
          ibuf=nbk+1; offset=lh*iolen          ! Number of blocks
          CALL MPI_FILE_WRITE_AT(ssq4fh(nss),offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
          do l = 0, nbk
-            mm=l+(1-mblk)*mb
+            mm=l+(1-mblk)*bid
             ibuf=ssGSzs(1,mm,nss); offset=lh*iolen ! IMax
             CALL MPI_FILE_WRITE_AT(ssq4fh(nss),offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
             ibuf=ssGSzs(2,mm,nss); offset=lh*iolen ! JMax
@@ -448,13 +431,13 @@ end subroutine ssCheck
             CALL MPI_FILE_WRITE_AT(ssq4fh(nss),offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
          end do
         end if
-        l=(1-mblk)*mb
+        l=(1-mblk)*bid
         lhmb(l)=1+(nbk+1)*3
         do mm = 0, nbk-1
            lhmb(mm+1)=lhmb(mm)+4+5*ssGSzs(1,mm,nss)*ssGSzs(2,mm,nss)*ssGSzs(3,mm,nss)
         end do
         if (bcomid==0) then
-           lh=lhmb(mb)
+           lh=lhmb(bid)
             rbuf=amachoo; offset=lh*iolen ! Mach Number
             CALL MPI_FILE_WRITE_AT(ssq4fh(nss),offset,rbuf,1,MPI_REAL4,ista,ierr); lh=lh+1
             rbuf=aoa    ; offset=lh*iolen ! AoA
@@ -464,7 +447,7 @@ end subroutine ssCheck
             rbuf=timo   ; offset=lh*iolen ! Time
             CALL MPI_FILE_WRITE_AT(ssq4fh(nss),offset,rbuf,1,MPI_REAL4,ista,ierr); lh=lh+1
         end if
-        disp=(lhmb(mb)+4)*iolen
+        disp=(lhmb(bid)+4)*iolen
         CALL MPI_FILE_SET_VIEW(ssq4fh(nss),disp,MPI_REAL4,ssq4arr(nss),'native',info,ierr)
         CALL MPI_FILE_WRITE_ALL(ssq4fh(nss),ssq4(idum),wrlen,MPI_REAL4,ista,ierr)
         CALL MPI_FILE_CLOSE(ssq4fh(nss),ierr)
@@ -492,7 +475,7 @@ end subroutine ssCheck
      character(len=*),parameter :: cext='.q'
      integer :: n,l,ll,llss,ii,jj,kk,i,lh,iolen,comid,bcomid,wrcom,nbk,err,mblk
      integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
-     integer :: amode,idum
+     integer :: amode,idum,bid
      integer, dimension (4) :: gsizes,lsizes,starts
      integer(k4) :: ibuf
      real   (k4) :: rbuf
@@ -517,8 +500,8 @@ end subroutine ssCheck
         case(1)
            cout=''
            wrcom=sscom(nss)
-           nbk=ssmb(nss)
-           if (nbk==0) mblk=0
+           nbk=ssmbk(nss)
+           bid=ssmb(nss)
         case(0)
            write(cout,"(a,i2)") 'b',mb
            do i = 0, 1
@@ -528,6 +511,7 @@ end subroutine ssCheck
            end do
            wrcom=ssbcom(nss)
            nbk=0
+           bid=mb
         case default
            if(ssid(nss)==0) write(*,*) 'Wrong multiblock option! Aborting...'
            CALL MPI_ABORT(icom,err,ierr)
@@ -599,7 +583,7 @@ end subroutine ssCheck
          ibuf=nbk+1; offset=lh*iolen          ! Number of blocks
          CALL MPI_FILE_WRITE_AT(ssq4fh(nss),offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
          do l = 0, nbk
-            mm=l+(1-mblk)*mb
+            mm=l+(1-mblk)*bid
             ibuf=ssGSzs(1,mm,nss); offset=lh*iolen ! IMax
             CALL MPI_FILE_WRITE_AT(ssq4fh(nss),offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
             ibuf=ssGSzs(2,mm,nss); offset=lh*iolen ! JMax
@@ -608,13 +592,13 @@ end subroutine ssCheck
             CALL MPI_FILE_WRITE_AT(ssq4fh(nss),offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1
          end do
         end if
-        l=(1-mblk)*mb
+        l=(1-mblk)*bid
         lhmb(l)=1+(nbk+1)*3
         do mm = 0, nbk-1
            lhmb(mm+1)=lhmb(mm)+4+5*ssGSzs(1,mm,nss)*ssGSzs(2,mm,nss)*ssGSzs(3,mm,nss)
         end do
         if (bcomid==0) then
-           lh=lhmb(mb)
+           lh=lhmb(bid)
             rbuf=amachoo; offset=lh*iolen ! Mach Number
             CALL MPI_FILE_WRITE_AT(ssq4fh(nss),offset,rbuf,1,MPI_REAL4,ista,ierr); lh=lh+1
             rbuf=aoa    ; offset=lh*iolen ! AoA
@@ -624,7 +608,7 @@ end subroutine ssCheck
             rbuf=timo   ; offset=lh*iolen ! Time
             CALL MPI_FILE_WRITE_AT(ssq4fh(nss),offset,rbuf,1,MPI_REAL4,ista,ierr); lh=lh+1
         end if
-        disp=(lhmb(mb)+4)*iolen
+        disp=(lhmb(bid)+4)*iolen
         CALL MPI_FILE_SET_VIEW(ssq4fh(nss),disp,MPI_REAL4,ssq4arr(nss),'native',info,ierr)
         CALL MPI_FILE_WRITE_ALL(ssq4fh(nss),ssq4(idum),wrlen,MPI_REAL4,ista,ierr)
         if (comid==0) then
