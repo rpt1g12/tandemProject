@@ -27,6 +27,8 @@ contains
 
      ! Allocate SubSet (SS) Flags
      allocate(ssFlag(tss),nout_ss(tss),ndati_ss(tss)) 
+     allocate(ssblocks(0:mbk,tss))
+     ssblocks(:,:)=.False.
      ! Allocate SS ranges
      allocate(ssRange(3,2,tss))
      ! Allocate SS Sizes, Starts, and Ends
@@ -94,6 +96,7 @@ contains
         end if
         end do
 
+
         ! rpt- Create SubSet communicator 
          CALL MPI_COMM_SPLIT(icom,color,myid,sscom(nss),ierr)   
         if (ssFlag(nss)) then
@@ -130,13 +133,23 @@ contains
               if (ssid(nss)==0) then
                  ssGSzs(:,mb,nss)=ssSize(:,nss)
                  do m = 1, ssmb(nss)
+                    CALL MPI_RECV(idum,1,MPI_INTEGER4,MPI_ANY_SOURCE,&
+                                     MPI_ANY_TAG,sscom(nss),ista,ierr)
+                    ssblocks(idum,nss)=.True.
+                 end do
+                 do m = 1, mbk
+                    if (ssblocks(m,nss)) then
                     CALL MPI_RECV(ssGSzs(1,m,nss),3,MPI_INTEGER4,MPI_ANY_SOURCE,&
                                   m,sscom(nss),ista,ierr)
                     do i = 1, 3
                        if (ssGSzs(i,m,nss)<0) ssGSzs(i,m,nss)=0
                     end do
+                    else
+                       ssGSzs(:,m,nss)=0
+                    end if
                  end do
               else
+                 CALL MPI_SEND(mb,1,MPI_INTEGER4,0,mb,sscom(nss),ierr)
                  CALL MPI_SEND(ssSize(1,nss),3,MPI_INTEGER4,0,mb,sscom(nss),ierr)
               end if
            end if
