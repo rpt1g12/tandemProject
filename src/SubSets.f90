@@ -37,7 +37,7 @@ contains
      allocate(gRange(3,2,tss))
      ! Allocate SS Sizes, Starts, and Ends
      allocate(ssGSzs(3,0:mbk,tss))
-     allocate(ssSize(3,tss),ssLSize(3,tss),ssGStr(3,tss),ssGEnd(3,tss),ssStr(3,tss))
+     allocate(ssSize(3,tss),ssLSize(3,tss),ssGStr(3,tss),ssGEnd(3,tss),ssStr(3,tss),ssEnd(3,tss))
      ! Allocate Communicators, ids and # processors
      allocate(sscom(tss),ssbcom(tss),ssid(tss),bssid(tss),ssnp(tss),ssmbk(tss),ssmb(tss)) 
      ! Allocate SS lmx array and SS frequencies
@@ -65,7 +65,7 @@ contains
            do i = 1, 3
               ssGSzs(i,nn,nss)=gRange(i,2,nss)-gRange(i,1,nss)+1
               if (ssblks(nn,nss)==0) ssGSzs(i,nn,nss)=0
-        end do
+           end do
         end do
         ! rpt- Number of blocks involved in SubSet
         ssmbk(nss)=sum(ssblks(:,nss))-1
@@ -102,7 +102,7 @@ contains
 
 
         ! rpt- Create SubSet communicator 
-         CALL MPI_COMM_SPLIT(icom,color,myid,sscom(nss),ierr)   
+        CALL MPI_COMM_SPLIT(icom,color,myid,sscom(nss),ierr)   
         if (ssFlag(nss)) then
            ssGStr(:,nss)=(/max(mpijks(1),ssRange(1,1,nss)),&
                       max(mpijks(2),ssRange(2,1,nss)),&
@@ -110,9 +110,11 @@ contains
            ssGEnd(:,nss)=(/min(mpijke(1),ssRange(1,2,nss)),&
                     min(mpijke(2),ssRange(2,2,nss)),&
                     min(mpijke(3),ssRange(3,2,nss))/)
-           ssStr(:,nss)=ssGStr(:,nss)-ssRange(:,1,nss)
-           ssEnd(:,nss)=ssGEnd(:,nss)-ssRange(:,1,nss)
-           ssLSize(:,nss)=ssGEnd(:,nss)-ssGStr(:,nss)+1
+           do m = 1, 3
+              ssStr(m,nss)=ssGStr(m,nss)-ssRange(m,1,nss)
+              ssEnd(m,nss)=ssGEnd(m,nss)-ssRange(m,1,nss)
+              ssLSize(m,nss)=ssGEnd(m,nss)-ssGStr(m,nss)+1
+           end do
            sslmx(nss)=(ssLSize(1,nss))*(ssLSize(2,nss))*(ssLSize(3,nss))-1
            ! rpt- Rank and Sizes for SubSet Communicator
            call MPI_COMM_RANK(sscom(nss),ssid(nss),ierr)
@@ -142,20 +144,20 @@ contains
 
      idum=sum(sslmx(:)+1)-1
      if (idum.ge.0) then
-     gsize=idum*3-1
-     qsize=idum*5-1
-     allocate(lss(0:idum),ssxyz4(0:gsize),ssq4(0:qsize))
+        gsize=(idum+1)*3-1
+        qsize=(idum+1)*5-1
+        allocate(lss(0:idum),ssxyz4(0:gsize),ssq4(0:qsize))
      end if
      ll=0
      do nss = 1, tss
         if (ssFlag(nss)) then
            write(cnum,"(i3,a)") nss
-              do ii = 1, 3
+           do ii = 1, 3
               i=scan(cnum,' ')
               if (i==0) exit
               cnum(i:i)='0'
-              end do
-              chstr='out/ss'//cnum//'/'
+           end do
+           chstr='out/ss'//cnum//'/'
            if (ssid(nss)==0) call system('mkdir -p '//chstr)
 
            lss0(nss)=ll
@@ -395,7 +397,7 @@ end subroutine ssCheck
            do ll = 0, sslmx(nss); l=lss(ll+lss0(nss))
               ii=ll+(i-1)*(sslmx(nss)+1)+idum
               ssq4(ii)=((qa(l,i)/qa(l,1))+umf(i-1))
-        end do
+           end do
         end do
         do ll = 0, sslmx(nss); l=lss(ll+lss0(nss))
            ii=ll+4*(sslmx(nss)+1)+idum
