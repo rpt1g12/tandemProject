@@ -37,7 +37,7 @@ contains
      allocate(gRange(3,2,tss))
      ! Allocate SS Sizes, Starts, and Ends
      allocate(ssGSzs(3,0:mbk,tss))
-     allocate(ssSize(3,tss),ssLSize(3,tss),ssGStr(3,tss),ssGEnd(3,tss),ssStr(3,tss))
+     allocate(ssSize(3,tss),ssLSize(3,tss),ssGStr(3,tss),ssGEnd(3,tss),ssStr(3,tss),ssEnd(3,tss))
      ! Allocate Communicators, ids and # processors
      allocate(sscom(tss),ssbcom(tss),ssid(tss),bssid(tss),ssnp(tss),ssmbk(tss),ssmb(tss)) 
      ! Allocate SS lmx array and SS frequencies
@@ -110,9 +110,11 @@ contains
            ssGEnd(:,nss)=(/min(mpijke(1),ssRange(1,2,nss)),&
                     min(mpijke(2),ssRange(2,2,nss)),&
                     min(mpijke(3),ssRange(3,2,nss))/)
-           ssStr(:,nss)=ssGStr(:,nss)-ssRange(:,1,nss)
-           ssEnd(:,nss)=ssGEnd(:,nss)-ssRange(:,1,nss)
-           ssLSize(:,nss)=ssGEnd(:,nss)-ssGStr(:,nss)+1
+           do m = 1, 3
+              ssStr(m,nss)=ssGStr(m,nss)-ssRange(m,1,nss)
+              ssEnd(m,nss)=ssGEnd(m,nss)-ssRange(m,1,nss)
+              ssLSize(m,nss)=ssGEnd(m,nss)-ssGStr(m,nss)+1
+           end do
            sslmx(nss)=(ssLSize(1,nss))*(ssLSize(2,nss))*(ssLSize(3,nss))-1
            ! rpt- Rank and Sizes for SubSet Communicator
            call MPI_COMM_RANK(sscom(nss),ssid(nss),ierr)
@@ -142,8 +144,8 @@ contains
 
      idum=sum(sslmx(:)+1)-1
      if (idum.ge.0) then
-     gsize=idum*3-1
-     qsize=idum*5-1
+        gsize=(idum+1)*3-1
+        qsize=(idum+1)*5-1
      allocate(lss(0:idum),ssxyz4(0:gsize),ssq4(0:qsize))
      end if
      ll=0

@@ -235,18 +235,18 @@ if (timo+dtk>tps) then
    daoadt=half*daoa*dtsdt*sin(tsdt) ! daoa(t=ts+dtko)/dt
    
    fctr=half*daoa*dtsdt
-   ut(:)=(/amachoo*cos(aoat),amachoo*sin(aoat),0/) !u(t=ts)
+   ut(:)=(/amachoo*cos(aoat),amachoo*sin(aoat),zero/) !u(t=ts)
    dudt(:)=(/-amachoo*fctr*sin(aoatdt)*sin(tsdt),& !du(t=ts+dtko)/dt
              amachoo*fctr*cos(aoatdt)*sin(tsdt),&  !dv(t=ts+dtko)/dt
-             0/)                                   !dw(t=ts+dtko)/dt
+             zero/)                                   !dw(t=ts+dtko)/dt
    umf(:)=ut(:)+dtk*dudt(:) ! Runge-Kutta at t=t+dtk
     
    dudt(:)=(/-amachoo*fctr*sin(aoat)*sin(ts),& !du(t=ts)/dt
              amachoo*fctr*cos(aoat)*sin(ts),&  !dv(t=ts)/dt
-             0/)                               !dw(t=ts)/dt
+             zero/)                               !dw(t=ts)/dt
    dudt2(:)=(/-amachoo*fctr*(cos(aoatdt)*fctr*(sin(tsdt))**2+dtsdt*sin(aoatdt)*cos(tsdt)),& !d2u(t=ts+dtko)/dt2
               -amachoo*fctr*(sin(aoatdt)*fctr*(sin(tsdt))**2-dtsdt*cos(aoatdt)*cos(tsdt)),& !d2v(t=ts+dtko)/dt2
-             0/)                                                                            !d2w(t=ts+dtko)/dt2
+             zero/)                                                                            !d2w(t=ts+dtko)/dt2
    dudtmf(:)=dudt(:)+dtk*dudt2(:) ! Runge-Kutta at t=t+dtk
 
    aoa=atan(umf(2)/umf(1))*180/pi
