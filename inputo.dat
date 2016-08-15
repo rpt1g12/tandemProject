@@ -11,7 +11,7 @@ nextrabc-gcic   0       0
 reoo-tempoo	4.0e5		273.0e0
 amach1-2-3	0.2819077862e0		0.102606043e0		0.0e0 !aoa=20, M=0.3
 wtemp           1.0e0
-cfl             0.95e
+cfl             0.95e0
 tmax-timf-tsam  175.0e0       15.0e0       165.0e0
 fltk-bc         0.85e0      0.85e0
 dto             -0.01725e0
