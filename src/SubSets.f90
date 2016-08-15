@@ -472,7 +472,7 @@ end subroutine ssCheck
      character(len=*),parameter :: fname='solT'
      character(len=:),allocatable :: lfname
      character(3) :: cout,cnum,ncout
-     character(8) :: ctime
+     character(len=:),allocatable :: ctime
      character(10) :: cpath
      character(len=*),parameter :: cext='.q'
      integer :: n,l,ll,llss,ii,jj,kk,i,lh,iolen,comid,bcomid,wrcom,nbk,err,mblk
@@ -526,9 +526,12 @@ end subroutine ssCheck
               if (l==0) exit
               ncout(l:l)='0'
            end do
+           l=len(trim(cname)//ncout)
+           allocate(character(len=l) :: ctime)
            ctime=trim(cname)//ncout
         else
            if (nout.le.ndata) then
+              allocate(character(len=8) :: ctime)
               write(ctime,"(f8.4)") times(nout)
               do i = 0, 8
                  l=scan(ctime,' ')
@@ -536,8 +539,10 @@ end subroutine ssCheck
                  ctime(l:l)='0'
               end do
            else if (nout==ndata+1) then
+              allocate(character(len=1) :: ctime)
               ctime='A'
            else if (nout==ndata+2) then
+              allocate(character(len=3) :: ctime)
               ctime='RMS'
            end if
         end if

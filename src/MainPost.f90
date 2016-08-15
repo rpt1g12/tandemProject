@@ -49,34 +49,16 @@ if (intgflag) then
               myid,sum(aintg),lcintg
 end if
 
-do n = 0, ndata
-   call rdP3dP(n,fmblk)
-   do nss = 1, tss
-      call wrP3dP_ss(n,fmblk,nss=nss)
-   end do
-end do
+!do n = 0, ndata
+!   call rdP3dP(n,fmblk)
+!   do nss = 1, tss
+!      call wrP3dP_ss(n,fmblk,nss=nss)
+!   end do
+!end do
 
 !===== COMPUTE AVERAGE VALUES IF NOT AVAILABLE YET
 if (favg==1) then
-   call p3daverage
-end if
-
-!!===== WRITE AVERAGE VALUES 
-if (fwavg==1) then
-   qo(:,:)=qa(:,:)
-   call wrP3dP(ndata+1,fmblk)
-end if
-
-!===== COMPUTE RMS VALUES IF NOT AVAILABLE YET
-if (frms==1) then
-   call p3drms
-end if
-
-!!===== WRITE RMS VALUES 
-if (fwrms==1) then
-   qo(:,:)=qb(:,:)
-   call wrP3dP(ndata+2,fmblk)
-   call wrP3dF('Rij',0,6,fmblk)
+   call p3dStats
 end if
 
 !===COMPUTE FORCE COEFFICIENT
@@ -147,14 +129,48 @@ if (fwplus==1) then
    end if
 end if
 
-!==COMUPTE Q+W
+!==COMUPTE Q+W+DELTA
 if (fcurl==1) then
-   !do n = 0, ndata
+   ! Get coefficients for time averaging
+   call integCoef
+   ! Store averaged quantity in qa and qb
+   qb(:,:)=0
+   qa(:,:)=0
+   do n = 0, ndata
+      !n=ndata+1
+      call getAllDs(n)
+      !call wrP3dP(n,fmblk,'Q+W')
+      qb(:,:)=qb(:,:)+delt(n)*qo(:,:)
+      do nss = 2, tss
+         call wrP3dP_ss(n,fmblk,cname='Q+W+DELTA',nss=nss)
+      end do
+      ra0=two/(amachoo**2)
+      qo(:,1)=0
+      do i = 2, 4
+         qo(:,i)=0
+         if (wflag) then
+            do m = 0, lcwall; l=lwall(m)
+               qo(l,i)=tw(m,i-1)
+               if (i==2) then
+               ra1=DOT_PRODUCT(tw(m,:),wtan(m,:))
+               qo(l,1)=ra1*ra0
+               end if
+            end do
+         end if
+      end do
+      qo(:,5)=(p(:)-poo)*ra0
+      qa(:,:)=qa(:,:)+delt(n)*qo(:,:)
+      !call wrP3dP(n,fmblk,'CftwCp')
+      call wrP3dP_ss(n,fmblk,cname='Cf+tw+Cp',nss=1)
+   end do
       n=ndata+1
-      call qcriterion(n);
-      call getCurl(n);
-      call wrP3dP(n,fmblk,'Q+W')
-   !end do
+      ! Save averaged data
+      qo(:,:)=qb(:,:)
+      do nss = 2, tss
+         call wrP3dP_ss(n,fmblk,cname='avgQ+W+DELTA',nss=nss)
+      end do
+      qo(:,:)=qa(:,:)
+      call wrP3dP_ss(n,fmblk,cname='avgCf+tw+Cp',nss=1)
 end if
 
 !==INTEGRATION
@@ -203,28 +219,29 @@ end if
 
 !==WRITE Cf+WSS+Cp
 if (fwss==1) then
-      call gettw(ndata+1)
-      ra0=two/(amachoo**2)
-      qo(:,1)=0
-      do i = 2, 4
-         qo(:,i)=0
-         if (wflag) then
-            do m = 0, lcwall; l=lwall(m)
-               qo(l,i)=tw(m,i-1)
-               if (i==2) then
-               ra1=DOT_PRODUCT(tw(m,:),wtan(m,:))
-               qo(l,1)=ra1*ra0
-               end if
-            end do
-         end if
-      end do
-      qo(:,5)=(p(:)-poo)*ra0
-      call wrP3dP(n,fmblk,'Cf+tw+Cp')
+   n=ndata+1
+   call getAllDs(n)
+   ra0=two/(amachoo**2)
+   qo(:,1)=0
+   do i = 2, 4
+      qo(:,i)=0
+      if (wflag) then
+         do m = 0, lcwall; l=lwall(m)
+            qo(l,i)=tw(m,i-1)
+            if (i==2) then
+            ra1=DOT_PRODUCT(tw(m,:),wtan(m,:))
+            qo(l,1)=ra1*ra0
+            end if
+         end do
+      end if
+   end do
+   qo(:,5)=(p(:)-poo)*ra0
+   call wrP3dP(n+1,fmblk,'CftwCp')
 end if
 
 !==COMPUTE Cf 
 if (fcf==1) then
-      call gettw(ndata+1)
+   call gettw(ndata+1)
    if (myid==7) then
       open(7,file='data/allCfAVG.dat')
       write(7,"('x cf')") 

@@ -647,6 +647,76 @@ contains
  end subroutine qcriterion
 
 !====================================================================================
+!=====COMPUTE dui/dxi+Q+VORTICITY
+!====================================================================================
+ subroutine getAllDs(nvar)
+    implicit none
+    integer, intent(in) :: nvar
+    real(k4),parameter :: r108=-1_k4/108_k4,r27=-1_k4/27_k4,&
+                          r4=-1_k4/4_k4,r18=-1_k4/18_k4
+
+    call rdP3dS(nvar,fmblk)
+    p(:)=qo(:,5)
+    de(:,2)=qo(:,1)
+    de(:,1)=1/de(:,2)
+    de(:,5)=gam*p(:)*de(:,1)
+    de(:,1)=srefp1dre*de(:,5)**1.5_k8/(de(:,5)+srefoo)
+    call getVGrad(nvar)
+
+     ! Q = 2nd Invariant of the characteristic eq
+     qo(:,1)=2*(half*(fout(:,2)-fout(:,4)))**2 + 2*(half*(fout(:,3)-fout(:,9)))**2 + &
+     2*(half*(fout(:,6)-fout(:,8)))**2 - fout(:,1)**2 - fout(:,5)**2 - fout(:,9)**2 -   &
+     2*(half*(fout(:,2)+fout(:,4)))**2 - 2*(half*(fout(:,3)+fout(:,7)))**2 -         &
+     2*(half*(fout(:,6)+fout(:,8)))**2
+
+     qo(:,2)=fout(:,8)-fout(:,6)
+     qo(:,3)=fout(:,3)-fout(:,7)
+     qo(:,4)=fout(:,4)-fout(:,2)
+
+     ! P = 1st Invariant of the characteristic eq
+     de(:,3)=fout(:,1)+fout(:,5)+fout(:,9)
+     ! R = 3rd Invariant of the characteristic eq
+     de(:,4)=fout(:,1)*qo(:,2)+fout(:,5)*qo(:,3)+fout(:,9)*qo(:,4)
+     ! PQ
+     de(:,5)=de(:,3)*qo(:,1)
+
+     ! Compute discriminant DELTA 
+     ! (PQ)**2/108
+     qo(:,5)=r108*de(:,5)
+     ! -(Q**3+P**3R)/27
+     qo(:,5)=qo(:,5)-r27*(qo(:,1)*qo(:,1)*qo(:,1)+de(:,3)*de(:,3)*de(:,3)*de(:,4))
+     ! -R**2/4
+     qo(:,5)=qo(:,5)-r4*de(:,4)*de(:,4)
+     ! +(PQR)/6
+     qo(:,5)=qo(:,5)+de(:,5)*de(:,4)
+
+    if (wflag) then
+    ! READ VARIABLES
+    if (nviscous==1) then
+ 
+     fctr=2.0_k8/3
+     rr(:,1)=-de(:,1)
+     rr(:,2)=1/yaco(:)
+     de(:,5)=fctr*(fout(:,1)+fout(:,5)+fout(:,9))*rr(:,2)
+ 
+     txx(:)=rr(:,1)*(2*fout(:,1)-de(:,5))
+     tyy(:)=rr(:,1)*(2*fout(:,5)-de(:,5))
+     tzz(:)=rr(:,1)*(2*fout(:,9)-de(:,5))
+     txy(:)=rr(:,1)*(fout(:,4)+fout(:,2))
+     tyz(:)=rr(:,1)*(fout(:,8)+fout(:,6))
+     tzx(:)=rr(:,1)*(fout(:,3)+fout(:,7))
+ 
+       if(.not.allocated(tw)) allocate(tw(0:lcwall,3))
+       do ll = 0, lcwall; l=lwall(ll)
+         tw(ll,1)=de(l,2)*(txx(l)*wnor(ll,1)+txy(l)*wnor(ll,2)+tzx(l)*wnor(ll,3))
+         tw(ll,2)=de(l,2)*(txy(l)*wnor(ll,1)+tyy(l)*wnor(ll,2)+tyz(l)*wnor(ll,3))
+         tw(ll,3)=de(l,2)*(tzx(l)*wnor(ll,1)+tyz(l)*wnor(ll,2)+tzz(l)*wnor(ll,3))
+       end do
+    end if
+    end if
+
+ end subroutine getAllDs
+!====================================================================================
 !=====FIND INDEX FROM X,Y, AND Z COORDINATES
 !====================================================================================
  subroutine findll(xpos,ypos,zpos,l,id) 
@@ -782,60 +852,7 @@ end subroutine flst
 !====================================================================================
 !=====AVERAGE RESULTS IN TIME PLOT3D
 !====================================================================================
- subroutine p3daverage
-    implicit none
-    integer :: foper
-    real(k8),dimension(:),allocatable :: delt
-    character(3) :: cout
-
-    selectcase(fmblk)
-    case(0)
-       write(cout,"(a,i2)") 'b',mb
-       do i = 0, 1
-          l=scan(cout,' ')
-          if (l==0) exit
-          cout(l:l)='0'
-       end do
-       foper=mo(mb)
-    case(1)
-       cout=''
-       foper=0
-    end select
-
-    if (fflag) then
-       if (myid==foper) then
-          write(*,"('Total amout of data: ',i3,a)") ndata,cout
-       end if
-       ! CONSTRUCT THE COEFFICIENTS ARRAY
-          ns=0; ne=ndata; allocate(delt(ns:ne))
-          fctr=half/(times(ne)-times(ns))
-          delt(ns)=fctr*(times(ns+1)-times(ns)); 
-          delt(ne)=fctr*(times(ne)-times(ne-1))
-       do n=ns+1,ne-1
-          delt(n)=fctr*(times(n+1)-times(n-1))
-       end do
-          qa(:,:)=0
-       nn=ndata*0.01_k8
-       wts=0
-       do n=0,ndata
-       !if (myid==foper) then
-          if (mod(n,nn)==0) then
-             wte=MPI_WTIME(); res=wte-wts
-             write(*,"('Block ',i2,x,f5.1,'% Averaged',a,' took ',f5.1,'s')")&
-             mb,real(n)*100.0e0/real(ndata),cout,res
-             wts=MPI_WTIME()
-          end if
-       !end if
-          call rdP3dS(n,fmblk)
-          qa(:,:)=qa(:,:)+delt(n)*qo(:,:)
-       end do
-    end if
- end subroutine p3daverage
-
-!====================================================================================
-!=====RMS OF RESULTS IN TIME PLOT3D
-!====================================================================================
- subroutine p3drms
+ subroutine p3dStats
     implicit none
     integer :: foper
     real(k8),dimension(:),allocatable :: delt
@@ -869,26 +886,43 @@ end subroutine flst
        do n=ns+1,ne-1
           delt(n)=fctr*(times(n+1)-times(n-1))
        end do
-          call rdP3dS(ndata+1,fmblk)
-          qa(:,:)=qo(:,:)
-          qb(:,:)=0
-       nn=ndata*0.05_k8
+          qa(:,:)=zero
+          qb(:,:)=zero
+       nn=ndata*0.01_k8
+       wts=0
        do n=0,ndata
+       if (myid==mo(mb)) then
           if (mod(n,nn)==0) then
-             write(*,"('Block ',i2,x,f5.1,'% Done',a)")&
-             mb,real(n)*100.0e0/real(ndata),cout
+             wte=MPI_WTIME(); res=wte-wts
+             write(*,"('Block ',i2,x,f5.1,'% Averaged',a,' took ',f5.1,'s')")&
+             mb,real(n)*100.0e0/real(ndata),cout,res
+             wts=MPI_WTIME()
           end if
+       end if
           call rdP3dS(n,fmblk)
-          de(:,:)=(qo(:,:)-qa(:,:))
-          qb(:,:)=qb(:,:)+delt(n)*de(:,:)*de(:,:)
-          fout(:,1:3)=qb(:,2:4)
-          fout(:,4)=fout(:,4)+delt(n)*de(:,2)*de(:,3)
-          fout(:,5)=fout(:,5)+delt(n)*de(:,2)*de(:,4)
-          fout(:,6)=fout(:,6)+delt(n)*de(:,3)*de(:,4)
+          de(:,:)=delt(n)*qo(:,:)
+          qa(:,:)=qa(:,:)+de(:,:)
+          qb(:,:)=qb(:,:)+de(:,:)*qo(:,:)
+          fout(:,4)=fout(:,4)+de(:,2)*qo(:,3)
+          fout(:,5)=fout(:,5)+de(:,2)*qo(:,4)
+          fout(:,6)=fout(:,6)+de(:,3)*qo(:,4)
        end do
-       qb(:,:)=sqrt(qb(:,:))
+       do i = 2, 4
+          fout(:,i-1)=qb(:,i)-qa(:,i)*qa(:,i)
+       end do
+       fout(:,4)=fout(:,4)-qa(:,2)*qa(:,3)
+       fout(:,5)=fout(:,5)-qa(:,2)*qa(:,4)
+       fout(:,6)=fout(:,6)-qa(:,3)*qa(:,4)
+       !!===== WRITE AVERAGE VALUES 
+           qo(:,:)=qa(:,:)
+           call wrP3dP(ndata+1,fmblk)
+       !!===== WRITE RMS VALUES 
+          qo(:,:)=sqrt(qb(:,:))
+          call wrP3dP(ndata+2,fmblk)
+          call wrP3dF('Rij',0,6,fmblk)
     end if
- end subroutine p3drms
+ end subroutine p3dStats
+
 
 !====================================================================================
 !=====  PLOT3D F FILES Read
