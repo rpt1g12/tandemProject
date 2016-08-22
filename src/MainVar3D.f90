@@ -214,9 +214,17 @@
  real(k8), dimension(2,2) :: cl
  real(k8), dimension(2,2,2) :: clh
 
+ !=== ipost.dat input flags
  integer :: fparallel,fmblk
- integer :: favg,fwavg,favgu,fcoef,fcf,fcp,floc,fwplus,fqcrit,fwss,fcurl,frms,fwrms
+ integer :: favg
+ integer :: fcoef
+ integer :: floc
+ integer :: fwss,fcf,fwplus
+ integer :: fcurl
  integer :: fstrip
+ integer :: fprobcirc
+ integer :: fijkmax
+
  real(k8),dimension(:),allocatable :: delt
  real(k8), dimension (:,:), allocatable :: svarr
 ! real(k8), dimension (:,:,:,:), allocatable :: qxyz
@@ -245,6 +253,13 @@
  real(k4) , dimension(:,:,:), allocatable :: maxxyz
  real(k4) :: rout
  integer(k4), dimension(:,:), allocatable :: nose
+
+ ! Dummy variables
+ integer(k4) :: idum
+ real(k4) :: rdum
+ real(k8) :: ddum
+ character(128) :: cdum
+ character(1) :: onechr
 
 !===== ADITIONAL INPUT VARIABLES BY RPT
  integer(k4)  :: nto,iwrec

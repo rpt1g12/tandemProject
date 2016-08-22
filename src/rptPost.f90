@@ -47,15 +47,15 @@ contains
 !===== INPUT PARAMETERS POSTPROCESS
     open(9,file='ipost.dat',shared)
     read(9,*) cinput,fparallel,fmblk
-    read(9,*) cinput,favg,fwavg,favgu
-    read(9,*) cinput,fcoef,fcf,fcp
+    read(9,*) cinput,favg
+    read(9,*) cinput,fcoef
     read(9,*) cinput,floc
-    read(9,*) cinput,fwplus
-    read(9,*) cinput,fqcrit,fwss
+    read(9,*) cinput,fwss,fcf,fwplus
     read(9,*) cinput,fcurl
-    read(9,*) cinput,frms,fwrms
     read(9,*) cinput,fstrip
     read(9,*) cinput,fintg,rdis,xpos,ypos,atk
+    read(9,*) cinput,fprobcirc
+    read(9,*) cinput,fijkmax
     close(9)
 
     cinput=cinput; fltk=pi*fltk; fltkbc=pi*fltkbc
@@ -669,26 +669,28 @@ contains
      2*(half*(fout(:,2)+fout(:,4)))**2 - 2*(half*(fout(:,3)+fout(:,7)))**2 -         &
      2*(half*(fout(:,6)+fout(:,8)))**2
 
+     ! Build OMEGA 
      qo(:,2)=fout(:,8)-fout(:,6)
      qo(:,3)=fout(:,3)-fout(:,7)
      qo(:,4)=fout(:,4)-fout(:,2)
 
-     ! P = 1st Invariant of the characteristic eq
-     de(:,3)=fout(:,1)+fout(:,5)+fout(:,9)
-     ! R = 3rd Invariant of the characteristic eq
-     de(:,4)=fout(:,1)*qo(:,2)+fout(:,5)*qo(:,3)+fout(:,9)*qo(:,4)
-     ! PQ
-     de(:,5)=de(:,3)*qo(:,1)
+     ! P = 1st Invariant of the characteristic eq <NABLA,U>
+     !de(:,3)=fout(:,1)+fout(:,5)+fout(:,9)
+     qo(:,5)=fout(:,1)+fout(:,5)+fout(:,9)
+     !! R = 3rd Invariant of the characteristic eq
+     !de(:,4)=fout(:,1)*qo(:,2)+fout(:,5)*qo(:,3)+fout(:,9)*qo(:,4)
+     !! PQ
+     !de(:,5)=de(:,3)*qo(:,1)
 
-     ! Compute discriminant DELTA 
-     ! (PQ)**2/108
-     qo(:,5)=r108*de(:,5)
-     ! -(Q**3+P**3R)/27
-     qo(:,5)=qo(:,5)-r27*(qo(:,1)*qo(:,1)*qo(:,1)+de(:,3)*de(:,3)*de(:,3)*de(:,4))
-     ! -R**2/4
-     qo(:,5)=qo(:,5)-r4*de(:,4)*de(:,4)
-     ! +(PQR)/6
-     qo(:,5)=qo(:,5)+de(:,5)*de(:,4)
+     !! Compute discriminant DELTA 
+     !! (PQ)**2/108
+     !qo(:,5)=r108*de(:,5)
+     !! -(Q**3+P**3R)/27
+     !qo(:,5)=qo(:,5)-r27*(qo(:,1)*qo(:,1)*qo(:,1)+de(:,3)*de(:,3)*de(:,3)*de(:,4))
+     !! -R**2/4
+     !qo(:,5)=qo(:,5)-r4*de(:,4)*de(:,4)
+     !! +(PQR)/6
+     !qo(:,5)=qo(:,5)+de(:,5)*de(:,4)
 
     if (wflag) then
     ! READ VARIABLES
@@ -1628,8 +1630,8 @@ implicit none
       varr(:)=qo(:,5)
       do n = 1, nprob
          if (probflag(n)) then
-         probze(:,m,n)=0
          if(.not.allocated(probze)) allocate(probze(0:lze,0:ntotal,nprob))
+         probze(:,m,n)=0
             do k = 0, lze
             ra0=0
                do ll = nklprob(1,k,n), nklprob(2,k,n); l=lprob(ll)
@@ -1667,12 +1669,14 @@ implicit none
 
 end subroutine probCirc
 
+!===Gets indices of maximum values of varr along a eta line with constant 
+!   xi and zeta 
 subroutine getijkMax(blk,nxk,xs,ks)
 implicit none
-integer, intent(in) :: blk
-integer, dimension(2), intent(in) :: nxk
-integer(k4) , dimension(nxk(1)), intent (in) :: xs
-integer(k4) , dimension(nxk(2)), intent (in) :: ks
+integer, intent(in) :: blk ! opearate only on this block
+integer, dimension(2), intent(in) :: nxk !# number of probes in each dir
+integer(k4) , dimension(nxk(1)), intent (in) :: xs ! xi indices
+integer(k4) , dimension(nxk(2)), intent (in) :: ks ! zeta indices
 integer(k4) :: pos,mymaxid,flg,flg2
 integer(k4) , dimension(nxk(1),nxk(2)) :: maxflag,maxcom
 integer(k4) , dimension(nxk(2)) :: maxkcom
@@ -1699,6 +1703,7 @@ allocate(maxpos(3,nxk(1),nxk(2)),maxxyz(3,nxk(1),nxk(2)))
       do k = 1, nxk(2)
         do i = 1, nxk(1)
            color=maxflag(i,k)
+           ! Create a communicator for each line
            call MPI_COMM_SPLIT(bcom,color,myid,maxcom(i,k),ierr)
         end do
       end do

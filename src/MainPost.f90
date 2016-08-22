@@ -70,7 +70,7 @@ if (fcoef==1) then
       write(18,"(3x,'n',8x,'time',9x,'Clv',9x,'Cdv',5x)")  
       write(*,"(3x,'n',8x,'time',9x,'Cdp',9x,'Cdv',5x)")  
    end if
-   do n = 0, ndata+favgu
+   do n = 0, ndata
       call clPVpost(nvar=n)
       if (myid==0) then
          ra0=aoa*pi/180;ra1=cos(ra0);ra2=sin(ra0); 
@@ -108,26 +108,6 @@ if (floc==1) then
    end if
 end if
 
-!==COMPUTE WALL DISTANCES
-if (fwplus==1) then
-   call getwplus(nvar=ndata+1)
-   if (myid==4) then
-      open(7,file='out/wplus.dat')
-      write(7,"('x y z x+ y+ z+')") 
-      do nn = 0, lcwall;l=lwall(nn)
-      write(7,"(f10.5,' ',f10.5,' ',f10.5,' ',f10.5,' ',f10.5,' ',f10.5)")&
-            xyz(l,1),xyz(l,2),xyz(l,3),wplus(nn,1),wplus(nn,2),wplus(nn,3)
-      end do
-      close(7)
-      if(.not.allocated(wvarr)) allocate(wvarr(0:lcwall))
-      wvarr=wplus(:,1)
-      call wavg('x+',dir=2,wall=.true.)
-      wvarr=wplus(:,2)
-      call wavg('y+',dir=2,wall=.true.)
-      wvarr=wplus(:,3)
-      call wavg('z+',dir=2,wall=.true.)
-   end if
-end if
 
 !==COMUPTE Q+W+DELTA
 if (fcurl==1) then
@@ -142,26 +122,28 @@ if (fcurl==1) then
       !call wrP3dP(n,fmblk,'Q+W')
       qb(:,:)=qb(:,:)+delt(n)*qo(:,:)
       do nss = 2, tss
-         call wrP3dP_ss(n,fmblk,cname='Q+W+DELTA',nss=nss)
+         call wrP3dP_ss(n,fmblk,cname='Q+W+NablU',nss=nss)
       end do
-      ra0=two/(amachoo**2)
-      qo(:,1)=0
-      do i = 2, 4
-         qo(:,i)=0
-         if (wflag) then
-            do m = 0, lcwall; l=lwall(m)
-               qo(l,i)=tw(m,i-1)
-               if (i==2) then
-               ra1=DOT_PRODUCT(tw(m,:),wtan(m,:))
-               qo(l,1)=ra1*ra0
-               end if
-            end do
-         end if
-      end do
-      qo(:,5)=(p(:)-poo)*ra0
-      qa(:,:)=qa(:,:)+delt(n)*qo(:,:)
-      !call wrP3dP(n,fmblk,'CftwCp')
-      call wrP3dP_ss(n,fmblk,cname='Cf+tw+Cp',nss=1)
+      if (fwss==1) then
+         ra0=two/(amachoo**2)
+         qo(:,1)=0
+         do i = 2, 4
+            qo(:,i)=0
+            if (wflag) then
+               do m = 0, lcwall; l=lwall(m)
+                  qo(l,i)=tw(m,i-1)
+                  if (i==2) then
+                  ra1=DOT_PRODUCT(tw(m,:),wtan(m,:))
+                  qo(l,1)=ra1*ra0
+                  end if
+               end do
+            end if
+         end do
+         qo(:,5)=(p(:)-poo)*ra0
+         qa(:,:)=qa(:,:)+delt(n)*qo(:,:)
+         !call wrP3dP(n,fmblk,'CftwCp')
+         call wrP3dP_ss(n,fmblk,cname='Cf+tw+Cp',nss=1)
+      end if
    end do
       n=ndata+1
       ! Save averaged data
@@ -169,8 +151,10 @@ if (fcurl==1) then
       do nss = 2, tss
          call wrP3dP_ss(n,fmblk,cname='avgQ+W+DELTA',nss=nss)
       end do
-      qo(:,:)=qa(:,:)
-      call wrP3dP_ss(n,fmblk,cname='avgCf+tw+Cp',nss=1)
+      if (fwss==1) then
+         qo(:,:)=qa(:,:)
+         call wrP3dP_ss(n,fmblk,cname='avgCf+tw+Cp',nss=1)
+      end if
 end if
 
 !==INTEGRATION
@@ -217,7 +201,7 @@ end if
 !   !end if
 !end if
 
-!==WRITE Cf+WSS+Cp
+!==Compute wall shear stress & WRITE Cf+WSS+Cp
 if (fwss==1) then
    n=ndata+1
    call getAllDs(n)
@@ -237,87 +221,44 @@ if (fwss==1) then
    end do
    qo(:,5)=(p(:)-poo)*ra0
    call wrP3dP(n+1,fmblk,'CftwCp')
-end if
-
-!==COMPUTE Cf 
-if (fcf==1) then
-   call gettw(ndata+1)
-   if (myid==7) then
-      open(7,file='data/allCfAVG.dat')
-      write(7,"('x cf')") 
-      ra0=two/(amachoo**2)
-      if(.not.allocated(wvarr)) allocate(wvarr(0:lcwall))
-      do n = 0, lcwall; l=lwall(n)
-         ra1=DOT_PRODUCT(tw(n,:),wtan(n,:))
-         wvarr(n)=ra1*ra0
-         write(7,"(f10.5,f10.5)")  xyz(l,1),ra1*ra0
-      end do
-      close(7)
-      call wavg('CfAVG',dir=2,wall=.true.)
+   !!!!! This only works with one processor per block
+   if (fcf==1) then
+   !==COMPUTE Span-Average Cf 
+   idum=4 ! Use only this block
+      if (myid==idum) then ! use only this block
+         open(7,file='out/allCfAVG.dat')
+         write(7,"('x cf')") 
+         ra0=two/(amachoo**2)
+         if(.not.allocated(wvarr)) allocate(wvarr(0:lcwall))
+         do n = 0, lcwall; l=lwall(n)
+            ra1=DOT_PRODUCT(tw(n,:),wtan(n,:))
+            wvarr(n)=ra1*ra0
+            write(7,"(f10.5,f10.5)")  xyz(l,1),ra1*ra0
+         end do
+         close(7)
+         call wavg('CfAVG',dir=2,wall=.true.)
+      end if
+   end if
+   !==COMPUTE Span-averaged WALL DISTANCES
+   if (fwplus==1) then
+      if (myid==idum) then ! Use only this block
+         open(7,file='out/wplus.dat')
+         write(7,"('x y z x+ y+ z+')") 
+         do nn = 0, lcwall;l=lwall(nn)
+         write(7,"(f10.5,' ',f10.5,' ',f10.5,' ',f10.5,' ',f10.5,' ',f10.5)")&
+               xyz(l,1),xyz(l,2),xyz(l,3),wplus(nn,1),wplus(nn,2),wplus(nn,3)
+         end do
+         close(7)
+         if(.not.allocated(wvarr)) allocate(wvarr(0:lcwall))
+         wvarr=wplus(:,1)
+         call wavg('x+',dir=2,wall=.true.)
+         wvarr=wplus(:,2)
+         call wavg('y+',dir=2,wall=.true.)
+         wvarr=wplus(:,3)
+         call wavg('z+',dir=2,wall=.true.)
+      end if
    end if
 end if
-
-!==COMPUTE RMS Cp
-!if (fcp==1) then
-!   call getCp(ndata+1)
-!   qa(:,1)=qo(:,1)
-!   qb(:,1)=0
-!    if (myid==0) then
-!       write(*,"('Total amout of data: ',i3)") ndata
-!    end if
-!    ! CONSTRUCT THE COEFFICIENTS ARRAY
-!       ns=0; ne=ndata; allocate(delt(ns:ne))
-!       fctr=half/(times(ne)-times(ns))
-!       delt(ns)=fctr*(times(ns+1)-times(ns)); 
-!       delt(ne)=fctr*(times(ne)-times(ne-1))
-!    do n=ns+1,ne-1
-!       delt(n)=fctr*(times(n+1)-times(n-1))
-!    end do
-!    do n=0,ndata
-!       if (myid==0) then
-!          write(*,"(f5.1,'% done')") real(n)*100.0e0/real(ndata)
-!       end if
-!       call getCp(n)
-!       de(:,1)=(qo(:,1)-qa(:,1))
-!       qb(:,1)=qb(:,1)+delt(n)*de(:,1)*de(:,1)
-!    end do
-!    qo(:,1)=sqrt(qb(:,1))
-!   cinput='Cp'; call wffile(cinput,ndata+2,1)
-!   !if (myid==7) then
-!   !   varr(:)=qo(:,1)
-!   !   call wavg('CpAVG',dir=2,wall=.false.)
-!   !end if
-!end if
-
-!==COMPUTE RMS Cf
-!qb(:,1)=0
-!if (wflag) then
-!   call integCoef
-!   call gettw(ndata+1)
-!   ra0=two/(amachoo**2)
-!   do n = 0, lcwall; l=lwall(n)
-!      ra1=DOT_PRODUCT(tw(n,:),wtan(n,:))
-!      qa(l,1)=ra1*ra0
-!   end do
-!    do n=0,ndata
-!       if (myid==7) then
-!          write(*,"(f5.1,'% done')") real(n)*100.0e0/real(ndata)
-!       end if
-!       call gettw(n)
-!       ra0=two/(amachoo**2)
-!       do m = 0, lcwall; l=lwall(n)
-!          ra1=DOT_PRODUCT(tw(m,:),wtan(m,:))
-!          qo(l,1)=ra1*ra0
-!       end do
-!       qa(:,2)=(qo(:,1)-qa(:,1))
-!       qb(:,1)=qb(:,1)+delt(n)*qa(:,2)*qa(:,2)
-!    end do
-!    qo(:,1)=sqrt(qb(:,1))
-!end if
-!cinput='Cf'; call wffile(cinput,ndata+2,1)
-!!qo(:,1)=qa(:,1)
-!!cinput='Cf'; call wffile(cinput,ndata+1,1)
-!
 
 !==Extract strip over time
 if (fstrip) then
@@ -340,40 +281,17 @@ if (fstrip) then
   if(mb==7) close(7)
 end if
 
-!call probCirc(ndata)
-!call rdP3dF('Rij',0,6,fmblk)
-!varr=half*(fout(:,1)+fout(:,2)+fout(:,3))
-!call rdP3dP(ndata+2,fmblk)
-!call rdP3dF('Rij',0,6,fmblk)
-!varr=half*(fout(:,1)+fout(:,2)+fout(:,3))
-!call rdP3dP(ndata+2,fmblk)
-!varr=qo(:,5)
-!call getijkMax(4,(/9,4/),(/(i,i=60,140,10)/),(/12,37,62,87/))
-!call getvalMax(4,(/9,4/),ndata)
-!
-!call rdP3dP(ndata+1,fmblk)
-!call getVGrad(ndata+1)
-!call wrP3dF('dUij',0,9,fmblk)
+if (fprobcirc==1) then
+   call probCirc(ndata)
+end if
 
-
-!!==== SHIFT RESTART SOLUTION
-!fflag=.true.
-!call rdRsta
-!m=25
-!do nn = 1, 5
-!   do k = 0, lze
-!      kk=k+m
-!      if (kk>lze) then
-!         kk=k+m-lze-1
-!      end if
-!      do j = 0, let; l=indx3(0,j,kk,1); ll=indx3(0,j,k,1)
-!         qo(ll:ll+lxi,nn)=qa(l:l+lxi,nn)
-!      end do
-!   end do
-!   qa(:,nn)=qo(:,nn)
-!end do
-!ndati=ndata
-!call wrRsta
+if (fijkmax==1) then
+   call rdP3dP(ndata+2,fmblk)
+   varr=qo(:,5)
+   call getijkMax(4,(/9,4/),(/(i,i=60,140,10)/),(/12,37,62,87/))
+   call getvalMax(4,(/9,4/),ndata)
+end if
+   
 
 !===== END OF JOB
  CALL MPI_BARRIER(icom,ierr)
