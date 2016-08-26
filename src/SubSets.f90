@@ -471,7 +471,8 @@ end subroutine ssCheck
      integer, intent(in) :: nout,nss
      character(len=*),parameter :: fname='solT'
      character(len=:),allocatable :: lfname
-     character(3) :: cout,cnum,ncout
+     character(3) :: cout,cnum
+     character(4) :: ncout
      character(len=:),allocatable :: ctime
      character(10) :: cpath
      character(len=*),parameter :: cext='.q'
@@ -520,8 +521,8 @@ end subroutine ssCheck
         end select
 
         if(present(cname)) then
-           write(ncout,"(i3)") nout
-           do i = 0, 2
+           write(ncout,"(i4)") nout
+           do i = 0, 3
               l=scan(ncout,' ')
               if (l==0) exit
               ncout(l:l)='0'
