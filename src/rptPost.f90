@@ -663,34 +663,35 @@ contains
     de(:,1)=srefp1dre*de(:,5)**1.5_k8/(de(:,5)+srefoo)
     call getVGrad(nvar)
 
-     ! Q = 2nd Invariant of the characteristic eq
-     qo(:,1)=2*(half*(fout(:,2)-fout(:,4)))**2 + 2*(half*(fout(:,3)-fout(:,9)))**2 + &
-     2*(half*(fout(:,6)-fout(:,8)))**2 - fout(:,1)**2 - fout(:,5)**2 - fout(:,9)**2 -   &
-     2*(half*(fout(:,2)+fout(:,4)))**2 - 2*(half*(fout(:,3)+fout(:,7)))**2 -         &
-     2*(half*(fout(:,6)+fout(:,8)))**2
 
+     ! Minors of the stress tensor du_i/dx_j
+     qo(:,2)=fout(:,1)*fout(:,5)-fout(:,2)*fout(:,4)
+     qo(:,3)=fout(:,1)*fout(:,9)-fout(:,3)*fout(:,7)
+     qo(:,4)=fout(:,5)*fout(:,9)-fout(:,6)*fout(:,8)
+
+     ! P = 1st Invariant of the characteristic eq 
+     de(:,3)=-(fout(:,1)+fout(:,5)+fout(:,9))
+     ! Q = 2nd Invariant of the characteristic eq
+     qo(:,1)=qo(:,2)+qo(:,3)+qo(:,4)
+     !! R = 3rd Invariant of the characteristic eq
+     de(:,4)=-(fout(:,1)*qo(:,2)+fout(:,5)*qo(:,3)+fout(:,9)*qo(:,4))
+     qo(:,5)=de(:,4)
      ! Build OMEGA 
      qo(:,2)=fout(:,8)-fout(:,6)
      qo(:,3)=fout(:,3)-fout(:,7)
      qo(:,4)=fout(:,4)-fout(:,2)
 
-     ! P = 1st Invariant of the characteristic eq <NABLA,U>
-     !de(:,3)=fout(:,1)+fout(:,5)+fout(:,9)
-     qo(:,5)=fout(:,1)+fout(:,5)+fout(:,9)
-     !! R = 3rd Invariant of the characteristic eq
-     !de(:,4)=fout(:,1)*qo(:,2)+fout(:,5)*qo(:,3)+fout(:,9)*qo(:,4)
+     !! Compute discriminant DELTA 
      !! PQ
      !de(:,5)=de(:,3)*qo(:,1)
-
-     !! Compute discriminant DELTA 
-     !! (PQ)**2/108
-     !qo(:,5)=r108*de(:,5)
-     !! -(Q**3+P**3R)/27
-     !qo(:,5)=qo(:,5)-r27*(qo(:,1)*qo(:,1)*qo(:,1)+de(:,3)*de(:,3)*de(:,3)*de(:,4))
-     !! -R**2/4
-     !qo(:,5)=qo(:,5)-r4*de(:,4)*de(:,4)
-     !! +(PQR)/6
-     !qo(:,5)=qo(:,5)+de(:,5)*de(:,4)
+     !! (PQ)**2
+     !qo(:,5)=de(:,5)*de(:,5)
+     !! (4Q**3-PQ**2)
+     !qo(:,5)=4*qo(:,1)**3-qo(:,5)
+     !! +(4P**3-18PQ)R
+     !qo(:,5)=qo(:,5)+(4*de(:,3)**3-18*de(:,5))*de(:,4)
+     !! +27R**2
+     !qo(:,5)=qo(:,5)+27*de(:,4)**2
 
     if (wflag) then
     ! READ VARIABLES

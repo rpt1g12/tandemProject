@@ -122,7 +122,7 @@ if (fcurl==1) then
       !call wrP3dP(n,fmblk,'Q+W')
       qb(:,:)=qb(:,:)+delt(n)*qo(:,:)
       do nss = 2, tss
-         call wrP3dP_ss(n,fmblk,cname='Q+W+NablU',nss=nss)
+         call wrP3dP_ss(n,fmblk,cname='Q+W+R',nss=nss)
       end do
       if (fwss==1) then
          ra0=two/(amachoo**2)
