@@ -237,6 +237,8 @@
  integer, dimension(:), allocatable :: mprob,probcom,lprob
  real(k8), dimension(:), allocatable :: aprob,vprob
  integer :: lcprob,nprob
+ real(k8) :: orprob
+ real(k8), dimension(2) :: sprob,eprob
  logical, dimension(:), allocatable :: probflag
 
  logical :: intgflag

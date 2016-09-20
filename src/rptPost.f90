@@ -54,7 +54,8 @@ contains
     read(9,*) cinput,fcurl
     read(9,*) cinput,fstrip
     read(9,*) cinput,fintg,rdis,xpos,ypos,atk
-    read(9,*) cinput,fprobcirc
+    read(9,*) cinput
+    read(9,*) cinput,fprobcirc,nprob,sprob,eprob,orprob
     read(9,*) cinput,fijkmax
     close(9)
 
@@ -350,8 +351,10 @@ contains
     if (fintg) then
        call intgUp(rdis,xpos,ypos,atk)
     end if
-    !nprob=31
-    !call probUp(nprob,(/-0.5_k8,0.15_k8/),(/0.48_k8,0.15_k8/),0.01_k8)
+    if (fprobcirc) then
+       nprob=31
+       call probUp(nprob,sprob,eprob,orprob)
+    end if
 
  do nn=1,3; do ip=0,1; i=ip*ijk(1,nn)
  do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
@@ -680,6 +683,9 @@ contains
      qo(:,2)=fout(:,8)-fout(:,6)
      qo(:,3)=fout(:,3)-fout(:,7)
      qo(:,4)=fout(:,4)-fout(:,2)
+     ! Output Cp
+     ra0=two/(amachoo**2)
+     qo(:,5)=(p(:)-poo)*ra0
 
      !! Compute discriminant DELTA 
      !! PQ
@@ -1130,6 +1136,7 @@ end subroutine flst
         end do
 
   end subroutine rdP3dPat
+
 !===================================================================================
 !=====  PLOT3D Q FILES READ POST
 !===================================================================================
@@ -1497,6 +1504,7 @@ end subroutine flst
     call MPI_COMM_SPLIT(icom,color,myid,intgcom,ierr)
 
  end subroutine intgUp
+
 !===================================================================================
 !=====PERFORM INTEGRAL
 !===================================================================================
@@ -1608,12 +1616,11 @@ implicit none
          call MPI_COMM_SPLIT(icom,color,myid,probcom(n),ierr)
          if (probflag(n)) then
             CALL MPI_ALLREDUCE(myid,mprob(n),1,MPI_INTEGER4,MPI_MIN,probcom(n),ierr)
-            write(*,*)&
-            myid,mprob(n),n,sum(aprob(nlprob(1,n):nlprob(2,n)))/(lze+1),nlprob(1,n),nlprob(2,n)
+            ra0=sum(aprob(nlprob(1,n):nlprob(2,n)))/(lze+1)
+            write(*,"(i3,2x,i3,2x,i3,2x,f8.3,2x,i9,2x,i9)")&
+            myid,mprob(n),n,ra0,nlprob(1,n),nlprob(2,n)
          end if
       end do
-
-
    end if
    
 end subroutine probUp
@@ -1624,6 +1631,7 @@ implicit none
    integer :: l,ll,n,m
    real(k8), dimension(:,:,:), allocatable :: probze
    character(3) :: cprob
+   character(32) :: myfmt
    
  
    do m = 0, ntotal
@@ -1648,6 +1656,8 @@ implicit none
       end do
    end do
 
+   write(myfmt,'("(e15.8,5x,",i4,"(e15.8,5x))")') lze+1
+   write(*,"('Format:',1x,a)") myfmt
    do n = 1, nprob
       write(cprob,"(i3)") n
       do i = 0, 3
@@ -1660,7 +1670,7 @@ implicit none
          open(unit=50+n, file='out/circ'//cprob//'.dat')
          write(50+n,"('t* circ (',f8.4,',',f8.4,')')") xyprob(1,n),xyprob(2,n)
          do m = 0, ntotal
-            write(50+n,"(202(es15.7))") times(m),probze(:,m,n)
+            write(50+n,myfmt) times(m),probze(:,m,n)
          end do
          close(50+n)
          write(*,"('Finished writing probe ',i2)") n
