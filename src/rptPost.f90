@@ -352,7 +352,6 @@ contains
        call intgUp(rdis,xpos,ypos,atk)
     end if
     if (fprobcirc) then
-       nprob=31
        call probUp(nprob,sprob,eprob,orprob)
     end if
 
@@ -1530,6 +1529,11 @@ implicit none
 
 end subroutine integrate
 
+function gaussian(a,c,r) result (g)
+real (k8) :: a,c,r,g
+   g=a*exp(-r/(2*c**2))
+end function gaussian
+
 !===================================================================================
 !=====SET UP PROBE CYLINDERS
 !===================================================================================
@@ -1540,7 +1544,7 @@ implicit none
    real(k8),dimension (2),intent(in) :: sprob,eprob
    real(k8),dimension (2)            :: dirprob
    integer :: color,err
-   real(k8) :: rprob,r2prob,g11,g22,g12
+   real(k8) :: rprob,r2prob,g11,g22,g12,agaus,cgaus,rdum,rdum2
 
    allocate(xyprob(2,nprob),nklprob(2,0:lze,nprob),nlprob(2,nprob))
    allocate(mprob(nprob),probcom(nprob),probflag(nprob))
@@ -1571,10 +1575,15 @@ implicit none
       xyprob(:,i+1)=sprob(:)+i*dirprob(:)
    end do
 
+   ! Compute gaussian parameters
+   r2prob=rprob**2;
+   cgaus=sqrt((-r2prob)/(2*log(0.0001)))
+   agaus=1.0_k8!/(cgaus*(2*pi)**1.5_k8)
+
    if (rprob<0) then
    ! in development
    else
-      r2prob=rprob**2;ll=0
+      ll=0
       do n = 1, nprob
          nlprob(1,n)=ll
          do k = 0, lze
@@ -1584,6 +1593,7 @@ implicit none
                tmp=(xyz(l,1)-xyprob(1,n))**2+(xyz(l,2)-xyprob(2,n))**2
                if (tmp-r2prob<0) then
                   ll=ll+1; de(ll,5)=l+sml
+                  varr(ll)=gaussian(agaus,cgaus,tmp)
                end if
             end do
          end do
@@ -1600,6 +1610,8 @@ implicit none
             g22 = qo(l,2)*qo(l,2)+qa(l,2)*qa(l,2)+de(l,2)*de(l,2)
             g12 = qo(l,1)*qo(l,2)+qa(l,1)*qa(l,2)+de(l,1)*de(l,2)
             aprob(ll)=sqrt(g11*g22-g12*g12)
+            !aprob(ll)=sqrt(g11*g22-g12*g12)*varr(ll)
+            !aprob(ll)=pi*r2prob*varr(ll)
          end do
       end if
 
@@ -1616,9 +1628,11 @@ implicit none
          call MPI_COMM_SPLIT(icom,color,myid,probcom(n),ierr)
          if (probflag(n)) then
             CALL MPI_ALLREDUCE(myid,mprob(n),1,MPI_INTEGER4,MPI_MIN,probcom(n),ierr)
-            ra0=sum(aprob(nlprob(1,n):nlprob(2,n)))/(lze+1)
-            write(*,"(i3,2x,i3,2x,i3,2x,f8.3,2x,i9,2x,i9)")&
-            myid,mprob(n),n,ra0,nlprob(1,n),nlprob(2,n)
+            rdum=sum(aprob(nlprob(1,n):nlprob(2,n)))/(lze+1)
+            rdum=rdum/(pi*r2prob)
+            rdum2=real(nlprob(2,n)-nlprob(1,n)+1)/(lze+1)
+            write(*,"(i3,2x,i3,2x,i3,2x,f8.3,2x,i9,2x,i9,2x,f8.3)")&
+            myid,mprob(n),n,rdum,nlprob(1,n),nlprob(2,n),rdum2
          end if
       end do
    end if
