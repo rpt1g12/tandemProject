@@ -56,7 +56,14 @@ contains
     read(9,*) cinput,fintg,rdis,xpos,ypos,atk
     read(9,*) cinput
     read(9,*) cinput,fprobcirc,nprob,sprob,eprob,orprob
-    read(9,*) cinput,fijkmax
+    read(9,*) cinput
+    read(9,*) cinput,fijkmax,mblock,mxst,mxend,mxsz,mzst,mzend,mzsz
+                msizes=(/mxsz,mzsz/)
+                mxstp=(mxend-mxst)/(mxsz-1)
+                mzstp=(mzend-mzst)/(mzsz-1)
+                allocate(xarr(mxsz),zarr(mzsz))
+                xarr=(/(i,i=mxst,mxend,mxstp)/)
+                zarr=(/(i,i=mzst,mzend,mzstp)/)
     close(9)
 
     cinput=cinput; fltk=pi*fltk; fltkbc=pi*fltkbc
@@ -915,8 +922,11 @@ end subroutine flst
           fout(:,5)=fout(:,5)+de(:,2)*qo(:,4)
           fout(:,6)=fout(:,6)+de(:,3)*qo(:,4)
        end do
+       do i = 1, 5
+          qb(:,i)=qb(:,i)-qa(:,i)*qa(:,i)
+       end do
        do i = 2, 4
-          fout(:,i-1)=qb(:,i)-qa(:,i)*qa(:,i)
+          fout(:,i-1)=qb(:,i)
        end do
        fout(:,4)=fout(:,4)-qa(:,2)*qa(:,3)
        fout(:,5)=fout(:,5)-qa(:,2)*qa(:,4)
@@ -1806,8 +1816,12 @@ allocate(maxpos(3,nxk(1),nxk(2)),maxxyz(3,nxk(1),nxk(2)))
 
    if (myid==0) then
       do k = 1, nxk(2)
+      write(cinput,"(i3)") k
+      cstring='maxpln'//trim(adjustl(cinput))//'_pos.dat'
+      open(unit=100, file=trim(adjustl(cstring)))
          write(*,"(a,x,i2,7x,a,x,i3)") 'nk =',k,'ze =',ks(k)
          write(*,"(a,7x,a,7x,a,7x,a,7x,a,7x,a)") 'xi','et','ze','x','y','z'
+         write(100,"(a,7x,a,7x,a,7x,a,7x,a,7x,a)") 'xi','et','ze','x','y','z'
          do i = 1, nxk(1)
             flg=nxk(1)*(k-1)+i
             flg2=flg+(nxk(1)*nxk(2))
@@ -1815,7 +1829,10 @@ allocate(maxpos(3,nxk(1),nxk(2)),maxxyz(3,nxk(1),nxk(2)))
             CALL MPI_RECV(maxxyz(1,i,k),3,MPI_REAL4,MPI_ANY_SOURCE,flg2,icom,ista,ierr)
             write(*,"(i3,7x,i3,7x,i3,7x,f7.3,7x,f7.3,7x,f7.3)")&
             maxpos(1,i,k),maxpos(2,i,k),maxpos(3,i,k),maxxyz(1,i,k),maxxyz(2,i,k),maxxyz(3,i,k)
+            write(100,"(i3,7x,i3,7x,i3,7x,f7.3,7x,f7.3,7x,f7.3)")&
+            maxpos(1,i,k),maxpos(2,i,k),maxpos(3,i,k),maxxyz(1,i,k),maxxyz(2,i,k),maxxyz(3,i,k)
          end do
+      close(100)
       end do
    end if
 

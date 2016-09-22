@@ -66,7 +66,7 @@ if (fcoef==1) then
    if (myid==0) then
       open (unit=17, file='out/signalout0.dat')
       open (unit=18, file='out/signalout1.dat')
-      write(17,"(3x,'n',8x,'time',9x,'Clp',9x,'Cdv',5x)")  
+      write(17,"(3x,'n',8x,'time',9x,'Clp',9x,'Cdp',5x)")  
       write(18,"(3x,'n',8x,'time',9x,'Clv',9x,'Cdv',5x)")  
       write(*,"(3x,'n',8x,'time',9x,'Cdp',9x,'Cdv',5x)")  
    end if
@@ -287,9 +287,9 @@ end if
 
 if (fijkmax==1) then
    call rdP3dP(ndata+2,fmblk)
-   varr=qo(:,5)
-   call getijkMax(4,(/9,4/),(/(i,i=60,140,10)/),(/12,37,62,87/))
-   call getvalMax(4,(/9,4/),ndata)
+   varr=qo(:,2)
+   call getijkMax(mblock,msizes,xarr,zarr)
+   call getvalMax(mblock,msizes,ndata)
 end if
    
 

@@ -255,6 +255,9 @@
  real(k4) , dimension(:,:,:), allocatable :: maxxyz
  real(k4) :: rout
  integer(k4), dimension(:,:), allocatable :: nose
+ integer(k4), dimension(:), allocatable :: xarr,zarr
+ integer(k4), dimension(2) :: msizes
+ integer(k4) :: mblock,mxst,mxend,mxsz,mzst,mzend,mzsz
 
  ! Dummy variables
  integer(k4) :: idum
