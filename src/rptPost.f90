@@ -904,6 +904,7 @@ end subroutine flst
           qa(:,:)=zero
           qb(:,:)=zero
        nn=ndata*0.01_k8
+       nn=max(1,nn)
        wts=0
        do n=0,ndata
        if (myid==mo(mb)) then
