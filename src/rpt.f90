@@ -866,6 +866,57 @@ contains
 !===================================================================================
 !=====COMPUTE LIFT COEFFICIENT OVER HALF THE AEROFOILS
 !===================================================================================
+ subroutine clrange(irange,krange,nvar,vis)
+ 
+ use problemcase, only: span,delt1,delt2
+ implicit none
+    
+    integer(k4), intent(in) :: nvar,vis
+    integer(k4), dimension(2), intent(in) :: irange,krange
+    integer(k4) :: ll,dir
+    real(k8) :: dynp,clp,clv,tcl
+    integer(k4) :: ks,ke,is,ie,i,k,l
+
+    dynp=two/(amachoo*amachoo*span)
+    is=irange(1);ie=irange(2)
+    ks=krange(1);ke=krange(2)
+ 
+    if (fparallel==0) then
+       if (wflag) then
+          ll=indx2(ie,ks,1); l=lwall(ll)
+          ra0=xyz(l,1)
+          ll=indx2(is,ks,1); l=lwall(ll)
+          ra0=ra0-xyz(l,1)
+          write(*,"(a,x,i2,x,a,f12.5)") 'block',mb,'x=',ra0
+       end if
+       if (ispost) call gettw(nvar)
+       do dir=1,2
+          clp=0;clv=0;tcl=0;
+          if (wflag) then
+            ! Compute Dynamic pressure
+            do k=ks, ke; do i =is, ie; ll=indx2(i,k,1); l=lwall(ll)
+              clp=clp+(p(l)*wnor(ll,dir)*area(ll))
+            end do; end do
+            if (vis==1) then
+              do k=ks, ke; do i =is, ie; ll=indx2(i,k,1); l=lwall(ll)
+                clv=clv+tw(ll,dir)*area(ll)
+              end do; end do
+            end if
+            tcl=(clp+clv)*dynp
+          end if
+          if(wflag.or.(myid==0)) then
+                CALL MPI_REDUCE(tcl,clrng(dir),1,MPI_REAL8,MPI_SUM,0,wcom,ierr)
+          end if
+       end do
+    else
+       write(*,"(a)") 'clrange only works for one proc per block'
+       write(*,"(a)") 'please set fparallel=0'
+    end if
+ 
+ end subroutine clrange
+!===================================================================================
+!=====COMPUTE LIFT COEFFICIENT OVER HALF THE AEROFOILS
+!===================================================================================
  subroutine clhpost(ele,nvar)
  
  use problemcase, only: span,delt1,delt2

@@ -213,6 +213,7 @@
  character(:),dimension(:),allocatable :: ofiles 
  real(k8), dimension(2,2) :: cl
  real(k8), dimension(2,2,2) :: clh
+ real(k8), dimension(2) :: clrng
 
  !=== ipost.dat input flags
  integer :: fparallel,fmblk

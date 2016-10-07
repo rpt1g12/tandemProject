@@ -64,31 +64,39 @@ end if
 !===COMPUTE FORCE COEFFICIENT
 if (fcoef==1) then
    if (myid==0) then
-      open (unit=17, file='out/signalout0.dat')
-      open (unit=18, file='out/signalout1.dat')
-      write(17,"(3x,'n',8x,'time',9x,'Clp',9x,'Cdp',5x)")  
-      write(18,"(3x,'n',8x,'time',9x,'Clv',9x,'Cdv',5x)")  
-      write(*,"(3x,'n',8x,'time',9x,'Cdp',9x,'Cdv',5x)")  
+      !open (unit=17, file='out/leRange.dat')
+      !open (unit=18, file='out/signalout1.dat')
+      write(*,"(3x,'n',8x,'time',9x,'Cl',9x,'Cd',5x)")  
+      !write(17,"(3x,'n',8x,'time',9x,'Clp',9x,'Cdp',5x)")  
+      !write(18,"(3x,'n',8x,'time',9x,'Clv',9x,'Cdv',5x)")  
+      !write(*,"(3x,'n',8x,'time',9x,'Cdp',9x,'Cdv',5x)")  
    end if
-   do n = 0, ndata
-      call clPVpost(nvar=n)
+   !do n = 0, ndata
+      n=ndata+1
+      !call clPVpost(nvar=n)
+      !call clpost(ele=1,nvar=n)
+      call clrange((/0,100/),(/0,200/),n,1)
       if (myid==0) then
          ra0=aoa*pi/180;ra1=cos(ra0);ra2=sin(ra0); 
+         fctr=sqrt(1-amachoo**2)
          if(n>ndata) then
             ra3=(-1)
          else
             ra3=times(n)
          end if
-         write(17,"(i8,f12.5,f12.7,f12.7)") &
-         n,ra3,cl(1,2)*ra1-cl(1,1)*ra2,cl(1,2)*ra2+cl(1,1)*ra1
-         write(18,"(i8,f12.5,f12.7,f12.7)") &
-         n,ra3,cl(2,2)*ra1-cl(2,1)*ra2,cl(2,2)*ra2+cl(2,1)*ra1
          write(*,"(i8,f12.5,f12.7,f12.7)") &
-         n,ra3,cl(1,2)*ra2+cl(1,1)*ra1,cl(2,2)*ra2+cl(2,1)*ra1
+         n,ra3,fctr*(clrng(2)*ra1-clrng(1)*ra2),fctr*(clrng(2)*ra2+clrng(1)*ra1)
+
+         !write(*,"(i8,f12.5,f12.7,f12.7)") &
+         !n,ra3,fctr*(cl(1,2)*ra1-cl(1,1)*ra2),fctr*(cl(1,2)*ra2+cl(1,1)*ra1)
+         !write(18,"(i8,f12.5,f12.7,f12.7)") &
+         !n,ra3,cl(2,2)*ra1-cl(2,1)*ra2,cl(2,2)*ra2+cl(2,1)*ra1
+         !write(*,"(i8,f12.5,f12.7,f12.7)") &
+         !n,ra3,cl(1,2)*ra2+cl(1,1)*ra1,cl(2,2)*ra2+cl(2,1)*ra1
       end if
-   end do
-   if(myid==0) close(17)
-   if(myid==0) close(18)
+   !end do
+   !if(myid==0) close(17)
+   !if(myid==0) close(18)
 end if
 
 !===find location
@@ -151,10 +159,12 @@ if (fcurl==1) then
       do nss = 2, tss
          call wrP3dP_ss(n,fmblk,cname='avgQ+W+DELTA',nss=nss)
       end do
+         call wrP3dP(n,fmblk,cname='avgQ+W+DELTA')
       if (fwss==1) then
          qo(:,:)=qa(:,:)
          call wrP3dP_ss(n,fmblk,cname='avgCf+tw+Cp',nss=1)
       end if
+         call wrP3dP(n,fmblk,cname='avgCf+tw+Cp')
 end if
 
 !==INTEGRATION
