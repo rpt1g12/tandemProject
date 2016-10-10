@@ -182,7 +182,7 @@
  integer(k4) :: lcwall
  integer(k4), dimension(:), allocatable ::lwall
  real(k8), dimension(:), allocatable ::area
- real(k8), dimension(:,:), allocatable ::wnor,wtan,tw
+ real(k8), dimension(:,:), allocatable ::wnor,wtan,tw,pna
  logical :: wflag
  real(k8), dimension(:,:), allocatable,target :: xyz
  integer(k4) :: wcom,bwcom

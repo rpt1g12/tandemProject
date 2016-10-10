@@ -75,7 +75,7 @@ if (fcoef==1) then
       n=ndata+1
       !call clPVpost(nvar=n)
       !call clpost(ele=1,nvar=n)
-      call clrange((/0,100/),(/0,200/),n,1)
+      call clrange((/0,320/),(/0,200/),n,0)
       if (myid==0) then
          ra0=aoa*pi/180;ra1=cos(ra0);ra2=sin(ra0); 
          fctr=sqrt(1-amachoo**2)
@@ -97,6 +97,23 @@ if (fcoef==1) then
    !end do
    !if(myid==0) close(17)
    !if(myid==0) close(18)
+         if(.not.allocated(wvarr)) allocate(wvarr(0:lcwall))
+         wvarr(:)=pna(:,1)
+         call getfromWall
+         qo(:,1)=varr(:)
+         wvarr(:)=pna(:,2)
+         call getfromWall
+         qo(:,2)=varr(:)
+         wvarr(:)=wnor(:,1)
+         call getfromWall
+         qo(:,3)=varr(:)
+         wvarr(:)=wnor(:,2)
+         call getfromWall
+         qo(:,4)=varr(:)
+         wvarr(:)=area(:)
+         call getfromWall
+         qo(:,5)=varr(:)
+         call wrP3dP(n,fmblk,cname='pna+n+a')
 end if
 
 !===find location
