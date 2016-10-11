@@ -182,7 +182,7 @@
  integer(k4) :: lcwall
  integer(k4), dimension(:), allocatable ::lwall
  real(k8), dimension(:), allocatable ::area
- real(k8), dimension(:,:), allocatable ::wnor,wtan,tw,pna
+ real(k8), dimension(:,:), allocatable ::wnor,wtan,tw
  logical :: wflag
  real(k8), dimension(:,:), allocatable,target :: xyz
  integer(k4) :: wcom,bwcom
@@ -271,7 +271,7 @@
  integer(k4)  :: nto,iwrec
  integer(k4)  :: forcing,LES
  real(k8) :: tgustd,tguste
- real(k8) :: tps,tp,tpe,aoa0,aoa1,aoa,raoa
+ real(k8) :: tps,tp,tpe,aoa0,aoa1,aoa,raoa,cosaoa,sinaoa
  real(k8) :: smago1,smago2
  integer(k4)  :: output,ogrid,osol,oblock
 

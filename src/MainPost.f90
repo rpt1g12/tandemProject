@@ -50,10 +50,11 @@ if (intgflag) then
 end if
 
 !do n = 0, ndata
-!   call rdP3dP(n,fmblk)
-!   do nss = 1, tss
-!      call wrP3dP_ss(n,fmblk,nss=nss)
-!   end do
+   n=ndata+1
+   call rdP3dP(n,fmblk)
+   do nss = 1, tss
+      call wrP3dP_ss(n,fmblk,nss=nss)
+   end do
 !end do
 
 !===== COMPUTE AVERAGE VALUES IF NOT AVAILABLE YET
@@ -78,7 +79,7 @@ if (fcoef==1) then
       call clrange((/0,320/),(/0,200/),n,0)
       if (myid==0) then
          ra0=aoa*pi/180;ra1=cos(ra0);ra2=sin(ra0); 
-         fctr=sqrt(1-amachoo**2)
+         fctr=1!sqrt(1-amachoo**2)
          if(n>ndata) then
             ra3=(-1)
          else
@@ -97,23 +98,22 @@ if (fcoef==1) then
    !end do
    !if(myid==0) close(17)
    !if(myid==0) close(18)
-         if(.not.allocated(wvarr)) allocate(wvarr(0:lcwall))
-         wvarr(:)=pna(:,1)
+         if(.not.allocated(wvarr).and.wflag) allocate(wvarr(0:lcwall))
+         if(wflag) wvarr(:)=area(:)
+         ra0=aoa*pi/180;cosaoa=cos(ra0);sinaoa=sin(ra0); 
          call getfromWall
          qo(:,1)=varr(:)
-         wvarr(:)=pna(:,2)
+         if(wflag) wvarr(:)=wnor(:,1)!ra1*wnor(:,1)+ra2*wnor(:,2)
          call getfromWall
          qo(:,2)=varr(:)
-         wvarr(:)=wnor(:,1)
+         if(wflag) wvarr(:)=wnor(:,2)!ra1*wnor(:,2)-ra2*wnor(:,1)
          call getfromWall
          qo(:,3)=varr(:)
-         wvarr(:)=wnor(:,2)
+         if(wflag) wvarr(:)=wnor(:,3)
          call getfromWall
          qo(:,4)=varr(:)
-         wvarr(:)=area(:)
-         call getfromWall
-         qo(:,5)=varr(:)
-         call wrP3dP(n,fmblk,cname='pna+n+a')
+         qo(:,5)=p(:)
+         call wrP3dP_ss(n,fmblk,cname='pna+n+a',nss=1)
 end if
 
 !===find location
@@ -180,6 +180,7 @@ if (fcurl==1) then
       if (fwss==1) then
          qo(:,:)=qa(:,:)
          call wrP3dP_ss(n,fmblk,cname='avgCf+tw+Cp',nss=1)
+         call wrP3dP(n,cname='avgCf+tw+Cp')
       end if
          call wrP3dP(n,fmblk,cname='avgCf+tw+Cp')
 end if

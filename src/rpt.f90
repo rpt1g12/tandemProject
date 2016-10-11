@@ -888,8 +888,6 @@ contains
           ll=indx2(is,ks,1); l=lwall(ll)
           ra0=ra0-xyz(l,1)
           write(*,"(a,x,i2,x,a,f12.5)") 'block',mb,'x=',ra0
-          if(.not.allocated(pna)) allocate(pna(0:lcwall,3))
-          pna(:,:)=zero
        end if
        if (ispost) call gettw(nvar)
        do dir=1,2
@@ -897,9 +895,8 @@ contains
           if (wflag) then
             ! Compute Dynamic pressure
             do k=ks, ke; do i =is, ie; ll=indx2(i,k,1); l=lwall(ll)
-              pna(ll,dir)=(p(l)*wnor(ll,dir)*area(ll))
+              clp=clp+(p(l)*wnor(ll,dir)*area(ll))
             end do; end do
-            clp=sum(pna(:,dir))
             if (vis==1) then
               do k=ks, ke; do i =is, ie; ll=indx2(i,k,1); l=lwall(ll)
                 clv=clv+tw(ll,dir)*area(ll)
