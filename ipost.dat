@@ -1,9 +1,9 @@
-fparal-mblk	0	1
+fparal-mblk	1	1
 favg		0
-fcoef		1
+fcoef		0
 floc		0	
 fwss-cf-wall+	0	0	0
-fcurl		0	
+fcurl		1	
 fstrip		0
 fintg		0	0.2e0	1.0e0	0.6e0	37
 #flag		val	nprob	x0	y0	x1	y1	radius

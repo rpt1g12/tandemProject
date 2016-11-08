@@ -874,12 +874,14 @@ contains
     integer(k4), intent(in) :: nvar,vis
     integer(k4), dimension(2), intent(in) :: irange,krange
     integer(k4) :: ll,dir
-    real(k8) :: dynp,clp,clv,tcl
+    real(k8) :: dynp,clp,clv,tcl,ypos,xpos,xlim,x0,minv
     integer(k4) :: ks,ke,is,ie,i,k,l
 
     dynp=two/(amachoo*amachoo*span)
     is=irange(1);ie=irange(2)
     ks=krange(1);ke=krange(2)
+    minv=-sin(20*pi/180)/cos(20*pi/180)
+    x0=-0.2_k8
  
     if (fparallel==0) then
        if (wflag) then
@@ -895,7 +897,12 @@ contains
           if (wflag) then
             ! Compute Dynamic pressure
             do k=ks, ke; do i =is, ie; ll=indx2(i,k,1); l=lwall(ll)
-              clp=clp+(p(l)*wnor(ll,dir)*area(ll))
+              ypos=xyz(l,2);xpos=xyz(l,1)
+              xlim=x0+minv*ypos
+              if (xpos.ge.xlim) then
+                clp=clp+(p(l)*wnor(ll,dir)*area(ll))
+                !if(k==0) write(*,*) myid,xlim,xpos,i,clp
+              end if
             end do; end do
             if (vis==1) then
               do k=ks, ke; do i =is, ie; ll=indx2(i,k,1); l=lwall(ll)

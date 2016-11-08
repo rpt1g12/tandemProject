@@ -61,19 +61,23 @@ end if
 if (favg==1) then
    call p3dStats
 end if
-
+         
 !===COMPUTE FORCE COEFFICIENT
 if (fcoef==1) then
    if (myid==0) then
       !open (unit=17, file='out/leRange.dat')
+      !open (unit=17, file='out/signalout0.dat')
       !open (unit=18, file='out/signalout1.dat')
+
       write(*,"(3x,'n',8x,'time',9x,'Cl',9x,'Cd',5x)")  
+      !write(*,"(3x,'n',8x,'time',9x,'Cdp',9x,'Cdv',5x)")  
+
+      !write(17,"(3x,'n',8x,'time',9x,'Cl',9x,'Cd',5x)")  
       !write(17,"(3x,'n',8x,'time',9x,'Clp',9x,'Cdp',5x)")  
       !write(18,"(3x,'n',8x,'time',9x,'Clv',9x,'Cdv',5x)")  
-      !write(*,"(3x,'n',8x,'time',9x,'Cdp',9x,'Cdv',5x)")  
    end if
-   !do n = 0, ndata
-      n=ndata+1
+   do n = ndata+1, ndata+1
+      !n=ndata+1
       !call clPVpost(nvar=n)
       !call clpost(ele=1,nvar=n)
       call clrange((/0,320/),(/0,200/),n,0)
@@ -88,32 +92,16 @@ if (fcoef==1) then
          write(*,"(i8,f12.5,f12.7,f12.7)") &
          n,ra3,fctr*(clrng(2)*ra1-clrng(1)*ra2),fctr*(clrng(2)*ra2+clrng(1)*ra1)
 
-         !write(*,"(i8,f12.5,f12.7,f12.7)") &
+         !write(17,"(i8,f12.5,f12.7,f12.7)") &
          !n,ra3,fctr*(cl(1,2)*ra1-cl(1,1)*ra2),fctr*(cl(1,2)*ra2+cl(1,1)*ra1)
          !write(18,"(i8,f12.5,f12.7,f12.7)") &
-         !n,ra3,cl(2,2)*ra1-cl(2,1)*ra2,cl(2,2)*ra2+cl(2,1)*ra1
+         !n,ra3,fctr*(cl(2,2)*ra1-cl(2,1)*ra2),fctr*(cl(2,2)*ra2+cl(2,1)*ra1)
          !write(*,"(i8,f12.5,f12.7,f12.7)") &
-         !n,ra3,cl(1,2)*ra2+cl(1,1)*ra1,cl(2,2)*ra2+cl(2,1)*ra1
+         !n,ra3,fctr*(cl(1,2)*ra1-cl(1,1)*ra2),fctr*(cl(1,2)*ra2+cl(1,1)*ra1)
       end if
-   !end do
-   !if(myid==0) close(17)
-   !if(myid==0) close(18)
-         if(.not.allocated(wvarr).and.wflag) allocate(wvarr(0:lcwall))
-         if(wflag) wvarr(:)=area(:)
-         ra0=aoa*pi/180;cosaoa=cos(ra0);sinaoa=sin(ra0); 
-         call getfromWall
-         qo(:,1)=varr(:)
-         if(wflag) wvarr(:)=wnor(:,1)!ra1*wnor(:,1)+ra2*wnor(:,2)
-         call getfromWall
-         qo(:,2)=varr(:)
-         if(wflag) wvarr(:)=wnor(:,2)!ra1*wnor(:,2)-ra2*wnor(:,1)
-         call getfromWall
-         qo(:,3)=varr(:)
-         if(wflag) wvarr(:)=wnor(:,3)
-         call getfromWall
-         qo(:,4)=varr(:)
-         qo(:,5)=p(:)
-         call wrP3dP_ss(n,fmblk,cname='pna+n+a',nss=1)
+   end do
+   if(myid==0) close(17)
+   if(myid==0) close(18)
 end if
 
 !===find location
@@ -133,7 +121,6 @@ if (floc==1) then
    end if
 end if
 
-
 !==COMUPTE Q+W+DELTA
 if (fcurl==1) then
    ! Get coefficients for time averaging
@@ -142,11 +129,10 @@ if (fcurl==1) then
    qb(:,:)=0
    qa(:,:)=0
    do n = 0, ndata
-      !n=ndata+1
       call getAllDs(n)
       !call wrP3dP(n,fmblk,'Q+W')
       qb(:,:)=qb(:,:)+delt(n)*qo(:,:)
-      do nss = 2, tss
+      do nss = 1, tss
          call wrP3dP_ss(n,fmblk,cname='Q+W+Cp',nss=nss)
       end do
       if (fwss==1) then
@@ -173,16 +159,15 @@ if (fcurl==1) then
       n=ndata+1
       ! Save averaged data
       qo(:,:)=qb(:,:)
-      do nss = 2, tss
+      do nss = 1, tss
          call wrP3dP_ss(n,fmblk,cname='avgQ+W+DELTA',nss=nss)
       end do
          call wrP3dP(n,fmblk,cname='avgQ+W+DELTA')
       if (fwss==1) then
          qo(:,:)=qa(:,:)
          call wrP3dP_ss(n,fmblk,cname='avgCf+tw+Cp',nss=1)
-         call wrP3dP(n,cname='avgCf+tw+Cp')
-      end if
          call wrP3dP(n,fmblk,cname='avgCf+tw+Cp')
+      end if
 end if
 
 !==INTEGRATION
