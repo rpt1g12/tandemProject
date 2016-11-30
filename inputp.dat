@@ -12,7 +12,7 @@ ximod-etamod	0.05e0		0.05e0
 span-wlew-wlea	0.2e0		0.1e0		0.00e0
 gap-chord1-2	1.0e0		1.0e0		1.0e0
 delt1-2(deg)	00.0e0		0.0e0		
-szth1-th2-xt-co	2.0e0		2.0e0		4.0e0		12.0e0
+szth1-th2-xt-co	2.0e0		2.0e0		2.0e0		12.0e0
 tgusto		500.0e0
 slit-gaus-cfit	5.76e0		0.45087254e0	0.5e0
 tlg0-g1-gw      0.14696321e0    0.30349845e0    0.55123963e0

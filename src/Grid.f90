@@ -67,7 +67,7 @@ module gridgen
  integer(k4), dimension(:,:) :: lxise(0:bkx-1,0:1)
  integer(k4), dimension(:,:) :: letse(0:bky-1,0:1)
  integer(k4), dimension(:,:) :: lzese(0:bkz-1,0:1)
- real(k8), dimension(:,:), allocatable :: px,py
+ real(k8), dimension(:,:), allocatable :: px,py,dx,dy
  real(k8),intent(in) :: smgrid,domlen,span,wlew,wlea,szth1,szth2,szxt,c1,delt1
  real(k8),intent(in) :: ximod,etamod
  real(k8) :: lsz1,lsz2
@@ -113,6 +113,7 @@ module gridgen
     allocate(xq(0:lett,0:npx),yq(0:lett,0:npx))
     allocate(pxi(0:lxit,0:npy),qet(0:lett,0:npx))
     allocate(px(0:bkx+2,0:npy),py(0:npy+2,0:npx))
+    allocate(dx(0:bkx+2,0:npy),dy(0:npy+2,0:npx))
     allocate(hslo(0:npy,0:bkx-1,0:1),vslo(0:npx,0:bky-1,0:1))
 
 ! rpt-Assign grid file names
@@ -121,10 +122,14 @@ if(myid==mo(mb)) then
     open(1,file='misc/grid'//cno(2)//cno(1)//cno(0)//'.dat',access='stream',form='unformatted')
 
 !---Domain Sizes
+    !X-direction
     dlth(0,0)=domlen; dlth(0,1)=domlen+szxt
+    !Y-direction
     dlth(1,0)=domlen; dlth(1,1)=domlen
 !---Sponge thicknesses
+    !X-direction
     szth(0,0)=szth1; szth(0,1)=szth2+szxt ! rpt-Horizontal direction left/right boudaries
+    !Y-direction
     szth(1,0)=szth1; szth(1,1)=szth2+szxt ! rpt-Vertical direction bottom/top boudaries
 !----- CONSTANT ANGLES IN RADIANS
     if(.not.allocated(degarr)) allocate(degarr(3))
@@ -132,17 +137,17 @@ if(myid==mo(mb)) then
 !---Wake Refinement
     nwk(0)=int(lxibk(2)*0.45e0) ! rpt-Wake box #xi points
     nwk(1)=int(letbk(1)*0.4e0) ! rpt-Wake box #eta points
-    lwk(1)=0.5e0*c1 ! rpt-Wake box size eta direction
-    lwk(0)=1.5e0*c1!real(nwk(0)/nwk(1))*lwk(1) ! rpt-Wake box size xi direction
+    lwk(1)=0.5e0*c1 ! rpt-Wake box size y-direction
+    lwk(0)=2.0e0*c1!real(nwk(0)/nwk(1))*lwk(1) ! rpt-Wake box size x-direction
     if (myid==0) then
-       write(*,"('Wake box size: xi=',f8.4,' eta=',f8.4)")&
+       write(*,"('Wake box size: x=',f8.4,' y=',f8.4)")&
        lwk(0),lwk(1)
        write(*,"('Wake box Pts: xi=',i4,' eta=',i4)")&
        nwk(0),nwk(1)
     end if
 !---Boundary Layer Refinement
-    lhbl(0)=0.15*c1 ! rpt-LE curve bottom-horizontal lenght
-    lhbl(1)=0.15*c1 ! rpt-LE curve top-horizontal lenght
+    lhbl(0)=0.25*c1 ! rpt-LE curve bottom-horizontal lenght
+    lhbl(1)=0.25*c1 ! rpt-LE curve top-horizontal lenght
     lvbl(0)=lwk(1) ! rpt-LE curve bottom-vertical lenght
     lvbl(1)=lwk(1) ! rpt-LE curve top-vertical lenght
     nvbl(0)=nwk(1) ! rpt-#eta points bottom LE curve
@@ -155,6 +160,8 @@ if(myid==mo(mb)) then
        write(*,"('BL Pts: south=',i4,' north=',i4)")&
        nvbl(0),nvbl(1)
     end if
+
+!===LOOP FOR AL K PLANES===
  do k=0,lzebk(0)
 !---SPANWISE COORDINATE (UNIFORM)
     zs(k)=span*(real(lzebk(0)-k,k8)/lzebk(0)-half)
@@ -170,16 +177,27 @@ if(myid==mo(mb)) then
     px(3,3)=px(3,2)
     px(4,:)=dlth(0,1)-szth(0,1)
     px(5,:)=dlth(0,1)
+!---HORIZONTAL Spacings
+    dx(0,:)=500*shs1
+    dx(1,:)=250*shs1
+    dx(2,:)=30*shs1; dx(2,1:2)=shs1
+    dx(3,:)=30*shs1; dx(3,1:2)=she1
+    dx(4,:)=250*shs1
+    dx(5,:)=300*shs1
 !---HORIZONTAL LINES
     py(0,:)=-dlth(1,0)
     py(1,:)=py(0,:)+szth(1,0)
-    py(2,0)=zero
-    py(2,1)=-lwle*sin(delt1)
-    py(2,2)=-c1*sin(delt1)
-    py(2,3)=py(2,2)!-3.5e0*lhbl(1)
+    py(2,0)=zero;py(2,1)=-lwle*sin(delt1);py(2,2)=-c1*sin(delt1);py(2,3)=py(2,2)!-3.5e0*lhbl(1)
     py(3,:)=py(2,:)
     py(4,:)=dlth(1,1)-szth(1,1)
     py(5,:)=dlth(1,1)
+!---VERTICAL Spacings
+    dy(0,:)=250*shs2
+    dy(1,:)=250*shs2
+    dy(2,:)=shs2*cos(pi4+delt1)
+    dy(3,:)=shs2*cos(pi4-delt1)
+    dy(4,:)=250*shs2
+    dy(5,:)=250*shs2
 
 !----- INITIAL AND END HORIZONTAL SLOPES
     !hslo(block,hline,start:end)
@@ -205,47 +223,31 @@ if(myid==mo(mb)) then
    do n = 0,npy
    !--BLOCK0
    !!--0-2 Left boundary->LE
-   if (n.eq.0) then !(bottom boundary)
       ip=lxise(0,0); im=lxibk(0);
-      tmpa=px(0,n);sha=smod(2)*shs1;tmpb=px(2,n);shb=shs1*smod(0);ra0=shb
+      tmpa=px(0,n);sha=dx(0,n);tmpb=px(2,n);shb=dx(2,n);ra0=shb
       call gridf(xp(:,n),pxi(:,n),tmpa,tmpb,sha,shb,lxit,im,ip)
          if (k==0.and.myid==0) then
             write(*,*) 'Block 0 hztnl: mesh size ratio',pxi(ip,n)/ra0
          end if
-   elseif (n.eq.npy) then !(top boundary)
-      ip=lxise(0,0); im=lxibk(0);
-      tmpa=px(0,n);sha=smod(2)*shs1;tmpb=px(2,n);shb=shs1*smod(0)
-      call gridf(xp(:,n),pxi(:,n),tmpa,tmpb,sha,shb,lxit,im,ip)
-   else !(horizontal interface)
-      ip=lxise(0,0); im=lxibk(0);
-      tmpa=px(0,n);sha=smod(2)*shs1;tmpb=px(2,n);shb=shs1;ra0=shb
-      call gridf(xp(:,n),pxi(:,n),tmpa,tmpb,sha,shb,lxit,im,ip)
-   end if
    !--BLOCK1
    !--2-3 LE->TE (just top/bottom lines)
-   select case(n)
-   case(0)
+   if ((n==0).or.(n==3)) then
       ip=lxise(1,0); im=lxibk(1);
-      tmpa=px(2,n);sha=shs1*smod(0);tmpb=px(3,n);shb=she1*smod(0)
+      tmpa=px(2,n);sha=dx(2,n);tmpb=px(3,n);shb=dx(3,n)
       call gridf(xp(:,n),pxi(:,n),tmpa,tmpb,sha,shb,lxit,im,ip)
-   case(3)
-      ip=lxise(1,0); im=lxibk(1);
-      tmpa=px(2,n);sha=shs1*smod(0);tmpb=px(3,n);shb=she1*smod(0)
-      call gridf(xp(:,n),pxi(:,n),tmpa,tmpb,sha,shb,lxit,im,ip)
-   end select
+   end if
    !--BLOCK2
    !--3-(3+lwk(0)) Trailing edge ->Wake box refinement
      ip=lxise(2,0); im=nwk(0)
-     tmpa=px(3,n);sha=she1;tmpb=px(3,n)+lwk(0);shb=sml;ra0=sha
+     tmpa=px(3,n);sha=dx(3,n);tmpb=px(3,n)+lwk(0);shb=sml;ra0=sha
      call gridf(xp(:,n),pxi(:,n),tmpa,tmpb,sha,shb,lxit,im,ip)
    !--(3+lwk(0))-5  Wake box->Right boundary
      ip=ip+im; im=lxibk(2)-im
-     tmpa=tmpb;sha=pxi(ip,n);tmpb=px(5,n);shb=smod(3)*ra0!sml
+     tmpa=tmpb;sha=pxi(ip,n);tmpb=px(5,n);shb=dx(5,n)
      call gridf(xp(:,n),pxi(:,n),tmpa,tmpb,sha,shb,lxit,im,ip)
          if (k==0.and.myid==0) then
             if(n==1) write(*,*) 'Horz Intfce: mesh size ratio',pxi(lxise(2,1),n)/ra0
          end if
-     if (n==npy-1) ra1=shb
    end do
 
    !--Y-COORDINATE for horizontal lines
@@ -310,22 +312,22 @@ if(myid==mo(mb)) then
    !-Y-COORDINATE
    do n = 0, bkx
          !-BLOCK0
-         !-(2-0.5lwk(1))-2 LE curve-LE
+         !-[2-lvbl(0)]-2 LE curve-LE
          im=nvbl(0)
          ip=letse(0,1)-im;
-         tmpa=py(2,n)-lvbl(0);sha=sml;tmpb=py(2,n);shb=shs2*cos(pi4+delt1)
+         tmpa=py(2,n)-lvbl(0);sha=sml;tmpb=py(2,n);shb=dy(2,n)
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
-         !-0-(2-0.5lwk(1)) Bottom->LE curve
+         !-0-[2-0.5lwk(1)] Bottom->LE curve
          ip=letse(0,0); im=letbk(0)-im
          tmpa=py(0,n);sha=sml;tmpb=py(2,n)-lvbl(0);shb=qet(im,n)
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
          if (n==bkx-1) ra2=qet(letse(0,0),n)
          !-BLOCK1
-         !!-3-(3+lwk(1)) LE->LE curve
+         !!-3-[3+lwk(1)] LE->LE curve
          ip=letse(1,0); im=nvbl(1);
-         tmpa=py(2,n);sha=shs2*cos(pi4-delt1);tmpb=py(2,n)+lvbl(1);shb=sml
+         tmpa=py(3,n);sha=dy(3,n);tmpb=py(3,n)+lvbl(1);shb=sml
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
-         !-(3+lwk(1))-5 LE curve->Top
+         !-[3+lwk(1)]-5 LE curve->Top
          ip=ip+im; im=letbk(1)-im
          tmpa=tmpb;sha=qet(ip,n);tmpb=py(5,n);shb=sml;
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
