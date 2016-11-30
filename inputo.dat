@@ -1,21 +1,21 @@
 mbk-bkx-y-z	5	3	2	1
-nts-nto		1		0
+nts-nto		0		0
 nscrn-nsgnl	1		100
-ndata		30
+ndata		1
 nkrk            4
 nviscous	1
 nsmf		0
 nfskp           0
-nrestart        1
+nrestart        0
 nextrabc-gcic   0       0
 reoo-tempoo	4.0e5		273.0e0
 amach1-2-3	0.2819077862e0		0.102606043e0		0.0e0 !aoa=20, M=0.3
 wtemp           1.0e0
 cfl             0.95e0
-tmax-timf-tsam  175.0e0       15.0e0       165.0e0
+tmax-timf-tsam  -1.0e0       15.0e0       0.0e0
 fltk-bc         0.85e0      0.85e0
 dto             -0.01725e0
 forcing-amfor%	0	0.8e0
-aoa0-1-tps-tp	20.0e0	10.0e0	195.0e0	120.0e0
+aoa0-1-tps-tp	00.0e0	00.0e0	995.0e0	120.0e0
 LES-smago1-2	0	0.16e0	0.0066e0
 output		1	1	1	1

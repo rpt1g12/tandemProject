@@ -213,10 +213,10 @@
  if(nbcs(nn)==10) then; nsz(0,nn)=1; else; nsz(0,nn)=0; end if
  if(nbce(nn)==10) then; nsz(1,nn)=1; else; nsz(1,nn)=0; end if
  select case(nn)
- case(1); szr(0,nn)=1/szth1;        szp(0,nn)=-0.7e0*domlen+szth1;  
+ case(1); szr(0,nn)=1/szth1;        szp(0,nn)=-domlen+szth1;  
           szr(1,nn)=1/(szth1+szxt); szp(1,nn)=domlen-szth1
- case(2); szr(0,nn)=1/szth2;        szp(0,nn)=-0.7e0*domlen+szth2; 
-          szr(1,nn)=1/szth2;        szp(1,nn)=domlen+szxt-szth2
+ case(2); szr(0,nn)=1/szth2;        szp(0,nn)=-domlen+szth2; 
+          szr(1,nn)=1/szth2;        szp(1,nn)=domlen-szth2
  case(3); szr(0,nn)=0; szp(0,nn)=0; szr(1,nn)=0; szp(1,nn)=0
  end select
  end do
@@ -257,7 +257,7 @@
  end if
  end do
     ltz=ll; ntz=litr*slit/tla; ra0=pi/szth1
-    ltz=-1
+    ltz=-1 !!!!!WARNING, THIS DISABLES THE INFLOW GUST
  if(ltz/=-1) then
     allocate(lctz(0:ltz),atz(0:ltz),tt(0:ntz),vit(0:ltz,3),vito(0:ltz,0:ntz,3)); lp=nrecd*(ltz+1)*(ntz+1)
     do ll=0,ltz; l=de(ll,5); lctz(ll)=l
