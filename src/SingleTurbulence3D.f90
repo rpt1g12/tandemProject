@@ -19,6 +19,7 @@
  real(kind=nr),dimension(3,0:1) :: tam
  real(kind=nr),dimension(0:1) :: tl0,tl1,tlw
  real(kind=nr) :: smgrid,domlen,span,wlew,wlea,szth1,szth2,szxt,szco
+ real(kind=nr),dimension(0:1,2) :: domlens
  real(kind=nr) :: tgusto,slit,gaus,cfit,tla,tlb,cutlb
  real(kind=nr) :: denxit
  ! rpt-tandem variables
@@ -46,7 +47,7 @@
     read(9,*) cinput,npcy(0:bky-1)  ! # processors in eta per row
     read(9,*) cinput,npcz(0:bkz-1)  ! # processors in zeta per plane
     read(9,*) cinput,nito,nits,litr
-    read(9,*) cinput,smgrid,domlen
+    read(9,*) cinput,smgrid,domlens(:,1),domlens(:,2)
     read(9,*) cinput,ximod,etamod   ! xi and eta modifiers for LE and TE spacing
     read(9,*) cinput,span,wlew,wlea
     read(9,*) cinput,gap,c1,c2
@@ -103,7 +104,7 @@
     ait(nn,m)=res*tam(m,mxc(nn))*(two*ait(nn,m)-one)*sit(nn,m)**1.5_nr
  end do; end do
     denxit=slit/(two*sum(ran(:,1)))
-    xit(1)=-domlen+half*(szth1+slit)-denxit*ran(1,1)
+    xit(1)=-domlens(0,1)+half*(szth1+slit)-denxit*ran(1,1)
  do nn=2,nits
     xit(nn)=xit(nn-1)-denxit*(ran(nn-1,1)+ran(nn,1))
  end do
@@ -169,7 +170,7 @@
 
     ! rpt-new grid generation file, see Grid.90
     call gridaerofoil(ngridv,nthick,smgrid,&
-         domlen,span,wlew,wlea,szth1,szth2,szxt,&
+         domlens,span,wlew,wlea,szth1,szth2,szxt,&
          c1,delt1,ximod,etamod)
 
  end subroutine makegrid
@@ -181,7 +182,7 @@
     itag=1; fctr=one/lze0
  do l=0,lze0
  if(l==0) then
-    ra1=zero; ra2=domlen-szth2; ra3=zero
+    ra1=zero; ra2=domlens(0,2)-szth2; ra3=zero
  else
     ra1=-half; ra2=zero; ra3=(-half+l*fctr)*span
  end if
@@ -213,22 +214,22 @@
  if(nbcs(nn)==10) then; nsz(0,nn)=1; else; nsz(0,nn)=0; end if
  if(nbce(nn)==10) then; nsz(1,nn)=1; else; nsz(1,nn)=0; end if
  select case(nn)
- case(1); szr(0,nn)=1/szth1;        szp(0,nn)=-domlen+szth1;  
-          szr(1,nn)=1/(szth1+szxt); szp(1,nn)=domlen-szth1
- case(2); szr(0,nn)=1/szth2;        szp(0,nn)=-domlen+szth2; 
-          szr(1,nn)=1/szth2;        szp(1,nn)=domlen-szth2
+ case(1); szr(0,nn)=1/szth1;        szp(0,nn)=-domlens(0,nn)+szth1;  
+          szr(1,nn)=1/(szth1+szxt); szp(1,nn)=domlens(1,nn)-szth1
+ case(2); szr(0,nn)=1/szth2;        szp(0,nn)=-domlens(0,nn)+szth2; 
+          szr(1,nn)=1/szth2;        szp(1,nn)=domlens(1,nn)-szth2
  case(3); szr(0,nn)=0; szp(0,nn)=0; szr(1,nn)=0; szp(1,nn)=0
  end select
  end do
 
-    ll=-1; ra1=0.25_nr; ra2=pi/(two*domlen)
+    ll=-1; ra1=0.25_nr; ra2=pi/(domlens(0,1)+domlens(1,1))
  do l=0,lmx
     rr(l,:)=nsz(0,:)*szr(0,:)*max(szp(0,:)-ss(l,:),zero)&
            +nsz(1,:)*szr(1,:)*max(ss(l,:)-szp(1,:),zero)
     ! rpt-this is sigma(x,y,z)
     de(l,1)=szco*(one-0.125_nr*(one+cos(pi*rr(l,1)))*(one+cos(pi*rr(l,2)))*(one+cos(pi*rr(l,3))))
     ! rpt-this is lambda(x)
-    de(l,2)=ra1+half*(one-ra1)*(one+cos(ra2*(min(ss(l,1),domlen)+domlen)))
+    de(l,2)=ra1+half*(one-ra1)*(one+cos(ra2*(min(ss(l,1),domlens(1,1))+domlens(0,1))))
  
  if(de(l,1)>zero) then
     ll=ll+1; de(ll,5)=l+sml ! rpt-this gives the l's containing sponge points
@@ -261,7 +262,7 @@
  if(ltz/=-1) then
     allocate(lctz(0:ltz),atz(0:ltz),tt(0:ntz),vit(0:ltz,3),vito(0:ltz,0:ntz,3)); lp=nrecd*(ltz+1)*(ntz+1)
     do ll=0,ltz; l=de(ll,5); lctz(ll)=l
-       vit(ll,:)=ss(l,:); atz(ll)=sin(min(ra0*(ss(l,1)+domlen),halfpi))**two
+       vit(ll,:)=ss(l,:); atz(ll)=sin(min(ra0*(ss(l,1)+domlens(0,1)),halfpi))**two
     end do
        fctr=slit/(ntz*uoo(1)); do ii=0,ntz; tt(ii)=ii*fctr; end do; vito(:,:,:)=zero
     if(nito==0) then
@@ -305,7 +306,7 @@
  if(myid==mo(3)) then
     fctr=one/lze0
     do l=0,lze0
-       ra1=-domlen; ra2=zero; ra3=(-half+l*fctr)*span
+       ra1=-domlens(0,1); ra2=zero; ra3=(-half+l*fctr)*span
        iit(l)=minloc((vit(:,1)-ra1)**two+(vit(:,2)-ra2)**two+(vit(:,3)-ra3)**two,1)-1
     end do
        open(9,file='inflowsignal.dat',status='replace',access='direct',form='formatted',recl=16)

@@ -60,7 +60,7 @@ module gridgen
 !px+> 0  |-------------|---------|------------------------| 5
 !        0    1        2         3              4         5
  subroutine gridaerofoil(ngridv,nthick,smgrid,&
-            domlen,span,wlew,wlea,szth1,szth2,szxt,&
+            domlens,span,wlew,wlea,szth1,szth2,szxt,&
             c1,delt1,ximod,etamod)
 
  integer(k4),intent(in) :: ngridv,nthick
@@ -68,7 +68,8 @@ module gridgen
  integer(k4), dimension(:,:) :: letse(0:bky-1,0:1)
  integer(k4), dimension(:,:) :: lzese(0:bkz-1,0:1)
  real(k8), dimension(:,:), allocatable :: px,py,dx,dy
- real(k8),intent(in) :: smgrid,domlen,span,wlew,wlea,szth1,szth2,szxt,c1,delt1
+ real(k8),intent(in) :: smgrid,span,wlew,wlea,szth1,szth2,szxt,c1,delt1
+ real(kind=nr),dimension(0:1,2), intent(in) :: domlens
  real(k8),intent(in) :: ximod,etamod
  real(k8) :: lsz1,lsz2
  real(k8) :: lwle
@@ -101,7 +102,7 @@ module gridgen
     shs=smgrid; she=shs
     shs1=ximod*smgrid; ! rpt-LE xi size 
     shs2=etamod*smgrid;! rpt-LE eta size
-    she1=shs2          ! rpt-TE size both xi and eta
+    she1=4*shs2          ! rpt-TE size both xi and eta
     smod(:)=(/4.0_k4,3.0_k4,220.0_k4,200.0_k4,1.2_k4,0.9_k4/) ! grid size modifiers
 
     allocate(xx(0:lxit,0:lett),yy(0:lxit,0:lett),zz(0:lxit,0:lett),zs(0:lzebk(0)))
@@ -123,9 +124,9 @@ if(myid==mo(mb)) then
 
 !---Domain Sizes
     !X-direction
-    dlth(0,0)=domlen; dlth(0,1)=domlen+szxt
+    dlth(0,0)=domlens(0,1); dlth(0,1)=domlens(1,1)+szxt
     !Y-direction
-    dlth(1,0)=domlen; dlth(1,1)=domlen
+    dlth(1,0)=domlens(0,2); dlth(1,1)=domlens(1,2)
 !---Sponge thicknesses
     !X-direction
     szth(0,0)=szth1; szth(0,1)=szth2+szxt ! rpt-Horizontal direction left/right boudaries
@@ -178,12 +179,12 @@ if(myid==mo(mb)) then
     px(4,:)=dlth(0,1)-szth(0,1)
     px(5,:)=dlth(0,1)
 !---HORIZONTAL Spacings
-    dx(0,:)=500*shs1
-    dx(1,:)=250*shs1
+    dx(0,:)=300*shs1
+    dx(1,:)=dx(0,:)
     dx(2,:)=30*shs1; dx(2,1:2)=shs1
     dx(3,:)=30*shs1; dx(3,1:2)=she1
-    dx(4,:)=250*shs1
-    dx(5,:)=300*shs1
+    dx(4,:)=300*shs1
+    dx(5,:)=dx(4,:)
 !---HORIZONTAL LINES
     py(0,:)=-dlth(1,0)
     py(1,:)=py(0,:)+szth(1,0)
@@ -192,12 +193,12 @@ if(myid==mo(mb)) then
     py(4,:)=dlth(1,1)-szth(1,1)
     py(5,:)=dlth(1,1)
 !---VERTICAL Spacings
-    dy(0,:)=250*shs2
-    dy(1,:)=250*shs2
-    dy(2,:)=shs2*cos(pi4+delt1)
-    dy(3,:)=shs2*cos(pi4-delt1)
-    dy(4,:)=250*shs2
-    dy(5,:)=250*shs2
+    dy(0,:)=500*shs2
+    dy(1,:)=dy(0,:)
+    dy(2,:)=she1*cos(pi4+delt1);dy(2,1)=shs1*cos(pi4+delt1)
+    dy(3,:)=she1*cos(pi4+delt1);dy(3,1)=shs1*cos(pi4+delt1)
+    dy(4,:)=500*shs2
+    dy(5,:)=dy(4,:)
 
 !----- INITIAL AND END HORIZONTAL SLOPES
     !hslo(block,hline,start:end)
@@ -319,7 +320,7 @@ if(myid==mo(mb)) then
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
          !-0-[2-0.5lwk(1)] Bottom->LE curve
          ip=letse(0,0); im=letbk(0)-im
-         tmpa=py(0,n);sha=sml;tmpb=py(2,n)-lvbl(0);shb=qet(im,n)
+         tmpa=py(0,n);sha=dy(0,n);tmpb=py(2,n)-lvbl(0);shb=qet(im,n)
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
          if (n==bkx-1) ra2=qet(letse(0,0),n)
          !-BLOCK1
@@ -329,7 +330,7 @@ if(myid==mo(mb)) then
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
          !-[3+lwk(1)]-5 LE curve->Top
          ip=ip+im; im=letbk(1)-im
-         tmpa=tmpb;sha=qet(ip,n);tmpb=py(5,n);shb=sml;
+         tmpa=tmpb;sha=qet(ip,n);tmpb=py(5,n);shb=dy(5,n);
          call gridf(yq(:,n),qet(:,n),tmpa,tmpb,sha,shb,lett,im,ip)
          if (n==bkx-1) ra1=qet(letse(1,1),n)
    end do
