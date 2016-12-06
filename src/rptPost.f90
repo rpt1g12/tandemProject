@@ -47,15 +47,23 @@ contains
 !===== INPUT PARAMETERS POSTPROCESS
     open(9,file='ipost.dat',shared)
     read(9,*) cinput,fparallel,fmblk
-    read(9,*) cinput,favg,fwavg,favgu
-    read(9,*) cinput,fcoef,fcf,fcp
+    read(9,*) cinput,favg
+    read(9,*) cinput,fcoef
     read(9,*) cinput,floc
-    read(9,*) cinput,fwplus
-    read(9,*) cinput,fqcrit,fwss
+    read(9,*) cinput,fwss,fcf,fwplus
     read(9,*) cinput,fcurl
-    read(9,*) cinput,frms,fwrms
     read(9,*) cinput,fstrip
     read(9,*) cinput,fintg,rdis,xpos,ypos,atk
+    read(9,*) cinput
+    read(9,*) cinput,fprobcirc,nprob,sprob,eprob,orprob
+    read(9,*) cinput
+    read(9,*) cinput,fijkmax,mblock,mxst,mxend,mxsz,mzst,mzend,mzsz
+                msizes=(/mxsz,mzsz/)
+                mxstp=(mxend-mxst)/(mxsz-1)
+                mzstp=(mzend-mzst)/(mzsz-1)
+                allocate(xarr(mxsz),zarr(mzsz))
+                xarr=(/(i,i=mxst,mxend,mxstp)/)
+                zarr=(/(i,i=mzst,mzend,mzstp)/)
     close(9)
 
     cinput=cinput; fltk=pi*fltk; fltkbc=pi*fltkbc
@@ -350,8 +358,9 @@ contains
     if (fintg) then
        call intgUp(rdis,xpos,ypos,atk)
     end if
-    !nprob=10
-    !call probUp(nprob,(/0.0_k8,0.3_k8/),(/1.0_k8,0.6_k8/))
+    if (fprobcirc) then
+       call probUp(nprob,sprob,eprob,orprob)
+    end if
 
  do nn=1,3; do ip=0,1; i=ip*ijk(1,nn)
  do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
@@ -370,7 +379,8 @@ contains
      cbca(:,:)=zero; cbca(1,1:2)=albed(1:2,0,0);
      cbca(2,1:3)=albed(0:2,1,0); cbca(3,1:3)=albed(-1:1,2,0)
   if(mbci>=4) then
-     cbca(3,4)=albed(2,2,0)
+     ii=min(4,mbci)
+     cbca(3,ii)=albed(2,2,0)
      do i=4,mbci
         cbca(i,i-3:i)=(/beta,alpha,one,alpha/);
         if(i<mbci) then; cbca(i,i+1)=beta; end if
@@ -646,6 +656,82 @@ contains
  end subroutine qcriterion
 
 !====================================================================================
+!=====COMPUTE dui/dxi+Q+VORTICITY
+!====================================================================================
+ subroutine getAllDs(nvar)
+    implicit none
+    integer, intent(in) :: nvar
+    real(k4),parameter :: r108=-1_k4/108_k4,r27=-1_k4/27_k4,&
+                          r4=-1_k4/4_k4,r18=-1_k4/18_k4
+
+    call rdP3dS(nvar,fmblk)
+    p(:)=qo(:,5)
+    de(:,2)=qo(:,1)
+    de(:,1)=1/de(:,2)
+    de(:,5)=gam*p(:)*de(:,1)
+    de(:,1)=srefp1dre*de(:,5)**1.5_k8/(de(:,5)+srefoo)
+    call getVGrad(nvar)
+
+
+     ! Minors of the stress tensor du_i/dx_j
+     qo(:,2)=fout(:,1)*fout(:,5)-fout(:,2)*fout(:,4)
+     qo(:,3)=fout(:,1)*fout(:,9)-fout(:,3)*fout(:,7)
+     qo(:,4)=fout(:,5)*fout(:,9)-fout(:,6)*fout(:,8)
+
+     ! P = 1st Invariant of the characteristic eq 
+     de(:,3)=-(fout(:,1)+fout(:,5)+fout(:,9))
+     ! Q = 2nd Invariant of the characteristic eq
+     qo(:,1)=qo(:,2)+qo(:,3)+qo(:,4)
+     !! R = 3rd Invariant of the characteristic eq
+     de(:,4)=-(fout(:,1)*qo(:,2)+fout(:,5)*qo(:,3)+fout(:,9)*qo(:,4))
+     qo(:,5)=de(:,4)
+     ! Build OMEGA 
+     qo(:,2)=fout(:,8)-fout(:,6)
+     qo(:,3)=fout(:,3)-fout(:,7)
+     qo(:,4)=fout(:,4)-fout(:,2)
+     ! Output Cp
+     ra0=two/(amachoo**2)
+     qo(:,5)=(p(:)-poo)*ra0
+
+     !! Compute discriminant DELTA 
+     !! PQ
+     !de(:,5)=de(:,3)*qo(:,1)
+     !! (PQ)**2
+     !qo(:,5)=de(:,5)*de(:,5)
+     !! (4Q**3-PQ**2)
+     !qo(:,5)=4*qo(:,1)**3-qo(:,5)
+     !! +(4P**3-18PQ)R
+     !qo(:,5)=qo(:,5)+(4*de(:,3)**3-18*de(:,5))*de(:,4)
+     !! +27R**2
+     !qo(:,5)=qo(:,5)+27*de(:,4)**2
+
+    if (wflag) then
+    ! READ VARIABLES
+    if (nviscous==1) then
+ 
+     fctr=2.0_k8/3
+     rr(:,1)=-de(:,1)
+     rr(:,2)=1/yaco(:)
+     de(:,5)=fctr*(fout(:,1)+fout(:,5)+fout(:,9))*rr(:,2)
+ 
+     txx(:)=rr(:,1)*(2*fout(:,1)-de(:,5))
+     tyy(:)=rr(:,1)*(2*fout(:,5)-de(:,5))
+     tzz(:)=rr(:,1)*(2*fout(:,9)-de(:,5))
+     txy(:)=rr(:,1)*(fout(:,4)+fout(:,2))
+     tyz(:)=rr(:,1)*(fout(:,8)+fout(:,6))
+     tzx(:)=rr(:,1)*(fout(:,3)+fout(:,7))
+ 
+       if(.not.allocated(tw)) allocate(tw(0:lcwall,3))
+       do ll = 0, lcwall; l=lwall(ll)
+         tw(ll,1)=de(l,2)*(txx(l)*wnor(ll,1)+txy(l)*wnor(ll,2)+tzx(l)*wnor(ll,3))
+         tw(ll,2)=de(l,2)*(txy(l)*wnor(ll,1)+tyy(l)*wnor(ll,2)+tyz(l)*wnor(ll,3))
+         tw(ll,3)=de(l,2)*(tzx(l)*wnor(ll,1)+tyz(l)*wnor(ll,2)+tzz(l)*wnor(ll,3))
+       end do
+    end if
+    end if
+
+ end subroutine getAllDs
+!====================================================================================
 !=====FIND INDEX FROM X,Y, AND Z COORDINATES
 !====================================================================================
  subroutine findll(xpos,ypos,zpos,l,id) 
@@ -781,60 +867,7 @@ end subroutine flst
 !====================================================================================
 !=====AVERAGE RESULTS IN TIME PLOT3D
 !====================================================================================
- subroutine p3daverage
-    implicit none
-    integer :: foper
-    real(k8),dimension(:),allocatable :: delt
-    character(3) :: cout
-
-    selectcase(fmblk)
-    case(0)
-       write(cout,"(a,i2)") 'b',mb
-       do i = 0, 1
-          l=scan(cout,' ')
-          if (l==0) exit
-          cout(l:l)='0'
-       end do
-       foper=mo(mb)
-    case(1)
-       cout=''
-       foper=0
-    end select
-
-    if (fflag) then
-       if (myid==foper) then
-          write(*,"('Total amout of data: ',i3,a)") ndata,cout
-       end if
-       ! CONSTRUCT THE COEFFICIENTS ARRAY
-          ns=0; ne=ndata; allocate(delt(ns:ne))
-          fctr=half/(times(ne)-times(ns))
-          delt(ns)=fctr*(times(ns+1)-times(ns)); 
-          delt(ne)=fctr*(times(ne)-times(ne-1))
-       do n=ns+1,ne-1
-          delt(n)=fctr*(times(n+1)-times(n-1))
-       end do
-          qa(:,:)=0
-       nn=ndata*0.01_k8
-       wts=0
-       do n=0,ndata
-       !if (myid==foper) then
-          if (mod(n,nn)==0) then
-             wte=MPI_WTIME(); res=wte-wts
-             write(*,"('Block ',i2,x,f5.1,'% Averaged',a,' took ',f5.1,'s')")&
-             mb,real(n)*100.0e0/real(ndata),cout,res
-             wts=MPI_WTIME()
-          end if
-       !end if
-          call rdP3dS(n,fmblk)
-          qa(:,:)=qa(:,:)+delt(n)*qo(:,:)
-       end do
-    end if
- end subroutine p3daverage
-
-!====================================================================================
-!=====RMS OF RESULTS IN TIME PLOT3D
-!====================================================================================
- subroutine p3drms
+ subroutine p3dStats
     implicit none
     integer :: foper
     real(k8),dimension(:),allocatable :: delt
@@ -868,26 +901,47 @@ end subroutine flst
        do n=ns+1,ne-1
           delt(n)=fctr*(times(n+1)-times(n-1))
        end do
-          call rdP3dS(ndata+1,fmblk)
-          qa(:,:)=qo(:,:)
-          qb(:,:)=0
-       nn=ndata*0.05_k8
+          qa(:,:)=zero
+          qb(:,:)=zero
+       nn=ndata*0.01_k8
+       nn=max(1,nn)
+       wts=0
        do n=0,ndata
+       if (myid==mo(mb)) then
           if (mod(n,nn)==0) then
-             write(*,"('Block ',i2,x,f5.1,'% Done',a)")&
-             mb,real(n)*100.0e0/real(ndata),cout
+             wte=MPI_WTIME(); res=wte-wts
+             write(*,"('Block ',i2,x,f5.1,'% Averaged',a,' took ',f5.1,'s')")&
+             mb,real(n)*100.0e0/real(ndata),cout,res
+             wts=MPI_WTIME()
           end if
+       end if
           call rdP3dS(n,fmblk)
-          de(:,:)=(qo(:,:)-qa(:,:))
-          qb(:,:)=qb(:,:)+delt(n)*de(:,:)*de(:,:)
-          fout(:,1:3)=qb(:,2:4)
-          fout(:,4)=fout(:,4)+delt(n)*de(:,2)*de(:,3)
-          fout(:,5)=fout(:,5)+delt(n)*de(:,2)*de(:,4)
-          fout(:,6)=fout(:,6)+delt(n)*de(:,3)*de(:,4)
+          de(:,:)=delt(n)*qo(:,:)
+          qa(:,:)=qa(:,:)+de(:,:)
+          qb(:,:)=qb(:,:)+de(:,:)*qo(:,:)
+          fout(:,4)=fout(:,4)+de(:,2)*qo(:,3)
+          fout(:,5)=fout(:,5)+de(:,2)*qo(:,4)
+          fout(:,6)=fout(:,6)+de(:,3)*qo(:,4)
        end do
-       qb(:,:)=sqrt(qb(:,:))
+       do i = 1, 5
+          qb(:,i)=qb(:,i)-qa(:,i)*qa(:,i)
+       end do
+       do i = 2, 4
+          fout(:,i-1)=qb(:,i)
+       end do
+       fout(:,4)=fout(:,4)-qa(:,2)*qa(:,3)
+       fout(:,5)=fout(:,5)-qa(:,2)*qa(:,4)
+       fout(:,6)=fout(:,6)-qa(:,3)*qa(:,4)
+       !!===== WRITE AVERAGE VALUES 
+           qo(:,:)=qa(:,:)
+           call wrP3dP(ndata+1,fmblk)
+       !!===== WRITE RMS VALUES 
+          qo(:,:)=sqrt(qb(:,:))
+          call wrP3dP(ndata+2,fmblk)
+          call wrP3dF('Rij',0,6,fmblk)
     end if
- end subroutine p3drms
+ end subroutine p3dStats
+
 
 !====================================================================================
 !=====  PLOT3D F FILES Read
@@ -1092,6 +1146,7 @@ end subroutine flst
         end do
 
   end subroutine rdP3dPat
+
 !===================================================================================
 !=====  PLOT3D Q FILES READ POST
 !===================================================================================
@@ -1459,6 +1514,7 @@ end subroutine flst
     call MPI_COMM_SPLIT(icom,color,myid,intgcom,ierr)
 
  end subroutine intgUp
+
 !===================================================================================
 !=====PERFORM INTEGRAL
 !===================================================================================
@@ -1484,6 +1540,11 @@ implicit none
 
 end subroutine integrate
 
+function gaussian(a,c,r) result (g)
+real (k8) :: a,c,r,g
+   g=a*exp(-r/(2*c**2))
+end function gaussian
+
 !===================================================================================
 !=====SET UP PROBE CYLINDERS
 !===================================================================================
@@ -1494,7 +1555,7 @@ implicit none
    real(k8),dimension (2),intent(in) :: sprob,eprob
    real(k8),dimension (2)            :: dirprob
    integer :: color,err
-   real(k8) :: rprob,r2prob,g11,g22,g12
+   real(k8) :: rprob,r2prob,g11,g22,g12,agaus,cgaus,rdum,rdum2
 
    allocate(xyprob(2,nprob),nklprob(2,0:lze,nprob),nlprob(2,nprob))
    allocate(mprob(nprob),probcom(nprob),probflag(nprob))
@@ -1504,8 +1565,9 @@ implicit none
       ra0=sqrt(dirprob(1)**2+dirprob(2)**2)/(nprob-1)
       rprob=ra0*half
       dirprob(:)=dirprob(:)/(nprob-1)
-      if (present(orprob).and.(orprob<0)) then
+      if (present(orprob)) then
          rprob=orprob
+         if(myid==0) write(*,*) rprob
       end if
    else 
       if (present(orprob)) then
@@ -1524,10 +1586,15 @@ implicit none
       xyprob(:,i+1)=sprob(:)+i*dirprob(:)
    end do
 
+   ! Compute gaussian parameters
+   r2prob=rprob**2;
+   cgaus=sqrt((-r2prob)/(2*log(0.0001)))
+   agaus=1.0_k8!/(cgaus*(2*pi)**1.5_k8)
+
    if (rprob<0) then
    ! in development
    else
-      r2prob=rprob**2;ll=-1
+      ll=0
       do n = 1, nprob
          nlprob(1,n)=ll
          do k = 0, lze
@@ -1537,6 +1604,7 @@ implicit none
                tmp=(xyz(l,1)-xyprob(1,n))**2+(xyz(l,2)-xyprob(2,n))**2
                if (tmp-r2prob<0) then
                   ll=ll+1; de(ll,5)=l+sml
+                  varr(ll)=gaussian(agaus,cgaus,tmp)
                end if
             end do
          end do
@@ -1545,7 +1613,7 @@ implicit none
          nlprob(2,n)=ll
       end do
       lcprob=ll
-      if(lcprob.ne.-1) then
+      if(lcprob>0) then
          allocate(lprob(0:lcprob),aprob(0:lcprob),&
                   vprob(0:lcprob))
          do ll = 0, lcprob; l=de(ll,5); lprob(ll)=l
@@ -1553,6 +1621,8 @@ implicit none
             g22 = qo(l,2)*qo(l,2)+qa(l,2)*qa(l,2)+de(l,2)*de(l,2)
             g12 = qo(l,1)*qo(l,2)+qa(l,1)*qa(l,2)+de(l,1)*de(l,2)
             aprob(ll)=sqrt(g11*g22-g12*g12)
+            !aprob(ll)=sqrt(g11*g22-g12*g12)*varr(ll)
+            !aprob(ll)=pi*r2prob*varr(ll)
          end do
       end if
 
@@ -1569,33 +1639,40 @@ implicit none
          call MPI_COMM_SPLIT(icom,color,myid,probcom(n),ierr)
          if (probflag(n)) then
             CALL MPI_ALLREDUCE(myid,mprob(n),1,MPI_INTEGER4,MPI_MIN,probcom(n),ierr)
-            write(*,*)&
-            myid,mprob(n),n,sum(aprob(nlprob(1,n):nlprob(2,n)))/(lze+1)
+            rdum=sum(aprob(nlprob(1,n):nlprob(2,n)))/(lze+1)
+            rdum=rdum/(pi*r2prob)
+            rdum2=real(nlprob(2,n)-nlprob(1,n)+1)/(lze+1)
+            write(*,"(i3,2x,i3,2x,i3,2x,f8.3,2x,i9,2x,i9,2x,f8.3)")&
+            myid,mprob(n),n,rdum,nlprob(1,n),nlprob(2,n),rdum2
          end if
       end do
-
-
    end if
    
 end subroutine probUp
 
-subroutine probCirc()
+subroutine probCirc(ntotal)
 implicit none
+   integer, intent(in) :: ntotal
    integer :: l,ll,n,m
-   real(k8), dimension (0:lze,0:ndata,nprob) :: probze
+   real(k8), dimension(:,:,:), allocatable :: probze
    character(3) :: cprob
-
-   do m = 0, ndata
-      call rdP3dP(m,fmblk,'Q+W')
+   character(32) :: myfmt
+   
+ 
+   do m = 0, ntotal
+      call rdP3dP(m,fmblk)
       varr(:)=qo(:,5)
       do n = 1, nprob
-         probze(:,m,n)=0
          if (probflag(n)) then
+         if(.not.allocated(probze)) allocate(probze(0:lze,0:ntotal,nprob))
+         probze(:,m,n)=0
             do k = 0, lze
             ra0=0
                do ll = nklprob(1,k,n), nklprob(2,k,n); l=lprob(ll)
                   ra0=ra0+aprob(ll)*varr(l)
                end do
+               ra1=sum(aprob(nklprob(1,k,n):nklprob(2,k,n)))
+               ra0=ra0/ra1
                CALL MPI_REDUCE(ra0,probze(k,m,n),1,MPI_REAL8,MPI_SUM,0,probcom(n),ierr)
             end do
          else
@@ -1604,6 +1681,8 @@ implicit none
       end do
    end do
 
+   write(myfmt,'("(e15.8,5x,",i4,"(e15.8,5x))")') lze+1
+   write(*,"('Format:',1x,a)") myfmt
    do n = 1, nprob
       write(cprob,"(i3)") n
       do i = 0, 3
@@ -1615,8 +1694,8 @@ implicit none
          write(*,"('Processor ',i2,' writing probe ',i2)") myid,n
          open(unit=50+n, file='out/circ'//cprob//'.dat')
          write(50+n,"('t* circ (',f8.4,',',f8.4,')')") xyprob(1,n),xyprob(2,n)
-         do m = 0, ndata
-            write(50+n,"(102(es15.7))") times(m),probze(:,m,n)
+         do m = 0, ntotal
+            write(50+n,myfmt) times(m),probze(:,m,n)
          end do
          close(50+n)
          write(*,"('Finished writing probe ',i2)") n
@@ -1626,12 +1705,14 @@ implicit none
 
 end subroutine probCirc
 
+!===Gets indices of maximum values of varr along a eta line with constant 
+!   xi and zeta 
 subroutine getijkMax(blk,nxk,xs,ks)
 implicit none
-integer, intent(in) :: blk
-integer, dimension(2), intent(in) :: nxk
-integer(k4) , dimension(nxk(1)), intent (in) :: xs
-integer(k4) , dimension(nxk(2)), intent (in) :: ks
+integer, intent(in) :: blk ! opearate only on this block
+integer, dimension(2), intent(in) :: nxk !# number of probes in each dir
+integer(k4) , dimension(nxk(1)), intent (in) :: xs ! xi indices
+integer(k4) , dimension(nxk(2)), intent (in) :: ks ! zeta indices
 integer(k4) :: pos,mymaxid,flg,flg2
 integer(k4) , dimension(nxk(1),nxk(2)) :: maxflag,maxcom
 integer(k4) , dimension(nxk(2)) :: maxkcom
@@ -1658,6 +1739,7 @@ allocate(maxpos(3,nxk(1),nxk(2)),maxxyz(3,nxk(1),nxk(2)))
       do k = 1, nxk(2)
         do i = 1, nxk(1)
            color=maxflag(i,k)
+           ! Create a communicator for each line
            call MPI_COMM_SPLIT(bcom,color,myid,maxcom(i,k),ierr)
         end do
       end do
@@ -1735,8 +1817,12 @@ allocate(maxpos(3,nxk(1),nxk(2)),maxxyz(3,nxk(1),nxk(2)))
 
    if (myid==0) then
       do k = 1, nxk(2)
+      write(cinput,"(i3)") k
+      cstring='maxpln'//trim(adjustl(cinput))//'_pos.dat'
+      open(unit=100, file=trim(adjustl(cstring)))
          write(*,"(a,x,i2,7x,a,x,i3)") 'nk =',k,'ze =',ks(k)
          write(*,"(a,7x,a,7x,a,7x,a,7x,a,7x,a)") 'xi','et','ze','x','y','z'
+         write(100,"(a,7x,a,7x,a,7x,a,7x,a,7x,a)") 'xi','et','ze','x','y','z'
          do i = 1, nxk(1)
             flg=nxk(1)*(k-1)+i
             flg2=flg+(nxk(1)*nxk(2))
@@ -1744,7 +1830,10 @@ allocate(maxpos(3,nxk(1),nxk(2)),maxxyz(3,nxk(1),nxk(2)))
             CALL MPI_RECV(maxxyz(1,i,k),3,MPI_REAL4,MPI_ANY_SOURCE,flg2,icom,ista,ierr)
             write(*,"(i3,7x,i3,7x,i3,7x,f7.3,7x,f7.3,7x,f7.3)")&
             maxpos(1,i,k),maxpos(2,i,k),maxpos(3,i,k),maxxyz(1,i,k),maxxyz(2,i,k),maxxyz(3,i,k)
+            write(100,"(i3,7x,i3,7x,i3,7x,f7.3,7x,f7.3,7x,f7.3)")&
+            maxpos(1,i,k),maxpos(2,i,k),maxpos(3,i,k),maxxyz(1,i,k),maxxyz(2,i,k),maxxyz(3,i,k)
          end do
+      close(100)
       end do
    end if
 

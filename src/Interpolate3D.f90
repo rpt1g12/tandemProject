@@ -80,7 +80,7 @@ if (iflag) then
    tol=abs(1.0_nr/tol**(1.0_nr/3.0_nr))
    call rdIRsta
    if (myid==0) then
-   write(*,"('Last time step was at:',f7.4)") timo
+   write(*,"('Last time step was at:',f10.4)") timo
    end if
 
    ! Get boundary values
