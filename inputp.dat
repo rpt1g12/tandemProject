@@ -3,9 +3,9 @@ let0-to-bky	119	119           !lett=238
 lze0-to-bkz	50                    !pts x plane ~ 135k
 nbody-nthick	2	2
 ngridv		1
-npcx		1	1	1	!8pcs
-npcy		1	1		!4pcs
-npcz		1			!total=8*4*1=32pcs/16=2 nodes
+npcx		4	4	10	!18pcs
+npcy		4	4		!8pcs
+npcz		3			!total=18*8*3=432pcs/16=27 nodes
 nito-nits-litr	0	1	10
 smgrid-domlens	0.0075e0 	7.0e0 10.0e0 10.0e0 10.0e0
 ximod-etamod	0.05e0		0.05e0
