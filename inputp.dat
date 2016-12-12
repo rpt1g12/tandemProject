@@ -1,13 +1,13 @@
-lxi0-to-bkx	119	149	299   !lxit=567
-let0-to-bky	119	119           !lett=238
-lze0-to-bkz	50                    !pts x plane ~ 135k
+lxi0-to-bkx	179	299	379   !lxit=567
+let0-to-bky	159	319           !lett=238
+lze0-to-bkz	14                    !pts x plane ~ 135k
 nbody-nthick	2	2
 ngridv		1
 npcx		1	1	1	!8pcs
 npcy		1	1		!4pcs
 npcz		1			!total=8*4*1=32pcs/16=2 nodes
 nito-nits-litr	0	1	10
-smgrid-domlens	0.0075e0 	7.0e0 10.0e0 10.0e0 10.0e0
+smgrid-domlens	0.0075e0 	7.0e0 10.0e0 7.0e0 10.0e0
 ximod-etamod	0.05e0		0.05e0
 span-wlew-wlea	0.2e0		0.1e0		0.00e0
 gap-chord1-2	1.0e0		1.0e0		1.0e0

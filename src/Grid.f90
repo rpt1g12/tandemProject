@@ -35,30 +35,7 @@ module gridgen
  contains
 
 !===== GRID GENERATION
-!        <==Grid Sketch==>
-!      ^
-!    py+>0             1         2                        3
-!     3  |----|--------|---------|--------------|---------| 5
-!        |             |         |                        |
-!        |- - |- - - - |- - - - -|- - - - - - - |- - - - -| 4
-!        |             |         |                        |
-!        |    |        |         |              |         |
-!        |             |         |                        |
-!        |    |        |         |              |         |
-!        |             |         |                        |
-!        |    |        |         |              |         |
-!    1-2 |=============|<=======>|========================| 2-3
-!        |    |        |         |              |         |
-!        |             |         |                        |
-!        |    |        |         |              |         |
-!        |             |         |                        |
-!        |    |        |         |              |         |
-!        |             |         |                        |
-!        |- - |- - - - |- - - - -|- - - - - - - |- - - - -| 4
-!        |             |         |                        |
-!  ^     |    |        |         |              |         |
-!px+> 0  |-------------|---------|------------------------| 5
-!        0    1        2         3              4         5
+
  subroutine gridaerofoil(ngridv,nthick,smgrid,&
             domlens,span,wlew,wlea,szth1,szth2,szxt,&
             c1,delt1,ximod,etamod)
@@ -73,7 +50,7 @@ module gridgen
  real(k8),intent(in) :: ximod,etamod
  real(k8) :: lsz1,lsz2
  real(k8) :: lwle
- real(k8) :: alph,thk=12
+ real(k8) :: alph,thk=21
  real(k8) :: oxp,oyp
  real(k8) :: tmps,tmpe,tmpc
  real(k8) :: sha,shb,shc
@@ -102,7 +79,8 @@ module gridgen
     shs=smgrid; she=shs
     shs1=ximod*smgrid; ! rpt-LE xi size 
     shs2=etamod*smgrid;! rpt-LE eta size
-    she1=4*shs2          ! rpt-TE size both xi and eta
+    she1=6*shs2          ! rpt-TE size xi
+    she2=2*shs2          ! rpt-TE size eta
     smod(:)=(/4.0_k4,3.0_k4,220.0_k4,200.0_k4,1.2_k4,0.9_k4/) ! grid size modifiers
 
     allocate(xx(0:lxit,0:lett),yy(0:lxit,0:lett),zz(0:lxit,0:lett),zs(0:lzebk(0)))
@@ -151,10 +129,10 @@ if(myid==mo(mb)) then
     lhbl(1)=0.25*c1 ! rpt-LE curve top-horizontal lenght
     lvbl(0)=lwk(1) ! rpt-LE curve bottom-vertical lenght
     lvbl(1)=lwk(1) ! rpt-LE curve top-vertical lenght
-    nvbl(0)=nwk(1) ! rpt-#eta points bottom LE curve
+    nvbl(0)=int(letbk(0)*0.3e0) ! rpt-#eta points bottom LE curve
     nvbl(1)=nwk(1) ! rpt-#eta points top LE curve
     if (myid==0) then
-       write(*,"('BL curve horizontal size: south=',f8.4,' north=',f8.4)")&
+       write(*,"('BL curve horizontal size: east=',f8.4,' west=',f8.4)")&
        lhbl(0),lhbl(1)
        write(*,"('BL curve vertical size: south=',f8.4,' north=',f8.4)")&
        lvbl(0),lvbl(1)
@@ -179,11 +157,11 @@ if(myid==mo(mb)) then
     px(4,:)=dlth(0,1)-szth(0,1)
     px(5,:)=dlth(0,1)
 !---HORIZONTAL Spacings
-    dx(0,:)=300*shs1
+    dx(0,:)=200*shs1
     dx(1,:)=dx(0,:)
-    dx(2,:)=30*shs1; dx(2,1:2)=shs1
-    dx(3,:)=30*shs1; dx(3,1:2)=she1
-    dx(4,:)=300*shs1
+    dx(2,:)=15*shs1; dx(2,1:2)=shs1
+    dx(3,:)=15*shs1; dx(3,1:2)=she1
+    dx(4,:)=220*shs1
     dx(5,:)=dx(4,:)
 !---HORIZONTAL LINES
     py(0,:)=-dlth(1,0)
@@ -193,11 +171,11 @@ if(myid==mo(mb)) then
     py(4,:)=dlth(1,1)-szth(1,1)
     py(5,:)=dlth(1,1)
 !---VERTICAL Spacings
-    dy(0,:)=500*shs2
+    dy(0,:)=300*shs2
     dy(1,:)=dy(0,:)
     dy(2,:)=she1*cos(pi4+delt1);dy(2,1)=shs1*cos(pi4+delt1)
     dy(3,:)=she1*cos(pi4+delt1);dy(3,1)=shs1*cos(pi4+delt1)
-    dy(4,:)=500*shs2
+    dy(4,:)=320*shs2
     dy(5,:)=dy(4,:)
 
 !----- INITIAL AND END HORIZONTAL SLOPES
