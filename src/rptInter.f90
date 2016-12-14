@@ -519,7 +519,7 @@ end subroutine interSetUp
 !====================================================================================
  subroutine readRestart
 
-    open(9,file=crestart,access='stream',shared); lh=0
+    open(9,file=crestart,access='stream'); lh=0
     read(9,pos=nr*lh+1) niter; lh=lh+1
     read(9,pos=nr*lh+1) ndt; lh=lh+1
     read(9,pos=nr*lh+1) dt; lh=lh+1
@@ -592,7 +592,7 @@ end subroutine interSetUp
 !====================================================================================
  subroutine readGrid
 
-         open(9,file='data/grid'//cnzone,access='stream',shared); lh=0
+         open(9,file='data/grid'//cnzone,access='stream'); lh=0
          lp=lpos(myid)
       do m=1,3; lq=(m-1)*ltomb
       do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
@@ -606,7 +606,7 @@ end subroutine interSetUp
 !====================================================================================
  subroutine writeGrid
 
-         open(9,file='data/grid'//cnzone,access='stream',shared); lh=0
+         open(9,file='data/grid'//cnzone,access='stream'); lh=0
          lp=lpos(myid)
       do m=1,3; lq=(m-1)*ltomb
       do k=0,lze; do j=0,let; l=indx3(0,j,k,1)
@@ -680,9 +680,9 @@ end subroutine interSetUp
 !====================================================================================
  subroutine writeRestart
 
-         open(9,file='i'//crestart,access='stream',shared); lh=0
+         open(9,file='i'//crestart,access='stream'); lh=0
       if(myid==mo(mb)) then
-         write(9,pos=nr*lh+1) n; lh=lh+1
+         write(9,pos=nr*lh+1) niter; lh=lh+1
          write(9,pos=nr*lh+1) ndt; lh=lh+1
          write(9,pos=nr*lh+1) dt; lh=lh+1
          write(9,pos=nr*lh+1) dts; lh=lh+1
@@ -761,7 +761,7 @@ end subroutine interSetUp
  end if
 
 do k = 0, lzei
-   write(*,*) myid,k
+   !write(*,"('Block: ',i2,', plane:',i3)") myid,k
    do j = 0, leti
       do i = 0, lxii;l2=indx4(i,j,k,1)
          xs(:)=(/xyz2(l2,1),xyz2(l2,2),xyz2(l2,3)/)
@@ -978,7 +978,7 @@ end do
 
  do k = 0, lze
     do j = 0, let
-       do i = 0, lxi; l=indx5(i,j,k,1)
+       do i = 0, lxi; l=indx5(i,j,k,1) !RPT CHECK THIS!!!!!
           lp=i+lio(j,k)+lpos(myid)
           lvarr2(lp)=varr(l)
        end do
@@ -993,17 +993,20 @@ end do
 !=====COPY OVER SPAN
 !====================================================================================
  subroutine spanCopy()
- integer :: i,j,k,kk,l,l2
+ integer :: lmx2,lmxdif
+ integer :: i,j,k,kk,l,ll,nn,lp
 
- do k = 0, lzei
-    kk=k-(k/lze)*lze
-    if(myid==0)write(*,*) k/lze,kk
-    do j = 0, leti
-       do i = 0, lxii; l=indx4(i,j,k,1); l2=indx3(i,j,kk,1)
-          qb(l,:)=qo(l2,:)
-       end do
-    end do
- end do
+ lp=(lxi+1)*(let+1)-1
+do nn = 1, 5
+   do k = 0, lzei
+      kk=k
+      if (kk>lze) then
+         kk=k-lze
+      end if
+      ll=indx4(0,0,k,1);l=indx3(0,0,kk,1)
+      qb(ll:ll+lp,nn)=qo(l:l+lp,nn)
+   end do
+end do
     
  end subroutine spanCopy
 !====================================================================================

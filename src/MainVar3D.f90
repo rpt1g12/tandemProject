@@ -150,6 +150,7 @@
  character(16) :: cgrid
  character(18) :: cdata,cturb
  character(19) :: crestart
+ character(256) :: cstring
 
 !===== INTEGER VARIABLES FOR MPI COMMANDS
 
@@ -173,7 +174,7 @@
  integer(k4), dimension (:), allocatable :: ibegin,jbegin,kbegin
  integer :: bcom
  integer :: q4arr,q4fh,qarr,qfh
- logical :: qflag=.false.,gflag=.false.,q4flag=.false.
+ logical :: qflag=.false.,gflag=.false.,q4flag=.false.,faflag=.false.
  logical :: wrsfg=.false.,wrrfg=.false.
  real(k8), dimension(:,:), allocatable :: q8
  real(k4), dimension(:,:), allocatable :: fout,xyz4,q4
@@ -187,18 +188,21 @@
  integer(k4) :: wcom,bwcom
 
 !===== SUBSETS VARIABLES
- integer (k4), dimension (3,2) :: ssRange
- integer (k4), dimension (3)   :: ssSize,ssLSize,ssGStr,ssGEnd,ssStr,ssEnd
- integer (k4), dimension (:,:), allocatable :: ssGSzs
+ integer (k4), dimension (:,:,:), allocatable :: ssRange
+ integer (k4), dimension (:,:), allocatable :: ssSize,ssLSize,ssGStr,ssGEnd,ssStr,ssEnd
+ integer (k4), dimension (:,:,:), allocatable :: ssGSzs
  integer (k4), dimension (:), allocatable :: lss
- integer (k4) :: sslmx,nss,tss,ssFreq
- integer (k4) :: sscom,ssbcom,ssid,bssid,ssnp
+ integer (k4), dimension (:), allocatable :: lss0,lssn
+ integer (k4), dimension (:), allocatable :: sslmx,ssFreq
+ integer (k4), dimension (:), allocatable :: sscom,ssbcom,ssid,bssid,ssnp,ssmbk,ssmb
+ integer (k4) :: nss,tss
  integer (k4) :: color
- integer :: ssq4arr,ssq4fh
- logical :: ssq4flag=.false.
- logical :: sswrsfg=.false.
- real(k4), dimension(:,:), allocatable :: ssfout,ssxyz4,ssq4
- logical :: ssFlag
+ integer (k4), dimension (:), allocatable :: nout_ss,ndati_ss
+ integer, dimension(:), allocatable :: ssq4arr,ssq4fh
+ logical, dimension(:), allocatable :: ssFlag
+ logical, dimension(:), allocatable :: ssq4flag
+ integer(k4), dimension(:,:), allocatable :: ssblks
+ real(k4), dimension(:), allocatable :: ssxyz4,ssq4
 
 !===== POST-PROCESSING VARIABLES BY RPT
 
@@ -209,21 +213,33 @@
  character(:),dimension(:),allocatable :: ofiles 
  real(k8), dimension(2,2) :: cl
  real(k8), dimension(2,2,2) :: clh
+ real(k8), dimension(2) :: clrng
 
+ !=== ipost.dat input flags
  integer :: fparallel,fmblk
- integer :: favg,fwavg,favgu,fcoef,fcf,fcp,floc,fwplus,fqcrit,fwss,fcurl,frms,fwrms
+ integer :: favg
+ integer :: fcoef
+ integer :: floc
+ integer :: fwss,fcf,fwplus
+ integer :: fcurl
  integer :: fstrip
+ integer :: fprobcirc
+ integer :: fijkmax
+
  real(k8),dimension(:),allocatable :: delt
  real(k8), dimension (:,:), allocatable :: svarr
 ! real(k8), dimension (:,:,:,:), allocatable :: qxyz
  logical :: fflag
 
  ! Cylinder probes variables
- real(k8), dimension(:,:), allocatable :: xyprob,nlprob
+ real(k8), dimension(:,:), allocatable :: xyprob
+ integer, dimension(:,:), allocatable :: nlprob
  real(k8), dimension(:,:,:), allocatable :: nklprob
  integer, dimension(:), allocatable :: mprob,probcom,lprob
  real(k8), dimension(:), allocatable :: aprob,vprob
  integer :: lcprob,nprob
+ real(k8) :: orprob
+ real(k8), dimension(2) :: sprob,eprob
  logical, dimension(:), allocatable :: probflag
 
  logical :: intgflag
@@ -234,11 +250,28 @@
  real :: rdis,xpos,ypos
  integer :: fintg,atk
 
+ ! Maximum probe variables
+ real(k4), dimension(:,:,:,:), allocatable :: mval
+ integer(k4) , dimension(:,:,:), allocatable :: maxpos
+ real(k4) , dimension(:,:,:), allocatable :: maxxyz
+ real(k4) :: rout
+ integer(k4), dimension(:,:), allocatable :: nose
+ integer(k4), dimension(:), allocatable :: xarr,zarr
+ integer(k4), dimension(2) :: msizes
+ integer(k4) :: mblock,mxst,mxend,mxsz,mzst,mzend,mzsz
+
+ ! Dummy variables
+ integer(k4) :: idum
+ real(k4) :: rdum
+ real(k8) :: ddum
+ character(128) :: cdum
+ character(1) :: onechr
+
 !===== ADITIONAL INPUT VARIABLES BY RPT
  integer(k4)  :: nto,iwrec
  integer(k4)  :: forcing,LES
  real(k8) :: tgustd,tguste
- real(k8) :: talphas,talphar,aoa
+ real(k8) :: tps,tp,tpe,aoa0,aoa1,aoa,raoa,cosaoa,sinaoa
  real(k8) :: smago1,smago2
  integer(k4)  :: output,ogrid,osol,oblock
 

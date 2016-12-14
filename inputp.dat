@@ -1,15 +1,15 @@
 lxi0-to-bkx	120	320	360   !lxit=800	
 let0-to-bky	120	360           !lett=480
-lze0-to-bkz	150                   !pts x plane = 384k
+lze0-to-bkz	200                   !pts x plane = 384k
 nbody-nthick	2	2
 ngridv		1
-!npcx		1	1	1
-!npcy		1	1
-!npcz		1
+npcx		1	1	1	!8pcs
+npcy		1	1		!4pcs
+npcz		5			!total=8*4*1=32pcs/16=2 nodes
 nito-nits-litr	0	1	10
 smgrid-domlen	0.0075e0 		10.0e0
-ximod-etamod	0.3e0		0.05e0
-span-wlew-wlea	0.33e0		0.11e0		0.000e0
+ximod-etamod	0.05e0		0.05e0
+span-wlew-wlea	0.88e0		0.11e0		0.015e0
 gap-chord1-2	1.0e0		1.0e0		1.0e0
 delt1-2(deg)	00.0e0		0.0e0		
 szth1-th2-xt-co	2.0e0		2.0e0		4.0e0		12.0e0
@@ -23,16 +23,24 @@ cutlb           0.5e0
 
 lxi0-to-bkx	120	320	360   !lxit=800	
 let0-to-bky	120	360           !lett=480
-lze0-to-bkz	100                   !pts x plane = 384k
+lze0-to-bkz	200                   !pts x plane = 384k
 
-lxi0-to-bkx	60	320	150   !lxit=800	
-let0-to-bky	60	150           !lett=480
-lze0-to-bkz	100                   !pts x plane = 384k
+lxi0-to-bkx	179	299     379   !lxit=860
+let0-to-bky	159	319           !lett=480
+lze0-to-bkz	192                   !pts x plane = 412.8k
+ 
+lxi0-to-bkx	019	299     119   !lxit=860
+let0-to-bky	019	119           !lett=480
+lze0-to-bkz	192                   !pts x plane = 412.8k
 
-lxi0-to-bkx	20	320	100   !lxit=800	
+lxi0-to-bkx	20	320	80   !lxit=800	
 let0-to-bky	20	120           !lett=480
-lze0-to-bkz	100                   !pts x plane = 384k
+lze0-to-bkz	200                   !pts x plane = 384k
 
-!npcx		3	8	9
-!npcy		1	3
-!npcz		1
+npcx		9	15	19    !43pcs
+npcy		8	16	      !24pcs
+npcz		8		      !total=43*24*8=8256pcs/24=>344 nodes
+
+npcx		1	3	4	!8pcs
+npcy		1	3		!4pcs
+npcz		1			!total=8*4*1=32pcs/16=2 nodes

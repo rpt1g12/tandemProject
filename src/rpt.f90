@@ -479,13 +479,13 @@ contains
         end select
 
         if (nout==ndata+1) then
-           l=len('out/solA'//trim(cout)//'.qa')
+           l=len('out/solTA'//trim(cout)//'.qa')
            allocate(character(len=l) :: lfname)
-           lfname='out/solA'//trim(cout)//'.qa'
+           lfname='out/solTA'//trim(cout)//'.qa'
         elseif (nout==ndata+2) then
-           l=len('out/solRMS'//trim(cout)//'.qa')
+           l=len('out/solTRMS'//trim(cout)//'.qa')
            allocate(character(len=l) :: lfname)
-           lfname='out/solRMS'//trim(cout)//'.qa'
+           lfname='out/solTRMS'//trim(cout)//'.qa'
         else 
            l=len(ofiles(nout))
            allocate(character(len=l) :: lfname)
@@ -866,6 +866,64 @@ contains
 !===================================================================================
 !=====COMPUTE LIFT COEFFICIENT OVER HALF THE AEROFOILS
 !===================================================================================
+ subroutine clrange(irange,krange,nvar,vis)
+ 
+ use problemcase, only: span,delt1,delt2
+ implicit none
+    
+    integer(k4), intent(in) :: nvar,vis
+    integer(k4), dimension(2), intent(in) :: irange,krange
+    integer(k4) :: ll,dir
+    real(k8) :: dynp,clp,clv,tcl,ypos,xpos,xlim,x0,minv
+    integer(k4) :: ks,ke,is,ie,i,k,l
+
+    dynp=two/(amachoo*amachoo*span)
+    is=irange(1);ie=irange(2)
+    ks=krange(1);ke=krange(2)
+    minv=-sin(20*pi/180)/cos(20*pi/180)
+    x0=-0.2_k8
+ 
+    if (fparallel==0) then
+       if (wflag) then
+          ll=indx2(ie,ks,1); l=lwall(ll)
+          ra0=xyz(l,1)
+          ll=indx2(is,ks,1); l=lwall(ll)
+          ra0=ra0-xyz(l,1)
+          write(*,"(a,x,i2,x,a,f12.5)") 'block',mb,'x=',ra0
+       end if
+       if (ispost) call gettw(nvar)
+       do dir=1,2
+          clp=0;clv=0;tcl=0;
+          if (wflag) then
+            ! Compute Dynamic pressure
+            do k=ks, ke; do i =is, ie; ll=indx2(i,k,1); l=lwall(ll)
+              ypos=xyz(l,2);xpos=xyz(l,1)
+              xlim=x0+minv*ypos
+              if (xpos.ge.xlim) then
+                clp=clp+(p(l)*wnor(ll,dir)*area(ll))
+                !if(k==0) write(*,*) myid,xlim,xpos,i,clp
+              end if
+            end do; end do
+            if (vis==1) then
+              do k=ks, ke; do i =is, ie; ll=indx2(i,k,1); l=lwall(ll)
+                clv=clv+tw(ll,dir)*area(ll)
+              end do; end do
+            end if
+            tcl=(clp+clv)*dynp
+          end if
+          if(wflag.or.(myid==0)) then
+                CALL MPI_REDUCE(tcl,clrng(dir),1,MPI_REAL8,MPI_SUM,0,wcom,ierr)
+          end if
+       end do
+    else
+       write(*,"(a)") 'clrange only works for one proc per block'
+       write(*,"(a)") 'please set fparallel=0'
+    end if
+ 
+ end subroutine clrange
+!===================================================================================
+!=====COMPUTE LIFT COEFFICIENT OVER HALF THE AEROFOILS
+!===================================================================================
  subroutine clhpost(ele,nvar)
  
  use problemcase, only: span,delt1,delt2
@@ -908,6 +966,51 @@ contains
     end do
  
  end subroutine clhpost
+!===================================================================================
+!=====COMPUTE LIFT COEFFICIENT OVER AEROFOILS: DIVIDE PRESSURE AND VISCOUS PARTS
+!===================================================================================
+ subroutine clPVpost(nvar)
+ 
+ use problemcase, only: span,delt1,delt2
+ implicit none
+    
+    integer(k4), intent(in) :: nvar
+    integer(k4) :: bct,bcb,bcw,m,ll,dir
+    real(k8) :: dynp,clp,clv,tcl
+ 
+    clp=0;clv=0;;tcl=0;
+
+    do dir = 1, 2
+       clp=0;clv=0;tcl=0;
+       if (ispost.and.(dir==1)) call gettw(nvar)
+       if (wflag) then
+         ! Compute Dynamic pressure
+         dynp=two/(amachoo*amachoo*span)
+         do ll = 0, lcwall; l=lwall(ll)
+           clp=clp+(p(l)*wnor(ll,dir)*area(ll))
+         end do
+         if (nviscous==1) then
+           if ((.not.ispost).and.(dir==1)) then
+              if(.not.allocated(tw)) allocate(tw(0:lcwall,3))
+              do ll = 0, lcwall; l=lwall(ll)
+                 tw(ll,1)=qa(l,1)*(txx(l)*wnor(ll,1)+txy(l)*wnor(ll,2)+tzx(l)*wnor(ll,3))
+                 tw(ll,2)=qa(l,1)*(txy(l)*wnor(ll,1)+tyy(l)*wnor(ll,2)+tyz(l)*wnor(ll,3))
+              end do
+           end if
+           do ll = 0, lcwall; l=lwall(ll)
+             clv=clv+tw(ll,dir)*area(ll)
+           end do
+         end if
+         clp=clp*dynp
+         clv=clv*dynp
+       end if
+       if(wflag.or.(myid==0)) then
+             CALL MPI_REDUCE(clp,cl(1,dir),1,MPI_REAL8,MPI_SUM,0,wcom,ierr)
+             CALL MPI_REDUCE(clv,cl(2,dir),1,MPI_REAL8,MPI_SUM,0,wcom,ierr)
+       end if
+    end do
+ 
+ end subroutine clPVpost
 !===================================================================================
 !=====COMPUTE LIFT COEFFICIENT OVER AEROFOILS
 !===================================================================================
@@ -962,7 +1065,6 @@ contains
  integer(k4) :: nn,ll
 
        call rdP3dS(nvar,fmblk)
-       !call p3dread(gsflag=0,nout=nvar)
        p(:)=qo(:,5)
     if (wflag) then
     ! READ VARIABLES

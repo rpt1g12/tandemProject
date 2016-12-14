@@ -80,7 +80,7 @@ if (iflag) then
    tol=abs(1.0_nr/tol**(1.0_nr/3.0_nr))
    call rdIRsta
    if (myid==0) then
-   write(*,"('Last time step was at:',f7.4)") timo
+   write(*,"('Last time step was at:',f10.4)") timo
    end if
 
    ! Get boundary values
@@ -97,12 +97,16 @@ if (iflag) then
    outside(1)=rhooo
    outside(2:4)=0.0_nr
    outside(5)=poo*hamm1/rhooo
-   !do n = 1, 5
-   !   call getDeri(n)
-   !   call interpolate(n,tol)
-   !end do
+   do n = 1, 5
+      call getDeri(n)
+      call interpolate(n,tol)
+   end do
    !call spanCopy
-   call spanAvg
+   !call spanAvg
+   CALL MPI_BARRIER(icom,ierr)
+   if (myid==0) then
+      write(*,*) 'Interpolation process finished!'
+   end if
    
    
    call deallocateArrays

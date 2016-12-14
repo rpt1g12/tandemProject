@@ -1,10 +1,12 @@
 fparal-mblk	1	1
-favg-w-u	0	0	0
-fcoef-fcf-fcp	0	0	0
+favg		0
+fcoef		0
 floc		0	
-fwplus		0	
-fqcrit-fwss	0	0
-fcurl		0	
-frms-w		0	0
+fwss-cf-wall+	0	0	0
+fcurl		1	
 fstrip		0
 fintg		0	0.2e0	1.0e0	0.6e0	37
+#flag		val	nprob	x0	y0	x1	y1	radius
+fprobcirc	0	31	-0.5e0	0.15	0.48	0.15	0.01 
+#flag		val	mblock	mxst	mxend	mxsz	mzst	mzend	mzsz
+fijkmax		0	4	20	140	9	37	187	4
