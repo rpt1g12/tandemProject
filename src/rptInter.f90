@@ -761,7 +761,7 @@ end subroutine interSetUp
  end if
 
 do k = 0, lzei
-   write(*,*) myid,k
+   !write(*,"('Block: ',i2,', plane:',i3)") myid,k
    do j = 0, leti
       do i = 0, lxii;l2=indx4(i,j,k,1)
          xs(:)=(/xyz2(l2,1),xyz2(l2,2),xyz2(l2,3)/)

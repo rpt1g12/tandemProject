@@ -97,12 +97,16 @@ if (iflag) then
    outside(1)=rhooo
    outside(2:4)=0.0_nr
    outside(5)=poo*hamm1/rhooo
-   !do n = 1, 5
-   !   call getDeri(n)
-   !   call interpolate(n,tol)
-   !end do
+   do n = 1, 5
+      call getDeri(n)
+      call interpolate(n,tol)
+   end do
    !call spanCopy
-   call spanAvg
+   !call spanAvg
+   CALL MPI_BARRIER(icom,ierr)
+   if (myid==0) then
+      write(*,*) 'Interpolation process finished!'
+   end if
    
    
    call deallocateArrays

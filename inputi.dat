@@ -5,8 +5,8 @@
 #IN 	lxibk	letbk	lzebk
 ilxibk	120	320	360
 iletbk	120	360
-ilzebk	100
+ilzebk	200
 #OUT lxibk	letbk	lzebk
-ilxibk	120	320	360
-iletbk	120	360
-ilzebk	150
+ilxibk	100	255	287
+iletbk	120	287
+ilzebk	160
