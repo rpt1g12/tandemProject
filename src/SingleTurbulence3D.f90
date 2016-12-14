@@ -237,7 +237,7 @@
  end do
     ! rpt- Output sponge 
     if ((ngridv==1).and.(output==1)) then
-       if(.not.allocated(fout)) allocate(fout(0:lmx,2))
+       if(.not.allocated(fout)) allocate(fout(0:lmx,3))
        fout(:,1:2)=de(:,1:2)
     end if
     lsz=ll ! rpt-total number of points in sponge zone
@@ -337,24 +337,24 @@
     if(timo>tgusto) then
        ra0=timo-tgusto+dtk; ra1=slit/uoo(1); ra2=ra0/ra1; ra3=ra0-ra1*int(ra2,kind=ni)
        is=0; ie=ntz; ii=minloc(abs(tt(:)-ra3),1)-1
-    do jj=-2,2
-       ilag(jj)=min(max(ii+jj,is),ie); tlag(jj)=tt(ilag(jj))
-    end do
-    if(ii-is==0) then; ilag(-2:-1)=(/ie-2,ie-1/); tlag(-2:-1)=tt(ilag(-2:-1))-ra1; end if
-    if(ii-is==1) then; ilag(-2)=ie-1; tlag(-2)=tt(ilag(-2))-ra1; end if
-    if(ie-ii==1) then; ilag(2)=is+1; tlag(2)=tt(ilag(2))+ra1; end if
-    if(ie-ii==0) then; ilag(1:2)=(/is+1,is+2/); tlag(1:2)=tt(ilag(1:2))+ra1; end if
-       alag(:)=ra3-tlag(:)
-    do jj=-2,2
-       blag(:)=tlag(jj)-tlag(:); ao=one; bo=one
-    do ii=-2,2
-    if(ii/=jj) then
-       ao=ao*alag(ii); bo=bo*blag(ii)
-    end if
-    end do
-       ii=ilag(jj); res=ao/bo
-       vit(:,:)=vit(:,:)+res*vito(:,ii,:)
-    end do
+       do jj=-2,2
+          ilag(jj)=min(max(ii+jj,is),ie); tlag(jj)=tt(ilag(jj))
+       end do
+       if(ii-is==0) then; ilag(-2:-1)=(/ie-2,ie-1/); tlag(-2:-1)=tt(ilag(-2:-1))-ra1; end if
+       if(ii-is==1) then; ilag(-2)=ie-1; tlag(-2)=tt(ilag(-2))-ra1; end if
+       if(ie-ii==1) then; ilag(2)=is+1; tlag(2)=tt(ilag(2))+ra1; end if
+       if(ie-ii==0) then; ilag(1:2)=(/is+1,is+2/); tlag(1:2)=tt(ilag(1:2))+ra1; end if
+          alag(:)=ra3-tlag(:)
+       do jj=-2,2
+          blag(:)=tlag(jj)-tlag(:); ao=one; bo=one
+          do ii=-2,2
+          if(ii/=jj) then
+             ao=ao*alag(ii); bo=bo*blag(ii)
+          end if
+          end do
+          ii=ilag(jj); res=ao/bo
+          vit(:,:)=vit(:,:)+res*vito(:,ii,:)
+       end do
     end if
  end if
 
