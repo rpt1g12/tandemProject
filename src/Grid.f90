@@ -151,7 +151,7 @@ if(myid==mo(mb)) then
     lhbl(1)=0.25*c1 ! rpt-LE curve top-horizontal lenght
     lvbl(0)=lwk(1) ! rpt-LE curve bottom-vertical lenght
     lvbl(1)=lwk(1) ! rpt-LE curve top-vertical lenght
-    nvbl(0)=nwk(1) ! rpt-#eta points bottom LE curve
+    nvbl(0)=int(letbk(0)*0.4e0) ! rpt-#eta points bottom LE curve
     nvbl(1)=nwk(1) ! rpt-#eta points top LE curve
     if (myid==0) then
        write(*,"('BL curve horizontal size: south=',f8.4,' north=',f8.4)")&

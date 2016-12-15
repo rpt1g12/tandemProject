@@ -34,11 +34,14 @@
 
    call interSetUp
    call setup(1)
-lxii=lxi;leti=let;lzei=lze
-write(*,*) myid,lxi,let,lze
-lxiio=lxio;letio=leto;lzeio=lzeo;ilmx=lmx
-allocate(qb(0:lmx,5))
-call prepareArrays
+! Store new arrays lengths
+  lxii=lxi;leti=let;lzei=lze
+  write(*,*) myid,lxi,let,lze
+  lxiio=lxio;letio=leto;lzeio=lzeo;ilmx=lmx
+! Allocate array of interpolated values
+   allocate(qb(0:lmx,5))
+! Allocate arrays for new grid
+   call prepareArrays
    allocate(xyz2(0:lmx,3),ixis(0:lmx,3))
    if (igflag) then
        call getGrid
@@ -56,9 +59,7 @@ call prepareArrays
 !        end do
 !      call wrP3dG
    end if
-   !call rdRsta
-   !write(*,*) n,ndt,dt,dts,dte,timo
-   !ndati=ndata;call wrP3dS
+
 
 call deallocateArrays
 
@@ -117,6 +118,17 @@ if (iflag) then
        call wrP3dF('inter',0,5)
        deallocate(fout)
    call wrIRsta
+
+
+   write(*,"('Checking new restart file...')") 
+   call rdIRstaCk
+   write(*,*) n,ndt,dt,dts,dte,timo
+   qa(:,2)=qa(:,2)*qa(:,1)
+   qa(:,3)=qa(:,3)*qa(:,1)
+   qa(:,4)=qa(:,4)*qa(:,1)
+   p(:)=gamm1*(qa(:,5)-half*(qa(:,1)*qa(:,2)**2+qa(:,1)*qa(:,3)**2+qa(:,1)*qa(:,4)**2))
+   umf(:)=uoo(:)
+   ndati=ndata;call wrP3dS
     if(myid==mo(mb)) then
        write(*,*) "Finished",mb
     end if

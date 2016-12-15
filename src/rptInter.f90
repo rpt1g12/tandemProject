@@ -966,6 +966,56 @@ end do
         end if
 
   end subroutine wrIRsta
+
+!====================================================================================
+!=====  READ RAW IRESTART
+!====================================================================================
+  subroutine rdIRstaCk()
+     integer(kind=MPI_OFFSET_KIND) :: wrlen,disp,offset
+     integer :: fh,amode,qarr,iolen
+     integer, dimension (4) :: gsizes,lsizes,starts
+     real(k8) :: rbuf
+     integer(k4) :: ibuf
+
+      if (myid==0) then
+         write(*,"('Reading restart file..')") 
+      end if
+
+     wrlen=5*(lmx+1)
+     amode=MPI_MODE_RDONLY
+     CALL MPI_TYPE_EXTENT(MPI_REAL8,iolen,ierr)
+
+     gsizes(:)=(/mbijkl(:),5/)
+     lsizes(:)=(/mpijkl(:),5/)
+     starts(:)=(/mpijks(:),0/)
+     CALL MPI_TYPE_CREATE_SUBARRAY(4,gsizes,lsizes,starts,MPI_ORDER_FORTRAN,MPI_REAL8,qarr,ierr) 
+     CALL MPI_TYPE_COMMIT(qarr,ierr)
+     
+
+     CALL MPI_FILE_OPEN(bcom,icrestart,amode,info,fh,ierr)
+     lh=0
+
+         offset=lh*iolen ! Iteration Number
+         CALL MPI_FILE_READ_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1; n=ibuf
+         offset=lh*iolen ! 10*(n/10)+1
+         CALL MPI_FILE_READ_AT(fh,offset,ibuf,1,MPI_INTEGER4,ista,ierr); lh=lh+1; ndt=ibuf
+         offset=lh*iolen ! Timestep
+         CALL MPI_FILE_READ_AT(fh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1; dt=rbuf
+         offset=lh*iolen ! ?
+         CALL MPI_FILE_READ_AT(fh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1; dts=rbuf
+         offset=lh*iolen ! ?
+         CALL MPI_FILE_READ_AT(fh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1; dte=rbuf
+         offset=lh*iolen ! time
+         CALL MPI_FILE_READ_AT(fh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1; timo=rbuf
+
+     disp=lh*iolen
+     CALL MPI_FILE_SET_VIEW(fh,disp,MPI_REAL8,qarr,'native',info,ierr)
+     CALL MPI_FILE_READ_ALL(fh,qa,wrlen,MPI_REAL8,ista,ierr)
+     CALL MPI_FILE_CLOSE(fh,ierr)
+     CALL MPI_TYPE_FREE(qarr,ierr)
+
+
+  end subroutine rdIRstaCk
 !====================================================================================
 ! ====JOIN BLOCK DATA
 !====================================================================================
