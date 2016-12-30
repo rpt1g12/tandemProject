@@ -55,7 +55,6 @@ module gridgen
  real(k8) :: tmps,tmpe,tmpc
  real(k8) :: sha,shb,shc
  integer(k4) :: npx,npy,mm,nn
- real(k4), dimension(0:5) :: smod
  integer(k4), dimension(:), allocatable :: linesy,linesx
  real(k8), dimension(:), allocatable :: degarr
  logical :: flag
@@ -79,9 +78,8 @@ module gridgen
     shs=smgrid; she=shs
     shs1=ximod*smgrid; ! rpt-LE xi size 
     shs2=etamod*smgrid;! rpt-LE eta size
-    she1=6*shs2          ! rpt-TE size xi
-    she2=2*shs2          ! rpt-TE size eta
-    smod(:)=(/4.0_k4,3.0_k4,220.0_k4,200.0_k4,1.2_k4,0.9_k4/) ! grid size modifiers
+    she1=3*shs2          ! rpt-TE size xi
+    she2=3*shs2          ! rpt-TE size eta
 
     allocate(xx(0:lxit,0:lett),yy(0:lxit,0:lett),zz(0:lxit,0:lett),zs(0:lzebk(0)))
 
@@ -161,7 +159,7 @@ if(myid==mo(mb)) then
     dx(1,:)=dx(0,:)
     dx(2,:)=15*shs1; dx(2,1:2)=shs1
     dx(3,:)=15*shs1; dx(3,1:2)=she1
-    dx(4,:)=220*shs1
+    dx(4,:)=200*shs1
     dx(5,:)=dx(4,:)
 !---HORIZONTAL LINES
     py(0,:)=-dlth(1,0)
@@ -173,9 +171,9 @@ if(myid==mo(mb)) then
 !---VERTICAL Spacings
     dy(0,:)=300*shs2
     dy(1,:)=dy(0,:)
-    dy(2,:)=she1*cos(pi4+delt1);dy(2,1)=shs1*cos(pi4+delt1)
-    dy(3,:)=she1*cos(pi4+delt1);dy(3,1)=shs1*cos(pi4+delt1)
-    dy(4,:)=320*shs2
+    dy(2,:)=0.3e0*she1*cos(pi4+delt1);dy(2,1:2)=shs1*cos(pi4+delt1)
+    dy(3,:)=0.3e0*she1*cos(pi4+delt1);dy(3,1:2)=shs1*cos(pi4+delt1)
+    dy(4,:)=80*shs2;dy(4,3)=50*shs2
     dy(5,:)=dy(4,:)
 
 !----- INITIAL AND END HORIZONTAL SLOPES
