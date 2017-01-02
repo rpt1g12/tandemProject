@@ -102,7 +102,7 @@ module gridgen
     shs=smgrid; she=shs
     shs1=ximod*smgrid; ! rpt-LE xi size 
     shs2=etamod*smgrid;! rpt-LE eta size
-    she1=4*shs2          ! rpt-TE size both xi and eta
+    she1=1*shs2          ! rpt-TE size both xi and eta
     smod(:)=(/4.0_k4,3.0_k4,220.0_k4,200.0_k4,1.2_k4,0.9_k4/) ! grid size modifiers
 
     allocate(xx(0:lxit,0:lett),yy(0:lxit,0:lett),zz(0:lxit,0:lett),zs(0:lzebk(0)))
