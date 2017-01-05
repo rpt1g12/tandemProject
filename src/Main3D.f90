@@ -129,6 +129,12 @@
     no(2)=mod(myid,1000)/100; no(1)=mod(myid,100)/10; no(0)=mod(myid,10)
     cno=achar(no+48); cnnode=cno(4)//cno(3)//cno(2)//cno(1)//cno(0)
     cdata='misc/data'//cnnode//'.dat'; cturb='misc/turb'//cnnode//'.dat'
+
+    if(myid==0) then
+       open (unit=99, file='out/clcdPresVisc.dat')
+       write(*,"(3x,'n',8x,'time',9x,'Clp',9x,'Cdp',9x,'Clv',9x,'Cdv',5x)")  
+    end if
+       
     
     call domdcomp
 
@@ -698,14 +704,21 @@
 
 !----- OUTPUT N,TIME,CL & CD
   if((mod(n,nscrn)==0).and.nk==1) then
-     call clpost(1,ndati) 
+     !call clpost(1,ndati)
+     call clPVpost(ndati)
      ! Convert AoA from degrees to radians
      raoa=aoa*pi/180
      if (myid==0) then
-     ra1=cos(raoa);ra2=sin(raoa)
-     ra3=(umf(1)**2+umf(2)**2+umf(3)**2)**half
-     write(*,"(i8,f12.5,f12.7,f12.7,f12.7,f12.7)") &
-     n,timo,cl(1,2)*ra1-cl(1,1)*ra2,cl(1,2)*ra2+cl(1,1)*ra1,aoa,ra3
+        ra1=cos(raoa);ra2=sin(raoa)
+        ra3=(umf(1)**2+umf(2)**2+umf(3)**2)**half
+        tcl=(cl(1,2)+cl(2,2))*ra1-(cl(2,1)+cl(1,1))*ra2
+        tcd=(cl(1,2)+cl(2,2))*ra2+(cl(2,1)+cl(1,1))*ra1
+        write(*,"(i8,f12.5,f12.7,f12.7,f12.7,f12.7)") &
+        n,timo,tcl,tcd,aoa,ra3
+        ! clPVpost
+        write(99,"(i8,f12.5,f12.7,f12.7,f12.7,f12.7)") &
+        n,timo,(cl(1,2)*ra1-cl(1,1)*ra2),(cl(2,2)*ra1-cl(2,1)*ra2),&
+        (cl(1,2)*ra2+cl(1,1)*ra1),(cl(2,2)*ra2+cl(2,1)*ra1)
      end if
   end if
 
@@ -1177,6 +1190,7 @@
 !===== END OF JOB
 
  if(myid==0) then
+    close(99)
     write(*,*) "Finished."
  end if
 

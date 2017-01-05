@@ -1017,6 +1017,7 @@ contains
          end if
          clp=clp*dynp
          clv=clv*dynp
+         if (.not.ispost) clv=-1.0e0*clv
        end if
        if(wflag.or.(myid==0)) then
              CALL MPI_REDUCE(clp,cl(1,dir),1,MPI_REAL8,MPI_SUM,0,wcom,ierr)
