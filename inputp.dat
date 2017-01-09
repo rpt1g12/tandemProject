@@ -1,6 +1,6 @@
 lxi0-to-bkx	119	199	299   !lxit=617
 let0-to-bky	119	199           !lett=318
-lze0-to-bkz	50                    !pts x plane ~ 196k
+lze0-to-bkz	75                    !pts x plane ~ 196k
 nbody-nthick	2	2
 ngridv		1
 npcx		4	6	10	!20pcs
