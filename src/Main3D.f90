@@ -132,7 +132,7 @@
 
     if(myid==0) then
        open (unit=99, file='out/clcdPresVisc.dat')
-       write(*,"(3x,'n',8x,'time',9x,'Clp',9x,'Cdp',9x,'Clv',9x,'Cdv',5x)")  
+       write(99,"(3x,'n',8x,'time',9x,'Clp',9x,'Cdp',9x,'Clv',9x,'Cdv',5x)")  
     end if
        
     
