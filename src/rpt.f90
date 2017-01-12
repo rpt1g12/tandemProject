@@ -727,8 +727,10 @@ contains
 !====================================================================================
  subroutine forceup
  use problemcase, only: span
+ implicit none
+ real(k8) :: z0
  
- ra0=-log(0.0001_k8)/(rfor**2); ra1=2*pi/span
+ ra0=-log(0.0001_k8)/(rfor**2); fctr=2*pi/span
  ra2=rfor**2
  ll=-1
  do l = 0, lmx
@@ -740,14 +742,16 @@ contains
  lfor=ll
  if (lfor.ne.-1) then
     allocate(lcfor(0:lfor),xafor(0:lfor,3),bfor(0:lfor,3))
+    z0=half*span
  do ll = 0, lfor; l=de(ll,5); lcfor(ll)=l
-    bfor(ll,1)=cos(ra1*ss(l,3))
-    bfor(ll,2)=cos(3*ra1*ss(l,3))
-    bfor(ll,3)=cos(4*ra1*ss(l,3))
-    ra1=half*exp(-ra0*rr(l,1))/yaco(l)
+    bfor(ll,1)=cos(2*fctr*(ss(l,3)+z0))
+    bfor(ll,2)=cos(3*fctr*(ss(l,3)+z0))
+    bfor(ll,3)=cos(4*fctr*(ss(l,3)+z0))
+    ra1=one*exp(-ra0*rr(l,1))/yaco(l)
     xafor(ll,1)=ra1*bfor(ll,1)
     xafor(ll,2)=ra1*bfor(ll,2)
     xafor(ll,3)=ra1*bfor(ll,3)
+    fout(l,3)=xafor(ll,1)
  end do
  end if
  end subroutine forceup
@@ -756,14 +760,24 @@ contains
 ! ====FORCE IMPLEMENTATION
 !====================================================================================
  subroutine forcego
+ implicit none
+ real(k8) :: freq0=128,ts,tk,ra0,ra1,dt,rforce
+ integer(k4) :: ll
  if ((timo+dtk>tsfor).and.(timo+dtk<tefor)) then
-   ra0=(timo+dtk-tsfor)
-   ra1=amfor*cos(ra0*48.76_k8*amachoo)/3
-   ra2=amfor*cos(ra0*53.6_k8*amachoo)/3
-   ra3=amfor*cos(ra0*53.6_k8*amachoo)/3
+ 
+   ts=timo-tsfor
+   tk=timo+dtk-tsfor
+   dt=dtk
+
+   ra0=sin(2*pi*ts*freq0)
+   ra1=sin(2*pi*tk*freq0)
+
+   rforce=amfor*(ra1-ra0)/dt
+
    do ll = 0, lfor; l=lcfor(ll)
-     de(l,2)=de(l,2)+qa(l,1)*(ra1*xafor(ll,1)+ra2*xafor(ll,2)+ra3*xafor(ll,3))
-     de(l,3)=de(l,3)-qa(l,1)*(ra1*xafor(ll,1)+ra2*xafor(ll,2)+ra3*xafor(ll,3))
+     de(l,2)=de(l,2)+xafor(ll,1)*qa(l,1)*ra1
+     de(l,3)=de(l,3)-xafor(ll,1)*qa(l,1)*ra1
+     de(l,5)=de(l,5)+xafor(ll,1)*qa(l,1)*ra1**2
    end do
  end if
  end subroutine forcego
@@ -1003,6 +1017,7 @@ contains
          end if
          clp=clp*dynp
          clv=clv*dynp
+         if (.not.ispost) clv=-1.0e0*clv
        end if
        if(wflag.or.(myid==0)) then
              CALL MPI_REDUCE(clp,cl(1,dir),1,MPI_REAL8,MPI_SUM,0,wcom,ierr)

@@ -80,13 +80,16 @@
 
     call inputext
 
-    !raoa=aoa0*pi/180
     ! rpt-Forcing parameters
-    !xfor=-(0.5_k8+3*cos(raoa))!cos(delt1)-0.5_k8-1.0_k8+(0.1_k8);
-    !yfor=-3*sin(raoa)!-sin(delt1)+(0.129_k8);
-    !rfor=5.0e-1
-    !amfor=amfor*amachoo/100.0e0
-    !tsfor=151.751e0;tefor=200.000e0
+    raoa=aoa0*pi/180
+    xfor=-(0.5_k8+3*cos(raoa))
+    yfor=-3*sin(raoa)
+    rfor=5.0e-1
+    amfor=amfor*amachoo*0.01e0
+    tsfor=88.0e0;tefor=100.0e0
+    if(myid==0) write(*,"('Forcing at: x=',f8.3,x,'y=',f8.3)") xfor,yfor 
+    if(myid==0) write(*,"('Forcing amplitude=',f8.3)") amfor
+    
 !===== DOMAIN DECOMPOSITION & BOUNDARY INFORMATION
 
     mo(0)=0
@@ -126,6 +129,12 @@
     no(2)=mod(myid,1000)/100; no(1)=mod(myid,100)/10; no(0)=mod(myid,10)
     cno=achar(no+48); cnnode=cno(4)//cno(3)//cno(2)//cno(1)//cno(0)
     cdata='misc/data'//cnnode//'.dat'; cturb='misc/turb'//cnnode//'.dat'
+    
+    if(myid==0) then
+       open (unit=99, file='out/clcdPresVisc.dat')
+       write(99,"(3x,'n',8x,'time',9x,'Clp',9x,'Cdp',9x,'Clv',9x,'Cdv',5x)")  
+    end if
+       
     
     call domdcomp
 
@@ -506,14 +515,15 @@
 !===== SETTING UP SPONGE ZONE PARAMETERS
 
     call spongeup
-    if ((ngridv==1).and.(output==1)) then
-       call wrP3dF('sponge',0,2)
-       deallocate(fout)
-    end if
 
 !===== SETTING UP FORCING PARAMETERS
 
     if (forcing==1) call forceup
+
+    if ((ngridv==1).and.(output==1)) then
+       call wrP3dF('sponge',0,3)
+       deallocate(fout)
+    end if
 
 !===== INITIAL CONDITIONS
 
@@ -694,14 +704,21 @@
 
 !----- OUTPUT N,TIME,CL & CD
   if((mod(n,nscrn)==0).and.nk==1) then
-     call clpost(1,ndati) 
+     !call clpost(1,ndati)
+     call clPVpost(ndati)
      ! Convert AoA from degrees to radians
      raoa=aoa*pi/180
      if (myid==0) then
      ra1=cos(raoa);ra2=sin(raoa)
      ra3=(umf(1)**2+umf(2)**2+umf(3)**2)**half
+        tcl=(cl(1,2)+cl(2,2))*ra1-(cl(2,1)+cl(1,1))*ra2
+        tcd=(cl(1,2)+cl(2,2))*ra2+(cl(2,1)+cl(1,1))*ra1
      write(*,"(i8,f12.5,f12.7,f12.7,f12.7,f12.7)") &
-     n,timo,cl(1,2)*ra1-cl(1,1)*ra2,cl(1,2)*ra2+cl(1,1)*ra1,aoa,ra3
+        n,timo,tcl,tcd,aoa,ra3
+        ! clPVpost
+        write(99,"(i8,f12.5,f12.7,f12.7,f12.7,f12.7)") &
+        n,timo,(cl(1,2)*ra1-cl(1,1)*ra2),(cl(2,2)*ra1-cl(2,1)*ra2),&
+        (cl(1,2)*ra2+cl(1,1)*ra1),(cl(2,2)*ra2+cl(2,1)*ra1)
      end if
   end if
 
@@ -967,7 +984,7 @@
 !----- RECORDING INTERMEDIATE RESULTS
  !if(timo-tsam+(tmax-tsam)/ndata>0) then
  !   dtsum=dtsum+dt; qb(:,:)=qb(:,:)+half*dt*(qo(:,:)+qa(:,:))
- !if(nout==1) then
+ !   if(nout==1) then
  !   times(ndati)=timo-half*dtsum
  !  if(n==1) then
  !   qb(:,:)=qo(:,:)
@@ -977,12 +994,14 @@
  !   rr(:,1)=1/qb(:,1)
  !  do m=1,5
  !  select case(m)
- !  case(1); varr(:)=qb(:,m); case(2:4); varr(:)=rr(:,1)*qb(:,m)+umf(m-1)
+ !           case(1); varr(:)=qb(:,m); 
+ !           case(2:4); varr(:)=rr(:,1)*qb(:,m)+umf(m-1)
  !  case(5); varr(:)=gamm1*(qb(:,m)-half*rr(:,1)*(qb(:,2)*qb(:,2)+qb(:,3)*qb(:,3)+qb(:,4)*qb(:,4)))
  !  end select
  !   write(0,rec=5*ndati+m+3) varr(:)
  !  end do
  !   dtsum=0; qb(:,:)=0
+ !   end if
  !end if
  do nn = 1, tss
  if(nout_ss(nn)==1) then
@@ -1171,6 +1190,7 @@
 !===== END OF JOB
 
  if(myid==0) then
+    close(99)
     write(*,*) "Finished."
  end if
 
