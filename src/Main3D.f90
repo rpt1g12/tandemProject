@@ -525,6 +525,11 @@
        deallocate(fout)
     end if
 
+    if ((ngridv==1).and.(output==1)) then
+       call wrP3dF('sponge',0,3)
+       deallocate(fout)
+    end if
+
 !===== INITIAL CONDITIONS
 
  if(nts==0) then
@@ -985,56 +990,56 @@
  !if(timo-tsam+(tmax-tsam)/ndata>0) then
  !   dtsum=dtsum+dt; qb(:,:)=qb(:,:)+half*dt*(qo(:,:)+qa(:,:))
  !   if(nout==1) then
- !   times(ndati)=timo-half*dtsum
- !  if(n==1) then
- !   qb(:,:)=qo(:,:)
- !  else
- !   fctr=1/dtsum; qb(:,:)=fctr*qb(:,:)
- !  end if
- !   rr(:,1)=1/qb(:,1)
- !  do m=1,5
- !  select case(m)
+ !      times(ndati)=timo-half*dtsum
+ !     if(n==1) then
+ !      qb(:,:)=qo(:,:)
+ !     else
+ !      fctr=1/dtsum; qb(:,:)=fctr*qb(:,:)
+ !     end if
+ !      rr(:,1)=1/qb(:,1)
+ !     do m=1,5
+ !        select case(m)
  !           case(1); varr(:)=qb(:,m); 
  !           case(2:4); varr(:)=rr(:,1)*qb(:,m)+umf(m-1)
- !  case(5); varr(:)=gamm1*(qb(:,m)-half*rr(:,1)*(qb(:,2)*qb(:,2)+qb(:,3)*qb(:,3)+qb(:,4)*qb(:,4)))
- !  end select
- !   write(0,rec=5*ndati+m+3) varr(:)
- !  end do
- !   dtsum=0; qb(:,:)=0
+ !           case(5); varr(:)=gamm1*(qb(:,m)-half*rr(:,1)*(qb(:,2)*qb(:,2)+qb(:,3)*qb(:,3)+qb(:,4)*qb(:,4)))
+ !        end select
+ !        write(0,rec=5*ndati+m+3) varr(:)
+ !     end do
+ !     dtsum=0; qb(:,:)=0
  !   end if
  !end if
  do nn = 1, tss
- if(nout_ss(nn)==1) then
-    call wrP3dS_ss(nss=nn)
- end if
+    if(nout_ss(nn)==1) then
+       call wrP3dS_ss(nss=nn)
+    end if
  end do
  if(nout==1) then
       times(ndati)=timo
    if(myid==0) then
       write(*,"('===> saving output ',i3,' at time =',f12.8)") ndati,timo
- end if
- selectcase(output)
-   case(2) ! New Tecplot Style
-   qb(:,:)=qa(:,:)
-    rr(:,1)=1/qb(:,1)
-   do m=1,5
-      select case(m)
-          case(1); varr(:)=qb(:,m); 
-          case(2:4); varr(:)=rr(:,1)*qb(:,m)+umf(m-1)
-      case(5); varr(:)=gam*gamm1*(qb(:,m)-half*rr(:,1)*(qb(:,2)*qb(:,2)+qb(:,3)*qb(:,3)+qb(:,4)*qb(:,4)))
-      end select
-          nn=3+5*ndati+m; write(0,rec=nn) varr(:); !call vminmax(nn)
-   end do
-   case(1)
-      call wrP3dS
- end select
+    end if
+    selectcase(output)
+      case(2) ! New Tecplot Style
+      qb(:,:)=qa(:,:)
+       rr(:,1)=1/qb(:,1)
+      do m=1,5
+         select case(m)
+             case(1); varr(:)=qb(:,m); 
+             case(2:4); varr(:)=rr(:,1)*qb(:,m)+umf(m-1)
+             case(5); varr(:)=gam*gamm1*(qb(:,m)-half*rr(:,1)*(qb(:,2)*qb(:,2)+qb(:,3)*qb(:,3)+qb(:,4)*qb(:,4)))
+         end select
+             nn=3+5*ndati+m; write(0,rec=nn) varr(:); !call vminmax(nn)
+      end do
+      case(1)
+         call wrP3dS
+    end select
 
 
    !===== GENERATING RESTART DATA FILE
    
     if(nrestart==1) then
        call wrRsta
- end if
+    end if
  end if
 
  !if(timo>=tsam.and.mod(n,nsgnl)==0) then
