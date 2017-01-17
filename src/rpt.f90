@@ -723,15 +723,18 @@ contains
   end subroutine wrGrid
 
 !====================================================================================
-! ====SET UP FORCING PARAMETERS
+! ====SET UP FORCING PARAMETERS 
 !====================================================================================
  subroutine forceup
  use problemcase, only: span
  implicit none
- real(k8) :: z0
+ real(k8) :: z0,k0,x0,f0,rmin,zfor
  
- ra0=-log(0.0001_k8)/(rfor**2); fctr=2*pi/span
  ra2=rfor**2
+ rmin=1.0e-6
+ k0=log(rmin)/(ra2); fctr=2*pi/span
+ x0=sqrt(-1/(two*k0))
+ f0=1/(x0*exp(-half))
  ll=-1
  do l = 0, lmx
    rr(l,1)=(ss(l,1)-xfor)**2+(ss(l,2)-yfor)**2
@@ -741,18 +744,60 @@ contains
  end do
  lfor=ll
  if (lfor.ne.-1) then
-    allocate(lcfor(0:lfor),xafor(0:lfor,3),bfor(0:lfor,3))
+    allocate(lcfor(0:lfor),xyrfor(0:lfor,3))
     z0=half*span
  do ll = 0, lfor; l=de(ll,5); lcfor(ll)=l
-    bfor(ll,1)=cos(2*fctr*(ss(l,3)+z0))
-    bfor(ll,2)=cos(3*fctr*(ss(l,3)+z0))
-    bfor(ll,3)=cos(4*fctr*(ss(l,3)+z0))
-    ra1=one*exp(-ra0*rr(l,1))/yaco(l)
-    xafor(ll,1)=ra1*bfor(ll,1)
-    xafor(ll,2)=ra1*bfor(ll,2)
-    xafor(ll,3)=ra1*bfor(ll,3)
-    fout(l,3)=xafor(ll,1)
+    zfor=cos(2*fctr*(ss(l,3)+z0))
+    ra1=f0*exp(k0*rr(l,1))/yaco(l)
+    ra0=f0*f0*exp(2*k0*rr(l,1))/yaco(l)
+    xyrfor(ll,1)=-(ss(l,2)-yfor)*ra1
+    xyrfor(ll,2)=(ss(l,1)-xfor)*ra1
+    xyrfor(ll,3)=rr(l,1)*ra0
+    fout(l,3)=-(ss(l,2)-yfor)*f0*exp(k0*rr(l,1))
+    fout(l,4)=(ss(l,1)-xfor)*f0*exp(k0*rr(l,1))
+    fout(l,5)=f0**2*rr(l,1)*exp(2*k0*rr(l,1))
  end do
+ else
+    fout(:,3:5)=zero
+ end if
+ end subroutine forceup
+!====================================================================================
+! ====SET UP FORCING PARAMETERS (Touch)
+!====================================================================================
+ subroutine forceuptouch
+ use problemcase, only: span
+ implicit none
+ real(k8) :: z0,k0,x0,f0,rmin,zfor
+ 
+ ra2=rfor**2
+ rmin=1.0e-6
+ k0=log(rmin)/(ra2); fctr=2*pi/span
+ x0=sqrt(-1/(two*k0))
+ f0=1/(x0*exp(-half))
+ ll=-1
+ do l = 0, lmx
+   rr(l,1)=(ss(l,1)-xfor)**2+(ss(l,2)-yfor)**2
+   if (rr(l,1)-ra2<0) then
+      ll=ll+1; de(ll,5)=l+sml
+   end if
+ end do
+ lfor=ll
+ if (lfor.ne.-1) then
+    allocate(lcfor(0:lfor),xyrfor(0:lfor,3))
+    z0=half*span
+ do ll = 0, lfor; l=de(ll,5); lcfor(ll)=l
+    zfor=cos(2*fctr*(ss(l,3)+z0))
+    ra1=f0*exp(k0*rr(l,1))
+    ra0=f0*f0*exp(2*k0*rr(l,1))
+    xyrfor(ll,1)=-(ss(l,2)-yfor)*ra1
+    xyrfor(ll,2)=(ss(l,1)-xfor)*ra1
+    xyrfor(ll,3)=rr(l,1)*ra0
+    fout(l,3)=-(ss(l,2)-yfor)*f0*exp(k0*rr(l,1))
+    fout(l,4)=(ss(l,1)-xfor)*f0*exp(k0*rr(l,1))
+    fout(l,5)=f0**2*rr(l,1)*exp(2*k0*rr(l,1))
+ end do
+ else
+    fout(:,3:5)=zero
  end if
  end subroutine forceup
 
@@ -772,15 +817,32 @@ contains
    ra0=sin(2*pi*ts*freq0)
    ra1=sin(2*pi*tk*freq0)
 
-   rforce=amfor*(ra1-ra0)/dt
+   ! Time derivative (linear approximation)
+   rforce=amfor*amachoo*0.01e0*(ra1-ra0)/dt
 
    do ll = 0, lfor; l=lcfor(ll)
-     de(l,2)=de(l,2)+xafor(ll,1)*qa(l,1)*ra1
-     de(l,3)=de(l,3)-xafor(ll,1)*qa(l,1)*ra1
-     de(l,5)=de(l,5)+xafor(ll,1)*qa(l,1)*ra1**2
+     de(l,2)=de(l,2)+xyrfor(ll,1)*qa(l,1)*rforce
+     de(l,3)=de(l,3)+xyrfor(ll,2)*qa(l,1)*rforce
+     de(l,5)=de(l,5)+xyrfor(ll,3)*qa(l,1)*rforce**2
    end do
  end if
  end subroutine forcego
+
+!====================================================================================
+! ====FORCE TOUCH
+!====================================================================================
+ subroutine forcetouch
+ implicit none
+ real(k8) :: force
+ integer(k4) :: ll,l
+
+   force=amfor
+   do ll = 0, lfor; l=lcfor(ll)
+     qa(l,2)=qa(l,2)+xyrfor(ll,1)*qa(l,1)*force
+     qa(l,3)=qa(l,3)+xyrfor(ll,2)*qa(l,1)*force
+     qa(l,5)=qa(l,5)+xyrfor(ll,3)*qa(l,1)*force**2
+   end do
+ end subroutine forcetouch
 
 !====================================================================================
 !=====COMPUTE CELL AREA OVER AEROFOILS
@@ -1143,4 +1205,25 @@ contains
     r(3)=(u(1)*v(2)-u(2)*v(1))
  end function cross
 
+!====================================================================================
+!=====FIND INDEX FROM X,Y, AND Z COORDINATES
+!====================================================================================
+ subroutine findll(xpos,ypos,zpos,l,id) 
+    implicit none
+    real(k8), intent(in) :: xpos,ypos,zpos
+    integer(k4), intent (out) :: l,id
+    real(k8) :: tmp,tmpall
+    type (realint) lminmax,gminmax
+
+    id=-1
+    varr(:)=sqrt((xyz(:,1)-xpos)**2+(xyz(:,2)-ypos)**2+(xyz(:,3)-zpos)**2)
+    l=minloc(varr(:),1)-1
+    lminmax%val=varr(l)
+    lminmax%pro=myid
+    CALL MPI_ALLREDUCE(lminmax,gminmax,1,MPI_DOUBLE_INT,MPI_MINLOC,icom,ierr)
+    if (gminmax%pro==myid) then
+       id=myid
+    end if
+
+ end subroutine findll
 end module rpt

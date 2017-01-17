@@ -49,7 +49,7 @@
     read(9,*) cinput,tmax,timf,tsam
     read(9,*) cinput,fltk,fltkbc
     read(9,*) cinput,dto
-    read(9,*) cinput,forcing,amfor
+    read(9,*) cinput,forcing,amfor,xfor,yfor,rfor,tsfor,tefor
     ! For pitching aerofoil: aoa1=desired angle,tps=time start pitching
     !                        tp=total time pitching
     read(9,*) cinput,aoa0,aoa1,tps,tp
@@ -80,15 +80,14 @@
 
     call inputext
 
-    ! rpt-Forcing parameters
+    ! Convert AoA from degrees to radians
     raoa=aoa0*pi/180
-    xfor=-(0.5_k8+3*cos(raoa))
-    yfor=-3*sin(raoa)
-    rfor=5.0e-1
-    amfor=amfor*amachoo*0.01e0
-    tsfor=88.0e0;tefor=100.0e0
-    if(myid==0) write(*,"('Forcing at: x=',f8.3,x,'y=',f8.3)") xfor,yfor 
-    if(myid==0) write(*,"('Forcing amplitude=',f8.3)") amfor
+    ! rpt-Forcing parameters
+    if(myid==0) write(*,"('Forcing at: x=',f8.3,x,'y=',f8.3,x,'Radius=',f8.3)") xfor,yfor,rfor
+    if(myid==0) write(*,"('Forcing amplitude=',es15.7)") amfor
+    if (forcing==1) then
+       if(myid==0) write(*,"('Forcing from t0=',f8.3,x,'to tn=',f8.3)") tsfor,tefor
+    end if
     
 !===== DOMAIN DECOMPOSITION & BOUNDARY INFORMATION
 
@@ -103,21 +102,6 @@
      ! rpt- Create communicator per block
      CALL MPI_COMM_SPLIT(icom,mb,myid,bcom,ierr)   
 
-    if (output==2) then
-    cfilet(-1)='grid'
- do n=0,ndata
-    no(2)=n/100; no(1)=mod(n,100)/10; no(0)=mod(n,10)
-    cno=achar(no+48); cfilet(n)='n'//cno(2)//cno(1)//cno(0)
- end do
- do n=-1,ndata
-            ctecplt(n)='out/'//cfilet(n)//'.plt'
- end do
- do mm=0,mbk
-    no(2)=mm/100; no(1)=mod(mm,100)/10; no(0)=mod(mm,10)
-    cno=achar(no+48); czonet(mm)='z'//cno(2)//cno(1)//cno(0)
-    cthead(mm)='data/'//czonet(mm)//'.plt'
- end do
-    end if
     no(2)=mb/100; no(1)=mod(mb,100)/10; no(0)=mod(mb,10)
     cno=achar(no+48); cnzone=cno(2)//cno(1)//cno(0)
     czone='zone'//cnzone;
@@ -276,11 +260,12 @@
     call ssSetUp
 
 !===== ALLOCATION OF MAIN ARRAYS
-    if (output==2) then
-       allocate(qo(0:lmx,5),qa(0:lmx,5),qb(0:lmx,5),de(0:lmx,5))
-    else
        allocate(qo(0:lmx,5),qa(0:lmx,5),de(0:lmx,5))
-    end if
+       if (forcing==2) then
+          allocate(de0(0:lmx,5),qb(0:lmx,5))
+          de0(:,:)=zero
+          qb(:,:)=zero
+       end if
     allocate(xim(0:lmx,3),etm(0:lmx,3),zem(0:lmx,3),rr(0:lmx,3),ss(0:lmx,3))
     allocate(p(0:lmx),yaco(0:lmx),varr(0:lmx))
 
@@ -491,25 +476,12 @@
 
 !===== SETTING UP OUTPUT FILE & STORING GRID DATA
 
- selectcase(output)
- case(2)
- if(myid==0) then
- do n=-1,ndata
-    open(0,file=ctecplt(n)); close(0,status='delete')
- end do
- end if
-    open(0,file=cdata,access='direct',form='unformatted',recl=nrecs*(lmx+1))
- do nn=1,3
-    varr(:)=ss(:,nn); write(0,rec=nn) varr(:); call vminmax(nn)
- end do
- case(1)
    call wrP3dG
    do nn = 1, tss
       call wrP3dG_ss(nss=nn)
    end do
    deallocate(xyz4)
    if(allocated(ssxyz4)) deallocate(ssxyz4)
- end select
 
 
 !===== SETTING UP SPONGE ZONE PARAMETERS
@@ -519,9 +491,10 @@
 !===== SETTING UP FORCING PARAMETERS
 
     if (forcing==1) call forceup
+    if (forcing==2) call forceuptouch
 
     if ((ngridv==1).and.(output==1)) then
-       call wrP3dF('sponge',0,3)
+       call wrP3dF('sponge',0,5)
        deallocate(fout)
     end if
 
@@ -535,8 +508,13 @@
     if (tsam<timo) then
        tsam=timo
     end if
+    if (forcing==2) then
+       n0=n
+       if (dto>0) then
+          dt=dto
+       end if
+    end if
  end if
- if (output==2) qb(:,:)=0
 
 !============================================
 !===== BEGINNING OF TIME MARCHING IN SOLUTION
@@ -562,6 +540,12 @@
  do while(timo<tmax.and.(dt/=zero.or.n<=2))
 
 !----- FILTERING & RE-INITIALISING
+    if (forcing==2) then
+       if (n==n0) then
+          qb(:,:)=qa(:,:)
+       end if
+       if (n-n0==4) call forcetouch
+    end if
  do m=1,5
     rr(:,1)=qa(:,m)
     call mpigo(ntflt,nrone,n45no,m);
@@ -595,28 +579,32 @@
 !----- DETERMINATION OF TIME STEP SIZE & OUTPUT TIME
 
  if(nk==1) then
- if(mod(n,10)==1) then; ndt=n; dts=dte
- if(dto<zero) then
-    rr(:,1)=xim(:,1)*xim(:,1)+xim(:,2)*xim(:,2)+xim(:,3)*xim(:,3)&
-           +etm(:,1)*etm(:,1)+etm(:,2)*etm(:,2)+etm(:,3)*etm(:,3)&
-           +zem(:,1)*zem(:,1)+zem(:,2)*zem(:,2)+zem(:,3)*zem(:,3)
-    rr(:,2)=abs(xim(:,1)*(de(:,2)+umf(1))+xim(:,2)*(de(:,3)+umf(2))+xim(:,3)*(de(:,4)+umf(3)))&
-           +abs(etm(:,1)*(de(:,2)+umf(1))+etm(:,2)*(de(:,3)+umf(2))+etm(:,3)*(de(:,4)+umf(3)))&
-           +abs(zem(:,1)*(de(:,2)+umf(1))+zem(:,2)*(de(:,3)+umf(2))+zem(:,3)*(de(:,4)+umf(3)))
-    ss(:,2)=abs(yaco(:))
-    res=maxval((sqrt(de(:,5)*rr(:,1))+rr(:,2))*ss(:,2))
-    call MPI_ALLREDUCE(res,fctr,1,MPI_REAL8,MPI_MAX,icom,ierr)
-    ra0=cfl/fctr; ra1=ra0
- if(nviscous==1) then
-    res=maxval(de(:,1)*ss(:,1)*rr(:,1)*ss(:,2)*ss(:,2))
-    call MPI_ALLREDUCE(res,fctr,1,MPI_REAL8,MPI_MAX,icom,ierr)
-    ra1=half/fctr
- end if
-    dte=min(ra0,ra1)
- else
-    dte=dto
- end if
- end if
+  if (forcing==2) then
+        dte=dto; ndt=n; dts=dte
+  else
+   if(mod(n,10)==1) then; ndt=n; dts=dte
+      if(dto<zero) then
+         rr(:,1)=xim(:,1)*xim(:,1)+xim(:,2)*xim(:,2)+xim(:,3)*xim(:,3)&
+                +etm(:,1)*etm(:,1)+etm(:,2)*etm(:,2)+etm(:,3)*etm(:,3)&
+                +zem(:,1)*zem(:,1)+zem(:,2)*zem(:,2)+zem(:,3)*zem(:,3)
+         rr(:,2)=abs(xim(:,1)*(de(:,2)+umf(1))+xim(:,2)*(de(:,3)+umf(2))+xim(:,3)*(de(:,4)+umf(3)))&
+                +abs(etm(:,1)*(de(:,2)+umf(1))+etm(:,2)*(de(:,3)+umf(2))+etm(:,3)*(de(:,4)+umf(3)))&
+                +abs(zem(:,1)*(de(:,2)+umf(1))+zem(:,2)*(de(:,3)+umf(2))+zem(:,3)*(de(:,4)+umf(3)))
+         ss(:,2)=abs(yaco(:))
+         res=maxval((sqrt(de(:,5)*rr(:,1))+rr(:,2))*ss(:,2))
+         call MPI_ALLREDUCE(res,fctr,1,MPI_REAL8,MPI_MAX,icom,ierr)
+         ra0=cfl/fctr; ra1=ra0
+         if(nviscous==1) then
+            res=maxval(de(:,1)*ss(:,1)*rr(:,1)*ss(:,2)*ss(:,2))
+            call MPI_ALLREDUCE(res,fctr,1,MPI_REAL8,MPI_MAX,icom,ierr)
+            ra1=half/fctr
+         end if
+         dte=min(ra0,ra1)
+      else
+         dte=dto
+      end if
+   end if
+  end if
     dt=dts+(dte-dts)*sin(0.05_nr*pi*(n-ndt))**two
 
     nout=0; res=tsam+(ndati+1)*(tmax-tsam)/ndata
@@ -626,7 +614,14 @@
  do nn = 1, tss
     nout_ss(nn)=0; res=tsam+(ndati_ss(nn)+1)*(1.0e0/ssFreq(nn))
     if((timo-res)*(timo+dt-res)<=zero) then
-       nout_ss(nn)=1; ndati_ss(nn)=ndati_ss(nn)+1
+         nout_ss(nn)=1; ndati_ss(nn)=ndati_ss(nn)+1
+    end if
+    if (forcing==2) then
+     if (mod(n,100)==0) then
+        nout_p_ss(nn)=1; ndati_p_ss(nn)=ndati_p_ss(nn)+1
+     else
+        nout_p_ss(nn)=0
+     end if
     end if
  end do
  end if
@@ -890,12 +885,12 @@
     dtko=dt*min(nk-1,1)/(nkrk-nk+2); dtk=dt/(nkrk-nk+1)
     call movef(dtko,dtk)
 
-    rr(:,1)=dtk*yaco(:)
-    qa(:,1)=qo(:,1)-rr(:,1)*de(:,1)
-    qa(:,2)=qo(:,2)-rr(:,1)*de(:,2)
-    qa(:,3)=qo(:,3)-rr(:,1)*de(:,3)
-    qa(:,4)=qo(:,4)-rr(:,1)*de(:,4)
-    qa(:,5)=qo(:,5)-rr(:,1)*de(:,5)
+       rr(:,1)=dtk*yaco(:)
+       qa(:,1)=qo(:,1)-rr(:,1)*de(:,1)
+       qa(:,2)=qo(:,2)-rr(:,1)*de(:,2)
+       qa(:,3)=qo(:,3)-rr(:,1)*de(:,3)
+       qa(:,4)=qo(:,4)-rr(:,1)*de(:,4)
+       qa(:,5)=qo(:,5)-rr(:,1)*de(:,5)
 
 
 !----- WALL TEMPERATURE & VELOCITY CONDITION
@@ -978,6 +973,12 @@
 !----- ADVANCE IN TIME
 !---------------------
 
+    if (forcing==2) then
+       if (n==n0) then
+          de0(:,:)=qa(:,:)-qb(:,:)
+       end if
+       qa(:,:)=qa(:,:)-de0(:,:)
+    end if
     n=n+1
     timo=timo+dt
 
@@ -1007,27 +1008,16 @@
     if(nout_ss(nn)==1) then
        call wrP3dS_ss(nss=nn)
     end if
+    if(nout_p_ss(nn)==1) then
+       call wrP3dSP_ss(nss=nn)
+    end if
  end do
  if(nout==1) then
       times(ndati)=timo
    if(myid==0) then
       write(*,"('===> saving output ',i3,' at time =',f12.8)") ndati,timo
-    end if
-    selectcase(output)
-      case(2) ! New Tecplot Style
-      qb(:,:)=qa(:,:)
-       rr(:,1)=1/qb(:,1)
-      do m=1,5
-         select case(m)
-             case(1); varr(:)=qb(:,m); 
-             case(2:4); varr(:)=rr(:,1)*qb(:,m)+umf(m-1)
-             case(5); varr(:)=gam*gamm1*(qb(:,m)-half*rr(:,1)*(qb(:,2)*qb(:,2)+qb(:,3)*qb(:,3)+qb(:,4)*qb(:,4)))
-         end select
-             nn=3+5*ndati+m; write(0,rec=nn) varr(:); !call vminmax(nn)
-      end do
-      case(1)
-         call wrP3dS
-    end select
+   end if
+        call wrP3dS
 
 
    !===== GENERATING RESTART DATA FILE
@@ -1056,9 +1046,6 @@
 
  end do
     close(1)
-    if (output==2) then
-    close(0)
-    end if
     !if (myid==idsignal) then
     !   close(6)
     !end if
@@ -1079,27 +1066,6 @@
     close(9)
  end if
 
-!===== GENERATING RESTART DATA FILE
-
-! if(nrestart==1) then
-! if(myid==mo(mb)) then
-!    open(9,file=crestart); close(9,status='delete')
-! end if
-!    call MPI_BARRIER(icom,ierr)
-!    open(9,file=crestart,access='direct',form='unformatted',recl=5*nrecd)
-! if(myid==mo(mb)) then
-!    cha(:)=(/real(n,kind=nr),real(ndt,kind=nr),dt,dts,dte/); dha(:)=(/timo,zero,zero,zero,zero/)
-!    write(9,rec=1) cha(:); write(9,rec=2) dha(:)
-! end if
-!    lp=lpos(myid)+2
-! do k=0,lze; do j=0,let; lq=lp+lio(j,k)
-! do i=0,lxi; l=indx3(i,j,k,1)
-!    write(9,rec=lq+i+1) qa(l,:)
-! end do
-! end do; end do
-!    close(9)
-! end if
-
 !===== POST-PROCESSING & GENERATING TECPLOT DATA FILE
 
  if(dt==0) then
@@ -1109,81 +1075,6 @@
     ndata=ndati
  else
   if(myid==0) write(*,'("Simulation time was ",f6.2," hours")') wtime/(3600_k8*npro)
-   selectcase(output)
-   case(2)
-   ! rpt-Deallocate Arrays
-    deallocate(qo,qa,qb,de,xim,etm,zem,rr,ss,p,yaco)
-    if(nviscous==1) then
-       deallocate(txx,tyy,tzz,txy,tyz,tzx,hxx,hyy,hzz)
-    end if
-   ! rpt-nlmx=>last index of total output
-   ! rpt-ll=>last index of each output
-    nlmx=(3+5*(ndata+1))*(lmx+1)-1; ll=5*(lmx+1)-1; allocate(vart(0:nlmx),vmean(0:ll))
-   ! rpt-Read all data written data into vart and delete files
-	open(9,file=cdata,access='direct',form='unformatted',recl=nrecs*(nlmx+1))
-    read(9,rec=1) vart(:)
-    close(9,status='delete')
-   !!!----- CALCULATING UNSTEADY FLUCTUATIONS
-   !!     fctr=half/(times(ndata)-times(0)); vmean(:)=0
-   !!do n=0,ndata; lis=(3+5*n)*(lmx+1); lie=lis+ll
-   !!   if(n==0) then; ra0=fctr*(times(n+1)-times(n)); end if
-   !!   if(n==ndata) then; ra0=fctr*(times(n)-times(n-1)); end if
-   !!   if(n>0.and.n<ndata) then; ra0=fctr*(times(n+1)-times(n-1)); end if
-   !!   vmean(:)=vmean(:)+ra0*vart(lis:lie)
-   !!end do
-    do n=0,ndata; lis=(3+5*n)*(lmx+1); lie=lis+ll
-             !vart(lis:lie)=vart(lis:lie)-vmean(:)
-      ! rpt-Compute min and max of each variable
-    do m=1,5; nn=3+5*n+m; l=lis+(m-1)*(lmx+1)
-       varr(:)=vart(l:l+lmx); call vminmax(nn)
-    end do
-    end do
-      !----- COLLECTING DATA FROM SUBDOMAINS & BUILDING TECPLOT OUTPUT FILES
-       lje=-1
-    do n=-1,ndata
-       mq=3+2*min(n+1,1); llmb=mq*ltomb-1; allocate(vara(0:llmb),varb(0:llmb))
-       ljs=lje+1; lje=ljs+mq*(lmx+1)-1
-         if(myid==mo(mb)) then 
-       mps=mo(mb); mpe=mps+npc(mb,1)*npc(mb,2)*npc(mb,3)-1
-       lis=0; lie=mq*(lmx+1)-1; vara(lis:lie)=vart(ljs:lje)
-    do mp=mps+1,mpe
-       lis=lie+1; lie=lis+mq*(lxim(mp)+1)*(letm(mp)+1)*(lzem(mp)+1)-1
-       itag=1; call MPI_RECV(vara(lis:lie),lie-lis+1,MPI_REAL4,mp,itag,icom,ista,ierr)
-    end do
-       lis=0
-    do mp=mps,mpe; do m=1,mq; do k=0,lzem(mp); do j=0,letm(mp)
-       ljs=lpos(mp)+(m-1)*ltomb+k*(leto+1)*(lxio+1)+j*(lxio+1)
-       varb(ljs:ljs+lxim(mp))=vara(lis:lis+lxim(mp)); lis=lis+lxim(mp)+1
-    end do; end do; end do; end do
-       open(9,file=cthead(mb),access='stream',form='unformatted')
-       call techead(9,n,mb,lh)
-       deallocate(vara); allocate(vara(0:lh+llmb)); read(9,pos=1) vara(0:lh-1)
-       close(9,status='delete')
-       lhmb(mb)=lh+llmb+1; vara(lh:lh+llmb)=varb(:)
-           if(mb==0) then
-    do mm=1,mbk
-       itag=2; call MPI_RECV(lhmb(mm),1,MPI_INTEGER8,mo(mm),itag,icom,ista,ierr)
-    end do
-       llmo=sum(lhmb(:))-1; deallocate(varb); allocate(varb(0:llmo))
-       lis=0; lie=lhmb(mb)-1; varb(lis:lie)=vara(:)
-    do mm=1,mbk
-       lis=lie+1; lie=lis+lhmb(mm)-1
-       itag=3; call MPI_RECV(varb(lis:lie),lie-lis+1,MPI_REAL4,mo(mm),itag,icom,ista,ierr)
-    end do
-                   write(*,*) ctecplt(n)
- 	open(0,file=ctecplt(n),access='direct',form='unformatted',recl=nrecs*(llmo+1))
-       write(0,rec=1) varb(:)
-       close(0)
-           else
-       itag=2; call MPI_SEND(lhmb(mb),1,MPI_INTEGER8,mo(0),itag,icom,ierr)
-       itag=3; call MPI_SEND(vara(:),lhmb(mb),MPI_REAL4,mo(0),itag,icom,ierr)
-           end if
-         else
-       itag=1; call MPI_SEND(vart(ljs:lje),lje-ljs+1,MPI_REAL4,mo(mb),itag,icom,ierr)
-         end if
-       deallocate(vara,varb)
-    end do
-   end select
  end if
 
 

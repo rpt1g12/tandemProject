@@ -167,7 +167,8 @@
  real(k8)  ::  xfor,yfor,rfor,amfor,tsfor,tefor
  integer(k4)   ::  lfor
  integer(k4) ,allocatable,dimension(:)  ::  lcfor
- real(k8),allocatable,dimension(:,:)  ::  xafor,yafor,bfor
+ real(k8),allocatable,dimension(:,:)  ::  xyrfor
+ real(k8),allocatable,dimension(:)  ::  bfor
 
 !===== MPI-IO VARIABLES BY RPT
  integer(k4), dimension (3) :: mpc,mbijkl,mpijkl,mpijks,mpijke
@@ -279,6 +280,15 @@
  integer(k4) :: bkx,bky,bkz
  integer(k4), dimension(:),allocatable:: lxibk,letbk,lzebk
 
+!===== Variables for LST
+ real(k8), dimension(:,:), allocatable :: de0
+ integer(k4) :: n0
+
+ type  realint
+    sequence
+    real(k4) :: val
+    integer(k4) :: pro
+ end type realint
 
 !=====
 

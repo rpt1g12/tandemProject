@@ -237,7 +237,7 @@
  end do
     ! rpt- Output sponge 
     if ((ngridv==1).and.(output==1)) then
-       if(.not.allocated(fout)) allocate(fout(0:lmx,3))
+       if(.not.allocated(fout)) allocate(fout(0:lmx,5))
        fout(:,1:2)=de(:,1:2)
     end if
     lsz=ll ! rpt-total number of points in sponge zone

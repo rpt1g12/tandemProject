@@ -21,6 +21,10 @@ tamg1-2-3	0.0e0		0.0e0		0.0e0
 tamm1-2-3	0.0e0		0.0e0		0.0e0
 cutlb           0.5e0
 
+npcx		4	6	10	!20pcs
+npcy		4	4		!8pcs
+npcz		3			!total=20*8*3=480pcs/16=30 nodes
+
 lxi0-to-bkx	120	320	360   !lxit=800	
 let0-to-bky	120	360           !lett=480
 lze0-to-bkz	200                   !pts x plane = 384k
