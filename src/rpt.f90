@@ -598,6 +598,9 @@ contains
             CALL MPI_FILE_WRITE_AT(qfh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1
             rbuf=timo; offset=lh*iolen ! time
             CALL MPI_FILE_WRITE_AT(qfh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1
+      if (myid==0) then
+         write(*,"('n=',i8,x,'ndt=',i3,x,'dt=',es15.8,x,'dts=',es15.8,x,'dte=',es15.8,x,'t=',es15.8)") n,ndt,dt,dts,dte,timo
+      end if
         else
             lh=lh+6
         end if
@@ -616,6 +619,53 @@ contains
         end if
      end if !wrrfg
   end subroutine wrRsta
+!====================================================================================
+!=====  WRITE RAW Array
+!====================================================================================
+  subroutine wrRaw(q8,cname)
+     integer(kind=MPI_OFFSET_KIND) :: wrlen,disp,offset
+     integer :: amode,iolen,l
+     integer, dimension (4) :: gsizes,lsizes,starts
+     real(k8) :: rbuf
+     real(k8), dimension(0:lmx,5), intent(in) :: q8
+     character(*), intent(in) :: cname
+     character(:),allocatable :: lfname
+     integer(k4) :: ibuf
+
+     cstring="rsta/"//cname//cnzone//".dat"
+     l=len(trim(adjustl(cstring)))
+     allocate(character(len=l) :: lfname)
+     lfname=trim(adjustl(cstring))
+
+
+        wrlen=5*(lmx+1)
+        amode=IOR(MPI_MODE_WRONLY,MPI_MODE_CREATE)
+        CALL MPI_TYPE_EXTENT(MPI_REAL8,iolen,ierr)
+
+        if (.not.qflag) then
+           gsizes(:)=(/mbijkl(:),5/)
+           lsizes(:)=(/mpijkl(:),5/)
+           starts(:)=(/mpijks(:),0/)
+           CALL MPI_TYPE_CREATE_SUBARRAY(4,gsizes,lsizes,starts,&
+                            MPI_ORDER_FORTRAN,MPI_REAL8,qarr,ierr) 
+           CALL MPI_TYPE_COMMIT(qarr,ierr)
+           qflag=.true.
+        end if
+        
+
+        if(myid==mo(mb)) CALL MPI_FILE_DELETE(lfname,info,ierr)
+        CALL MPI_FILE_OPEN(bcom,lfname,amode,info,qfh,ierr)
+        lh=0
+        disp=lh*iolen
+        CALL MPI_FILE_SET_VIEW(qfh,disp,MPI_REAL8,qarr,'native',info,ierr)
+        CALL MPI_FILE_WRITE_ALL(qfh,q8,wrlen,MPI_REAL8,ista,ierr)
+        if (myid==0) then
+           write(*,"(a,x,'written!')") lfname
+        end if
+        CALL MPI_FILE_CLOSE(qfh,ierr)
+        CALL MPI_TYPE_FREE(qarr,ierr)
+        qflag=.false.
+  end subroutine wrRaw
 
 !====================================================================================
 !=====  READ RAW RESTART
@@ -635,11 +685,14 @@ contains
      amode=MPI_MODE_RDONLY
      CALL MPI_TYPE_EXTENT(MPI_REAL8,iolen,ierr)
 
-     gsizes(:)=(/mbijkl(:),5/)
-     lsizes(:)=(/mpijkl(:),5/)
-     starts(:)=(/mpijks(:),0/)
-     CALL MPI_TYPE_CREATE_SUBARRAY(4,gsizes,lsizes,starts,MPI_ORDER_FORTRAN,MPI_REAL8,qarr,ierr) 
-     CALL MPI_TYPE_COMMIT(qarr,ierr)
+     if (.not.qflag) then
+        gsizes(:)=(/mbijkl(:),5/)
+        lsizes(:)=(/mpijkl(:),5/)
+        starts(:)=(/mpijks(:),0/)
+        CALL MPI_TYPE_CREATE_SUBARRAY(4,gsizes,lsizes,starts,MPI_ORDER_FORTRAN,MPI_REAL8,qarr,ierr) 
+        CALL MPI_TYPE_COMMIT(qarr,ierr)
+        qflag=.true.
+     end if
      
 
      CALL MPI_FILE_OPEN(bcom,crestart,amode,info,fh,ierr)
@@ -658,14 +711,65 @@ contains
          offset=lh*iolen ! time
          CALL MPI_FILE_READ_AT(fh,offset,rbuf,1,MPI_REAL8,ista,ierr); lh=lh+1; timo=rbuf
 
+      if (myid==0) then
+         write(*,"('n=',i8,x,'ndt=',i3,x,'dt=',es15.8,x,'dts=',es15.8,x,'dte=',es15.8,x,'t=',es15.8)") n,ndt,dt,dts,dte,timo
+      end if
+
      disp=lh*iolen
      CALL MPI_FILE_SET_VIEW(fh,disp,MPI_REAL8,qarr,'native',info,ierr)
      CALL MPI_FILE_READ_ALL(fh,qa,wrlen,MPI_REAL8,ista,ierr)
      CALL MPI_FILE_CLOSE(fh,ierr)
      CALL MPI_TYPE_FREE(qarr,ierr)
+     qflag=.false.
 
 
   end subroutine rdRsta
+!====================================================================================
+!=====  READ RAW Array
+!====================================================================================
+  subroutine rdRaw(q8,cname)
+     integer(kind=MPI_OFFSET_KIND) :: wrlen,disp,offset
+     integer :: fh,amode,qarr,iolen,l
+     integer, dimension (4) :: gsizes,lsizes,starts
+     real(k8), dimension(0:lmx,5), intent(inout) :: q8
+     character(*), intent(in) :: cname
+     real(k8) :: rbuf
+     integer(k4) :: ibuf
+     character(:),allocatable :: lfname
+
+      if (myid==0) then
+         write(*,"('Reading',x,a,'..')") cname
+      end if
+
+     cstring="rsta/"//cname//cnzone//".dat"
+     l=len(trim(adjustl(cstring)))
+     allocate(character(len=l) :: lfname)
+     lfname=trim(adjustl(cstring))
+
+     wrlen=5*(lmx+1)
+     amode=MPI_MODE_RDONLY
+     CALL MPI_TYPE_EXTENT(MPI_REAL8,iolen,ierr)
+
+     if (.not.qflag) then
+        gsizes(:)=(/mbijkl(:),5/)
+        lsizes(:)=(/mpijkl(:),5/)
+        starts(:)=(/mpijks(:),0/)
+        CALL MPI_TYPE_CREATE_SUBARRAY(4,gsizes,lsizes,starts,MPI_ORDER_FORTRAN,MPI_REAL8,qarr,ierr) 
+        CALL MPI_TYPE_COMMIT(qarr,ierr)
+        qflag=.true.
+     end if
+     
+
+     CALL MPI_FILE_OPEN(bcom,lfname,amode,info,fh,ierr)
+     lh=0
+     disp=lh*iolen
+     CALL MPI_FILE_SET_VIEW(fh,disp,MPI_REAL8,qarr,'native',info,ierr)
+     CALL MPI_FILE_READ_ALL(fh,q8,wrlen,MPI_REAL8,ista,ierr)
+     CALL MPI_FILE_CLOSE(fh,ierr)
+     CALL MPI_TYPE_FREE(qarr,ierr)
+     qflag=.false.
+
+  end subroutine rdRaw
 
 !====================================================================================
 !=====  READ RAW GRID
@@ -799,7 +903,7 @@ contains
  else
     fout(:,3:5)=zero
  end if
- end subroutine forceup
+ end subroutine forceuptouch
 
 !====================================================================================
 ! ====FORCE IMPLEMENTATION

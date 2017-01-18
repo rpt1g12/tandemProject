@@ -165,7 +165,7 @@
 !===== VARIABLES FOR FORCING BY RPT
 
  real(k8)  ::  xfor,yfor,rfor,amfor,tsfor,tefor
- integer(k4)   ::  lfor
+ integer(k4)   ::  lfor,nsfor
  integer(k4) ,allocatable,dimension(:)  ::  lcfor
  real(k8),allocatable,dimension(:,:)  ::  xyrfor
  real(k8),allocatable,dimension(:)  ::  bfor
@@ -199,6 +199,7 @@
  integer (k4) :: nss,tss
  integer (k4) :: color
  integer (k4), dimension (:), allocatable :: nout_ss,ndati_ss
+ integer (k4), dimension (:), allocatable :: nout_p_ss,ndati_p_ss
  integer, dimension(:), allocatable :: ssq4arr,ssq4fh
  logical, dimension(:), allocatable :: ssFlag
  logical, dimension(:), allocatable :: ssq4flag

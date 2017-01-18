@@ -28,7 +28,7 @@ contains
      read(9,*) cinput,tss
 
      ! Allocate SubSet (SS) Flags
-     allocate(ssFlag(tss),nout_ss(tss),ndati_ss(tss)) 
+     allocate(ssFlag(tss),nout_p_ss(tss),nout_ss(tss),ndati_ss(tss),ndati_p_ss(tss)) 
      allocate(ssblks(0:mbk,tss))
      ssblks(:,:)=0
      ssFlag(:)=.False.
@@ -605,7 +605,7 @@ end subroutine ssCheck
         CALL MPI_FILE_WRITE_ALL(ssq4fh(nss),ssq4(idum),wrlen,MPI_REAL4,ista,ierr)
         CALL MPI_FILE_CLOSE(ssq4fh(nss),ierr)
         if (comid==0) then
-           write(*,"('Subset Solution',i3,' written! T= ',8a)") nss,ctime 
+           write(*,"('Subset Perturbation',i3,' written! T= ',8a)") nss,ctime 
         end if
         if (ndati.ge.ndata) then
            CALL MPI_TYPE_FREE(ssq4arr(nss),ierr)

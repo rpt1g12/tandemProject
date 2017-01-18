@@ -49,7 +49,7 @@
     read(9,*) cinput,tmax,timf,tsam
     read(9,*) cinput,fltk,fltkbc
     read(9,*) cinput,dto
-    read(9,*) cinput,forcing,amfor,xfor,yfor,rfor,tsfor,tefor
+    read(9,*) cinput,forcing,amfor,xfor,yfor,rfor,tsfor,tefor,nsfor
     ! For pitching aerofoil: aoa1=desired angle,tps=time start pitching
     !                        tp=total time pitching
     read(9,*) cinput,aoa0,aoa1,tps,tp
@@ -509,9 +509,13 @@
        tsam=timo
     end if
     if (forcing==2) then
-       n0=n
+       n0=n;
        if (dto>0) then
           dt=dto
+       end if
+       if (nts==2) then
+          dts=zero; dte=zero;ndt=n
+          call rdRaw(de0,'RHS')
        end if
     end if
  end if
@@ -537,14 +541,20 @@
 
     ndati=-1; nsigi=-1; dtsum=zero
     ndati_ss(:)=-1;
+    ndati_p_ss(:)=-1;
  do while(timo<tmax.and.(dt/=zero.or.n<=2))
 
 !----- FILTERING & RE-INITIALISING
     if (forcing==2) then
-       if (n==n0) then
-          qb(:,:)=qa(:,:)
+       if (nts==2) then
+          if(n==n0) call rdRaw(qb,'OLD')  
+       else
+          if (n==n0) then
+             qb(:,:)=qa(:,:)
+             call wrRaw(qb,'OLD')
+          end if
+          if (n-n0==4) call forcetouch
        end if
-       if (n-n0==4) call forcetouch
     end if
  do m=1,5
     rr(:,1)=qa(:,m)
@@ -617,7 +627,7 @@
          nout_ss(nn)=1; ndati_ss(nn)=ndati_ss(nn)+1
     end if
     if (forcing==2) then
-     if (mod(n,100)==0) then
+     if (mod(n,nsfor)==0) then
         nout_p_ss(nn)=1; ndati_p_ss(nn)=ndati_p_ss(nn)+1
      else
         nout_p_ss(nn)=0
@@ -974,8 +984,9 @@
 !---------------------
 
     if (forcing==2) then
-       if (n==n0) then
+       if ((n==n0).and.(nts.ne.2)) then
           de0(:,:)=qa(:,:)-qb(:,:)
+          call wrRaw(de0,'RHS')
        end if
        qa(:,:)=qa(:,:)-de0(:,:)
     end if
