@@ -1043,7 +1043,6 @@ end do
 !=====COPY OVER SPAN
 !====================================================================================
  subroutine spanCopy()
- integer :: lmx2,lmxdif
  integer :: i,j,k,kk,l,ll,nn,lp
 
  lp=(lxi+1)*(let+1)-1
@@ -1082,6 +1081,26 @@ end do
  end do
     
  end subroutine spanAvg
+!====================================================================================
+!=====COPY OVER SPAN ITS Phase-AVERAGE
+!====================================================================================
+ subroutine spanPhaseAvg()
+ integer :: i,j,k,kk,l,l2,plmx,nk,dk
+
+ dk=lzei
+ plmx=nbsize(3)-1
+ nk=lze/dk
+ if(myid==0) write(*,"('nk=',i3)") nk
+ qa(:,:)=zero
+ do k = 0, dk; l=k*(plmx+1)
+    do n = 0, nk-1; ll=(k+n*dk)*(plmx+1)
+       qb(l:l+plmx,:)=qb(l:l+plmx,:)+qo(ll:ll+plmx,:)
+    end do
+ end do
+ ra1=1.0_k8/real(nk,k8)
+ qb(:,:)=qb(:,:)*ra1
+    
+ end subroutine spanPhaseAvg
 
 !===== FUNCTION FOR MAIN INDEX TRANSFORMATION IN 3D
 
