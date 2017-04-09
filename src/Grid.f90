@@ -112,10 +112,10 @@ if(myid==mo(mb)) then
     if(.not.allocated(degarr)) allocate(degarr(3))
     degarr(:)=(/25_k8,0_k8,15_k8/); degarr(:)=degarr(:)*pi/180_k8
 !---Wake Refinement
-    nwk(0)=int(lxibk(2)*0.45e0) ! rpt-Wake box #xi points
-    nwk(1)=int(letbk(1)*0.4e0) ! rpt-Wake box #eta points
-    lwk(1)=0.5e0*c1 ! rpt-Wake box size y-direction
-    lwk(0)=2.0e0*c1!real(nwk(0)/nwk(1))*lwk(1) ! rpt-Wake box size x-direction
+    nwk(0)=int(lxibk(2)*0.47e0) ! rpt-Wake box #xi points
+    nwk(1)=int(letbk(1)*0.45e0) ! rpt-Wake box #eta points
+    lwk(1)=0.28e0*c1 ! rpt-Wake box size y-direction
+    lwk(0)=1.0e0*c1!real(nwk(0)/nwk(1))*lwk(1) ! rpt-Wake box size x-direction
     if (myid==0) then
        write(*,"('Wake box size: x=',f8.4,' y=',f8.4)")&
        lwk(0),lwk(1)
@@ -123,11 +123,11 @@ if(myid==mo(mb)) then
        nwk(0),nwk(1)
     end if
 !---Boundary Layer Refinement
-    lhbl(0)=0.25*c1 ! rpt-LE curve bottom-horizontal lenght
-    lhbl(1)=0.25*c1 ! rpt-LE curve top-horizontal lenght
+    lhbl(0)=0.18*c1 ! rpt-LE curve bottom-horizontal lenght
+    lhbl(1)=0.18*c1 ! rpt-LE curve top-horizontal lenght
     lvbl(0)=lwk(1) ! rpt-LE curve bottom-vertical lenght
     lvbl(1)=lwk(1) ! rpt-LE curve top-vertical lenght
-    nvbl(0)=int(letbk(0)*0.3e0) ! rpt-#eta points bottom LE curve
+    nvbl(0)=nwk(1)!int(letbk(0)*0.3e0) ! rpt-#eta points bottom LE curve
     nvbl(1)=nwk(1) ! rpt-#eta points top LE curve
     if (myid==0) then
        write(*,"('BL curve horizontal size: east=',f8.4,' west=',f8.4)")&
@@ -157,9 +157,9 @@ if(myid==mo(mb)) then
 !---HORIZONTAL Spacings
     dx(0,:)=200*shs1
     dx(1,:)=dx(0,:)
-    dx(2,:)=15*shs1; dx(2,1:2)=shs1
-    dx(3,:)=15*shs1; dx(3,1:2)=she1
-    dx(4,:)=200*shs1
+    dx(2,:)=5*shs1; dx(2,1:2)=shs1
+    dx(3,:)=5*shs1; dx(3,1:2)=she1
+    dx(4,:)=300*shs1
     dx(5,:)=dx(4,:)
 !---HORIZONTAL LINES
     py(0,:)=-dlth(1,0)
@@ -169,11 +169,11 @@ if(myid==mo(mb)) then
     py(4,:)=dlth(1,1)-szth(1,1)
     py(5,:)=dlth(1,1)
 !---VERTICAL Spacings
-    dy(0,:)=300*shs2
+    dy(0,:)=310*shs2
     dy(1,:)=dy(0,:)
     dy(2,:)=0.3e0*she1*cos(pi4+delt1);dy(2,1:2)=shs1*cos(pi4+delt1)
     dy(3,:)=0.3e0*she1*cos(pi4+delt1);dy(3,1:2)=shs1*cos(pi4+delt1)
-    dy(4,:)=80*shs2;dy(4,3)=50*shs2
+    dy(4,:)=310*shs2
     dy(5,:)=dy(4,:)
 
 !----- INITIAL AND END HORIZONTAL SLOPES
