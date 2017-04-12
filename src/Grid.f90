@@ -78,8 +78,8 @@ module gridgen
     shs=smgrid; she=shs
     shs1=ximod*smgrid; ! rpt-LE xi size 
     shs2=etamod*smgrid;! rpt-LE eta size
-    she1=3*shs2          ! rpt-TE size xi
-    she2=3*shs2          ! rpt-TE size eta
+    she1=shs1          ! rpt-TE size xi
+    she2=shs2          ! rpt-TE size eta
 
     allocate(xx(0:lxit,0:lett),yy(0:lxit,0:lett),zz(0:lxit,0:lett),zs(0:lzebk(0)))
 
@@ -157,8 +157,8 @@ if(myid==mo(mb)) then
 !---HORIZONTAL Spacings
     dx(0,:)=200*shs1
     dx(1,:)=dx(0,:)
-    dx(2,:)=5*shs1; dx(2,1:2)=shs1
-    dx(3,:)=5*shs1; dx(3,1:2)=she1
+    dx(2,:)=shs1;
+    dx(3,:)=she2*cos(pi4+delt1)
     dx(4,:)=300*shs1
     dx(5,:)=dx(4,:)
 !---HORIZONTAL LINES
@@ -171,8 +171,8 @@ if(myid==mo(mb)) then
 !---VERTICAL Spacings
     dy(0,:)=310*shs2
     dy(1,:)=dy(0,:)
-    dy(2,:)=0.3e0*she1*cos(pi4+delt1);dy(2,1:2)=shs1*cos(pi4+delt1)
-    dy(3,:)=0.3e0*she1*cos(pi4+delt1);dy(3,1:2)=shs1*cos(pi4+delt1)
+    dy(2,:)=shs2*cos(pi4+delt1)
+    dy(3,:)=she2*cos(pi4+delt1)
     dy(4,:)=310*shs2
     dy(5,:)=dy(4,:)
 
@@ -272,7 +272,7 @@ if(myid==mo(mb)) then
        xo=xp(lxis+ll,n); sho=sum(xp(lxis+ll-4:lxis+ll,n)*(/3,-16,36,-48,25/))/12
        ! COMPUTE THE REST OF THE POINTS
        ip=lxis+ll;im=lxib-ll 
-       call gridf(xp(:,n),pxi(:,n),xo,tmp,sho,she1,lxit,im,ip)
+       call gridf(xp(:,n),pxi(:,n),xo,tmp,sho,dx(3,n),lxit,im,ip)
        do i=lxis+ll+1,lxie-1
           yp(i,n)=naca(xp(i,n),tmp,thk,n-1)
        end do
