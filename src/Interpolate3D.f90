@@ -54,10 +54,10 @@
    else
       !call rdIGrid
       call readGrid
-!        do i = 1, 3
-!           ss(:,i)=xyz2(:,i)
-!        end do
-!      call wrP3dG
+        do i = 1, 3
+           ss(:,i)=xyz2(:,i)
+        end do
+      call wrP3dG
    end if
 
 
@@ -104,6 +104,7 @@ if (iflag) then
    end do
    !call spanCopy
    !call spanAvg
+   !call spanPhaseAvg
    CALL MPI_BARRIER(icom,ierr)
    if (myid==0) then
       write(*,*) 'Interpolation process finished!'
@@ -123,10 +124,12 @@ if (iflag) then
    write(*,"('Checking new restart file...')") 
    call rdIRstaCk
    write(*,*) n,ndt,dt,dts,dte,timo
-   qa(:,2)=qa(:,2)*qa(:,1)
-   qa(:,3)=qa(:,3)*qa(:,1)
-   qa(:,4)=qa(:,4)*qa(:,1)
-   p(:)=gamm1*(qa(:,5)-half*(qa(:,1)*qa(:,2)**2+qa(:,1)*qa(:,3)**2+qa(:,1)*qa(:,4)**2))
+   de(:,1)=one/qa(:,1)
+   de(:,2)=qa(:,2)*de(:,1)
+   de(:,3)=qa(:,3)*de(:,1)
+   de(:,4)=qa(:,4)*de(:,1)
+
+   p(:)=gamm1*(qa(:,5)-half*(qa(:,2)*de(:,2)+qa(:,3)*de(:,3)+qa(:,4)*de(:,4)))
    umf(:)=uoo(:)
    ndati=ndata;call wrP3dS
     if(myid==mo(mb)) then

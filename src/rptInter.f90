@@ -1043,19 +1043,19 @@ end do
 !=====COPY OVER SPAN
 !====================================================================================
  subroutine spanCopy()
- integer :: i,j,k,kk,l,ll,nn,lp
+ integer :: i,j,k,kk,l,ll,nn,lp,nwave
 
- lp=(lxi+1)*(let+1)-1
-do nn = 1, 5
-   do k = 0, lzei
-      kk=k
-      if (kk>lze) then
-         kk=k-lze
-      end if
-      ll=indx4(0,0,k,1);l=indx3(0,0,kk,1)
-      qb(ll:ll+lp,nn)=qo(l:l+lp,nn)
-   end do
-end do
+ lp=nbsize(3)-1
+ do k = 0, lzei
+    nwave=int(k/lze)
+    kk=k-nwave*lze
+    if(myid==0) write(*,*) kk
+    do j = 0, leti
+       do i = 0, lxii; l=indx4(i,j,k,1); ll=indx3(i,j,kk,1)
+          qb(l,:)=qo(ll,:)
+       end do
+    end do
+ end do
     
  end subroutine spanCopy
 !====================================================================================
