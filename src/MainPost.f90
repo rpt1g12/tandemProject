@@ -50,11 +50,11 @@ if (intgflag) then
 end if
 
 !do n = 0, ndata
-   n=ndata+1
-   call rdP3dP(n,fmblk)
-   do nss = 1, tss
-      call wrP3dP_ss(n,fmblk,nss=nss)
-   end do
+   !n=ndata+1
+   !call rdP3dP(n,fmblk)
+   !do nss = 1, tss
+   !   call wrP3dP_ss(n,fmblk,nss=nss)
+   !end do
 !end do
 
 !===== COMPUTE AVERAGE VALUES IF NOT AVAILABLE YET
@@ -121,6 +121,10 @@ if (floc==1) then
    end if
 end if
 
+!==COMUPTE dUij of average field
+      call getAllDs(ndata+1)
+      call wrP3dF('dUij',ndata+1,9,fmblk)
+
 !==COMUPTE Q+W+DELTA
 if (fcurl==1) then
    ! Get coefficients for time averaging
@@ -132,9 +136,9 @@ if (fcurl==1) then
       call getAllDs(n)
       !call wrP3dP(n,fmblk,'Q+W')
       qb(:,:)=qb(:,:)+delt(n)*qo(:,:)
-      do nss = 1, tss
-         call wrP3dP_ss(n,fmblk,cname='Q+W+Cp',nss=nss)
-      end do
+      !do nss = 1, tss
+      !   call wrP3dP_ss(n,fmblk,cname='Q+W+Cp',nss=nss)
+      !end do
       if (fwss==1) then
          ra0=two/(amachoo**2)
          qo(:,1)=0
@@ -153,7 +157,7 @@ if (fcurl==1) then
          qo(:,5)=(p(:)-poo)*ra0
          qa(:,:)=qa(:,:)+delt(n)*qo(:,:)
          !call wrP3dP(n,fmblk,'CftwCp')
-         call wrP3dP_ss(n,fmblk,cname='Cf+tw+Cp',nss=1)
+         !call wrP3dP_ss(n,fmblk,cname='Cf+tw+Cp',nss=1)
       end if
    end do
       n=ndata+1

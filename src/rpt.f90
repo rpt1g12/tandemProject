@@ -15,10 +15,10 @@ contains
   subroutine wrP3dF(fname,nout,ndim,mblkin)
      integer, intent(in),optional :: mblkin
      integer, intent(in) :: nout,ndim
-     character(len=*), intent(in) :: fname
-     character(len=:),allocatable :: lfname
+     character(len=*), intent(in),optional :: fname
+     character(len=:),allocatable :: lfname,cpath
      character(3) :: cout,cblk
-     character(len=*),parameter :: cext='.f',cpath='out/'
+     character(len=*),parameter :: cext='.f',cpath0='out/'
      integer :: n,l,i,lh,iolen,foper,wrcom,nbk,err,mblk
      integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
      integer :: fh,amode,farr
@@ -30,6 +30,17 @@ contains
         mblk=mblkin
      else
         mblk=1
+     end if
+
+     ! rpt- Set default local output path
+     if (allocated(outpath)) then
+        l=len(outpath)
+        allocate(character(len=l) :: cpath)
+        cpath=outpath
+     else
+        l=len(cpath0)
+        allocate(character(len=l) :: cpath)
+        cpath=cpath0
      end if
 
      selectcase(mblk);
@@ -114,11 +125,12 @@ contains
 !====================================================================================
   subroutine wrP3dS(mblkin)
      integer, intent(in),optional :: mblkin
+     character(len=:),allocatable :: cpath
      character(len=*),parameter :: fname='solT'
      character(len=:),allocatable :: lfname
      character(3) :: cout
      character(8) :: ctime
-     character(len=*),parameter :: cext='.q',cpath='out/'
+     character(len=*),parameter :: cext='.q',cpath0='out/'
      integer :: n,l,i,lh,iolen,foper,wrcom,nbk,err,mblk
      integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
      integer :: amode
@@ -137,6 +149,17 @@ contains
            mblk=mblkin
         else
            mblk=1
+        end if
+
+        ! rpt- Set default local output path
+        if (allocated(outpath)) then
+           l=len(outpath)
+           allocate(character(len=l) :: cpath)
+           cpath=outpath
+        else
+           l=len(cpath0)
+           allocate(character(len=l) :: cpath)
+           cpath=cpath0
         end if
 
         selectcase(mblk);
@@ -245,10 +268,11 @@ contains
 !====================================================================================
   subroutine wrP3dG(mblkin)
      integer, intent(in),optional :: mblkin
+     character(len=:),allocatable :: cpath
      character(len=*),parameter :: fname='grid'
      character(len=:),allocatable :: lfname
      character(2) :: cout
-     character(len=*),parameter :: cext='.xyz',cpath='out/'
+     character(len=*),parameter :: cext='.xyz',cpath0='out/'
      integer :: n,l,i,lh,iolen,foper,wrcom,nbk,err,mblk
      integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
      integer :: fh,amode,garr
@@ -260,6 +284,17 @@ contains
         mblk=mblkin
      else
         mblk=1
+     end if
+
+     ! rpt- Set default local output path
+     if (allocated(outpath)) then
+        l=len(outpath)
+        allocate(character(len=l) :: cpath)
+        cpath=outpath
+     else
+        l=len(cpath0)
+        allocate(character(len=l) :: cpath)
+        cpath=cpath0
      end if
 
      selectcase(mblk);
@@ -334,10 +369,11 @@ contains
 !===================================================================================
   subroutine rdP3dG(mblkin)
      integer, intent(in),optional :: mblkin
+     character(len=:),allocatable :: cpath
      character(len=*),parameter :: fname='grid'
      character(len=:),allocatable :: lfname
      character(2) :: cout
-     character(len=*),parameter :: cext='.xyz',cpath='out/'
+     character(len=*),parameter :: cext='.xyz',cpath0='out/'
      integer :: n,l,i,lh,iolen,foper,wrcom,nbk,err,mblk
      integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
      integer :: fh,amode,garr
@@ -349,6 +385,17 @@ contains
         mblk=mblkin
      else
         mblk=1
+     end if
+
+     ! rpt- Set default local output path
+     if (allocated(inpath)) then
+        l=len(inpath)
+        allocate(character(len=l) :: cpath)
+        cpath=inpath
+     else
+        l=len(cpath0)
+        allocate(character(len=l) :: cpath)
+        cpath=cpath0
      end if
 
      selectcase(mblk);
@@ -432,11 +479,12 @@ contains
      integer, intent(in) :: nout
      logical, intent(in), optional ::verbin
      integer, intent(in),optional :: mblkin
+     character(len=:),allocatable :: cpath
      character(len=*),parameter :: fname='solT'
      character(len=:),allocatable :: lfname
      character(3) :: cout
      character(8) :: ctime
-     character(len=*),parameter :: cext='.q',cpath='out/'
+     character(len=*),parameter :: cext='.q',cpath0='out/'
      integer :: n,l,i,lh,iolen,foper,wrcom,nbk,err,mblk
      integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
      integer :: amode
@@ -455,6 +503,17 @@ contains
            verb=verbin
         else
            verb=.false.
+        end if
+
+        ! rpt- Set default local output path
+        if (allocated(inpath)) then
+           l=len(inpath)
+           allocate(character(len=l) :: cpath)
+           cpath=inpath
+        else
+           l=len(cpath0)
+           allocate(character(len=l) :: cpath)
+           cpath=cpath0
         end if
 
         selectcase(mblk);
@@ -479,13 +538,13 @@ contains
         end select
 
         if (nout==ndata+1) then
-           l=len('out/solTA'//trim(cout)//'.qa')
+           l=len(cpath//'solTA'//trim(cout)//'.qa')
            allocate(character(len=l) :: lfname)
-           lfname='out/solTA'//trim(cout)//'.qa'
+           lfname=cpath//'solTA'//trim(cout)//'.qa'
         elseif (nout==ndata+2) then
-           l=len('out/solTRMS'//trim(cout)//'.qa')
+           l=len(cpath//'solTRMS'//trim(cout)//'.qa')
            allocate(character(len=l) :: lfname)
-           lfname='out/solTRMS'//trim(cout)//'.qa'
+           lfname=cpath//'solTRMS'//trim(cout)//'.qa'
         else 
            l=len(ofiles(nout))
            allocate(character(len=l) :: lfname)

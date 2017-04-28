@@ -64,7 +64,20 @@ contains
                 allocate(xarr(mxsz),zarr(mzsz))
                 xarr=(/(i,i=mxst,mxend,mxstp)/)
                 zarr=(/(i,i=mzst,mzend,mzstp)/)
+    read(9,*) cinput
+    read(9,"(a)") cdum
+    l=len(trim(cdum)); allocate(character(len=l) :: inpath); inpath=trim(cdum)
+    if(myid==0) write(*,"('in:',a,x,'length=',i3)") inpath,len(inpath)
+    read(9,*) cinput
+    read(9,"(a)") cdum
+    l=len(trim(cdum)); allocate(character(len=l) :: outpath); outpath=trim(cdum)
+    if(myid==0) write(*,"('out:',a,x,'length=',i3)") outpath,len(outpath)
     close(9)
+
+    ! rpt- Create output directory if it does not exist
+    write(unxcall,"('mkdir -p ',a)") outpath
+    if (myid==0) call system(unxcall)
+
 
     cinput=cinput; fltk=pi*fltk; fltkbc=pi*fltkbc
     rhooo=one; poo=one/gam; aoo=sqrt(gam*poo/rhooo); amachoo=sqrt(amach1*amach1+amach2*amach2+amach3*amach3)
@@ -772,7 +785,8 @@ subroutine flst(mblkin)
    integer, intent(in),optional :: mblkin
    character(10)  :: ctime
    character(3) :: cout
-   character(*), parameter :: cs1='ls out/*'
+   character(len=:),allocatable :: cpath,cs1
+   character(*), parameter :: cpath0='out/'
    character(:), allocatable :: cflst,rcout,ofile
    integer :: lmt,stat,i,mblk,foper,wrcom,err
    real(4) :: res
@@ -781,6 +795,21 @@ subroutine flst(mblkin)
       mblk=mblkin
    else
       mblk=1
+   end if
+
+   ! rpt- Set default local output path
+   if (allocated(inpath)) then
+      l=len(inpath)
+      allocate(character(len=l) :: cpath)
+      allocate(character(len=l+4) :: cs1)
+      cpath=inpath
+      write(cs1,"('ls',x,a,'*')") cpath
+   else
+      l=len(cpath0)
+      allocate(character(len=l) :: cpath)
+      allocate(character(len=l+4) :: cs1)
+      cpath=cpath0
+      write(cs1,"('ls',x,a,'*')") cpath
    end if
 
    selectcase(mblk);
@@ -807,9 +836,10 @@ subroutine flst(mblkin)
 
    if (myid==foper) then
       write(*,*) 'Delete previous filelist '//rcout
-      open(90,file='out/filelist'//rcout); close(90,status='delete')
-      call system('ls out/*'//rcout//'.q -1 > out/filelist'//rcout)
-      open(90,file='out/filelist'//rcout)
+      open(90,file=cpath//'filelist'//rcout); close(90,status='delete')
+      write(unxcall,"(a)") cs1//rcout//'.q -1 > '//cpath//'filelist'//rcout
+      call system(unxcall)
+      open(90,file=cpath//'filelist'//rcout)
       inquire(unit=90,size=l)
       if (l.le.1) then
          close(90,status='delete')
@@ -820,10 +850,10 @@ subroutine flst(mblkin)
 
    CALL MPI_BARRIER(icom,ierr)
    
-   inquire(file='out/filelist'//rcout,exist=fflag)
+   inquire(file=cpath//'filelist'//rcout,exist=fflag)
    if (fflag) then
       if (myid==foper) then
-         open(90,file='out/filelist'//rcout,shared)
+         open(90,file=cpath//'filelist'//rcout,shared)
          lmt=-2
          do while (stat.ge.0)
             read(90,*,IOSTAT=stat) 
@@ -831,7 +861,7 @@ subroutine flst(mblkin)
          end do
          close(90)
          ndata=lmt
-         l=len('out/sotT')+8+len(trim(rcout))+len('.q')
+         l=len(cpath//'sotT')+8+len(trim(rcout))+len('.q')
       end if
 
       CALL MPI_BCAST(ndata,1,MPI_INTEGER4,foper,wrcom,ierr)
@@ -841,11 +871,11 @@ subroutine flst(mblkin)
       allocate(times(0:ndata))
 
       if (myid==foper) then
-         open(90,file='out/filelist'//rcout)
+         open(90,file=cpath//'filelist'//rcout)
          do i = 0, ndata
             read(90,"(a)") ofile
             ofiles(i)=ofile
-            ctime=(ofile(9:16)//'e0')
+            ctime=(ofile(l-9:l-2)//'e0')
             read(ctime,*) times(i)
          end do
          close(90)
@@ -951,8 +981,9 @@ end subroutine flst
      integer, intent(in) :: nout,ndim
      character(len=*), intent(in) :: fname
      character(len=:),allocatable :: lfname
+     character(len=:),allocatable :: cpath
      character(3) :: cout,cblk
-     character(len=*),parameter :: cext='.f',cpath='out/'
+     character(len=*),parameter :: cext='.f',cpath0='out/'
      integer :: n,l,i,lh,iolen,foper,wrcom,nbk,err,mblk
      integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
      integer :: fh,amode,farr
@@ -964,6 +995,17 @@ end subroutine flst
         mblk=mblkin
      else
         mblk=1
+     end if
+
+     ! rpt- Set default local output path
+   if (allocated(inpath)) then
+        l=len(inpath)
+        allocate(character(len=l) :: cpath)
+        cpath=inpath
+     else
+        l=len(cpath0)
+        allocate(character(len=l) :: cpath)
+        cpath=cpath0
      end if
 
      selectcase(mblk);
@@ -1052,10 +1094,11 @@ end subroutine flst
      character(*), intent(in),optional :: cname
      character(*),parameter :: fname='solT'
      character(:),allocatable :: lfname
+     character(len=:),allocatable :: cpath
      character(3) :: cout,ncout
      character(8) :: ctime
      character(:), allocatable :: cext
-     character(len=*),parameter :: cext0='.q',cext1='.qa',cpath='out/'
+     character(len=*),parameter :: cext0='.q',cext1='.qa',cpath0='out/'
      integer :: n,l,i,k,mm,m,lh,iolen,nbk,err,mblk
      integer :: disp
      integer(k4) :: ibuf
@@ -1066,6 +1109,17 @@ end subroutine flst
            mblk=mblkin
         else
            mblk=1
+        end if
+
+        ! rpt- Set default local output path
+        if (allocated(inpath)) then
+           l=len(inpath)
+           allocate(character(len=l) :: cpath)
+           cpath=inpath
+        else
+           l=len(cpath0)
+           allocate(character(len=l) :: cpath)
+           cpath=cpath0
         end if
 
         selectcase(mblk);
@@ -1156,10 +1210,11 @@ end subroutine flst
      character(*), intent(in),optional :: cname
      character(*),parameter :: fname='solT'
      character(:),allocatable :: lfname
+     character(len=:),allocatable :: cpath
      character(3) :: cout,ncout
      character(8) :: ctime
      character(:), allocatable :: cext
-     character(len=*),parameter :: cext0='.q',cext1='.qa',cpath='out/'
+     character(len=*),parameter :: cext0='.q',cext1='.qa',cpath0='out/'
      integer :: n,l,i,lh,iolen,foper,wrcom,nbk,err,mblk
      integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
      integer :: amode
@@ -1172,6 +1227,17 @@ end subroutine flst
            mblk=mblkin
         else
            mblk=1
+        end if
+
+        ! rpt- Set default local output path
+        if (allocated(inpath)) then
+           l=len(inpath)
+           allocate(character(len=l) :: cpath)
+           cpath=inpath
+        else
+           l=len(cpath0)
+           allocate(character(len=l) :: cpath)
+           cpath=cpath0
         end if
 
         selectcase(mblk);
@@ -1303,9 +1369,10 @@ end subroutine flst
      character(*), intent(in),optional :: cname
      character(*),parameter :: fname='solT'
      character(:),allocatable :: lfname
+     character(len=:),allocatable :: cpath
      character(3) :: cout,ncout
      character(8) :: ctime
-     character(len=*),parameter :: cext='.qa',cpath='out/'
+     character(len=*),parameter :: cext='.qa',cpath0='out/'
      integer :: n,l,i,lh,iolen,foper,wrcom,nbk,err,mblk
      integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
      integer :: amode
@@ -1318,6 +1385,17 @@ end subroutine flst
            mblk=mblkin
         else
            mblk=1
+        end if
+
+        ! rpt- Set default local output path
+        if (allocated(outpath)) then
+           l=len(outpath)
+           allocate(character(len=l) :: cpath)
+           cpath=outpath
+        else
+           l=len(cpath0)
+           allocate(character(len=l) :: cpath)
+           cpath=cpath0
         end if
 
         selectcase(mblk);

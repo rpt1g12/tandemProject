@@ -12,10 +12,10 @@ reoo-tempoo	4.0e5		273.0e0
 amach1-2-3	0.3000000000e0	0.0000000000e0	0.0e0 !aoa=10, M=0.3
 wtemp           1.0e0
 cfl             0.95e0
-tmax-timf-tsam  30.0e0       15.0e0       15.0e0
+tmax-timf-tsam  90.0e0       30.0e0       60.0e0
 fltk-bc         0.85e0      0.85e0
 dto             -0.01725e0
 forcing-amfor%	0	0.8e0
-aoa0-1-tps-tp	00.0e0	12.0e0	905.0e0	15.0e0
+aoa0-1-tps-tp	00.0e0	6.0e0	905.0e0	15.0e0
 LES-smago1-2	0	0.16e0	0.0066e0
 output		1	1	1	1

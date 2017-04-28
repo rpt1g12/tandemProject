@@ -1,15 +1,15 @@
-lxi0-to-bkx	179	319	339   !lxit=857
-let0-to-bky	239	239           !lett=478
+lxi0-to-bkx	14	319	14   !lxit=857
+let0-to-bky	79	79           !lett=478
 lze0-to-bkz	48                   !pts x plane ~ 409k
 nbody-nthick	2	2
 ngridv		1
-npcx		4	8	8	!20pcs
-npcy		4	4		!8pcs
-npcz		3			!total=20*8*3=480pcs/16=30 nodes
+npcx		1	10	1	!12pcs
+npcy		1	1		!2pcs
+npcz		1			!total=12*2*1=24pcs/24=1 nodes
 nito-nits-litr	0	1	10
 smgrid-domlens	0.0075e0 	7.0e0 10.0e0 7.0e0 7.0e0
 ximod-etamod	0.05e0		0.05e0
-span-wlew-wlea	0.11e0		0.11e0		0.015e0
+span-wlew-wlea	0.11e0		0.11e0		0.000e0
 gap-chord1-2	1.0e0		1.0e0		1.0e0
 delt1-2(deg)	00.0e0		0.0e0		
 szth1-th2-xt-co	2.0e0		2.0e0		2.0e0		12.0e0

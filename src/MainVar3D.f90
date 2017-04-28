@@ -226,6 +226,7 @@
  integer :: fstrip
  integer :: fprobcirc
  integer :: fijkmax
+ character(len=:),allocatable :: inpath,outpath
 
  real(k8),dimension(:),allocatable :: delt
  real(k8), dimension (:,:), allocatable :: svarr
@@ -265,7 +266,7 @@
  integer(k4) :: idum
  real(k4) :: rdum
  real(k8) :: ddum
- character(128) :: cdum
+ character(512) :: cdum,unxcall
  character(1) :: onechr
 
 !===== ADITIONAL INPUT VARIABLES BY RPT

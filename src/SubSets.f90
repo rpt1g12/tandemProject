@@ -12,14 +12,26 @@ contains
 !====================================================================================
 !=====  SUBSETS SETUP
 !====================================================================================
-  subroutine ssSetUp
+  subroutine ssSetUp()
      implicit none
+     character(len=:),allocatable :: cpath
      integer :: n,i,j,k,m,ll,idum,gsize,qsize,l,ii,jj,kk,nss,nn
      character(3) :: cnum
-     character(10) :: chstr
      integer(k4), dimension(:,:,:),allocatable :: gRange
      integer(k4), dimension(:), allocatable :: mssid
+     character(len=*),parameter :: cpath0='out/'
      integer :: color
+
+        ! rpt- Set default local output path
+        if (allocated(outpath)) then
+           l=len(outpath)
+           allocate(character(len=l) :: cpath)
+           cpath=outpath
+        else
+           l=len(cpath0)
+           allocate(character(len=l) :: cpath)
+           cpath=cpath0
+        end if
 
 
      color=0
@@ -157,8 +169,9 @@ contains
               if (i==0) exit
               cnum(i:i)='0'
            end do
-           chstr='out/ss'//cnum//'/'
-           if (ssid(nss)==0) call system('mkdir -p '//chstr)
+           write(unxcall,"('mkdir -p ',a,'ss',a,'/')") cpath,cnum
+           if (ssid(nss)==0) write(*,"(a)") unxcall
+           if (ssid(nss)==0) call system(unxcall)
 
            lss0(nss)=ll
            do kk = ssGStr(3,nss)-mpijks(3),ssGEnd(3,nss)-mpijks(3)
@@ -203,10 +216,11 @@ end subroutine ssCheck
      integer, intent(in) :: nss
      character(len=*),parameter :: fname='grid'
      character(len=:),allocatable :: lfname
+     character(len=:),allocatable :: cpath
      character(2) :: cout
      character(3) :: cnum
-     character(10) :: cpath
-     character(len=*),parameter :: cext='.xyz'
+     !character(10) :: cpath
+     character(len=*),parameter :: cext='.xyz',cpath0='out/'
      integer :: n,l,llss,i,ii,lh,iolen,comid,wrcom,nbk,err,mblk
      integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
      integer :: fh,amode,garr,idum,bid
@@ -227,7 +241,17 @@ end subroutine ssCheck
            if (l==0) exit
            cnum(l:l)='0'
         end do
-        cpath='out/ss'//cnum//'/'
+
+        ! rpt- Set default local output path
+        if (allocated(outpath)) then
+           l=len(outpath)
+           allocate(character(len=l+6) :: cpath)
+           cpath=outpath//'ss'//cnum//'/'
+        else
+           l=len(cpath0)
+           allocate(character(len=l+6) :: cpath)
+           cpath=cpath0//'ss'//cnum//'/'
+        end if
 
         selectcase(mblk);
         case(1)
@@ -319,10 +343,11 @@ end subroutine ssCheck
      integer, intent(in) :: nss
      character(len=*),parameter :: fname='solT'
      character(len=:),allocatable :: lfname
+     character(len=:),allocatable :: cpath
      character(3) :: cout,cnum
      character(8) :: ctime
-     character(10) :: cpath
-     character(len=*),parameter :: cext='.q'
+     !character(10) :: cpath
+     character(len=*),parameter :: cext='.q',cpath0='out/'
      integer :: n,l,ll,llss,ii,jj,kk,i,lh,iolen,comid,bcomid,wrcom,nbk,err,mblk
      integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
      integer :: amode,idum,bid
@@ -344,7 +369,17 @@ end subroutine ssCheck
            if (l==0) exit
            cnum(l:l)='0'
         end do
-        cpath='out/ss'//cnum//'/'
+
+        ! rpt- Set default local output path
+        if (allocated(outpath)) then
+           l=len(outpath)
+           allocate(character(len=l+6) :: cpath)
+           cpath=outpath//'ss'//cnum//'/'
+        else
+           l=len(cpath0)
+           allocate(character(len=l+6) :: cpath)
+           cpath=cpath0//'ss'//cnum//'/'
+        end if
 
         selectcase(mblk);
         case(1)
@@ -471,11 +506,12 @@ end subroutine ssCheck
      integer, intent(in) :: nout,nss
      character(len=*),parameter :: fname='solT'
      character(len=:),allocatable :: lfname
+     character(len=:),allocatable :: cpath
      character(3) :: cout,cnum
      character(4) :: ncout
      character(len=:),allocatable :: ctime
-     character(10) :: cpath
-     character(len=*),parameter :: cext='.q'
+     !character(10) :: cpath
+     character(len=*),parameter :: cext='.q',cpath0='out/'
      integer :: n,l,ll,llss,ii,jj,kk,i,lh,iolen,comid,bcomid,wrcom,nbk,err,mblk
      integer(kind=MPI_OFFSET_KIND) :: wrlen,offset,disp
      integer :: amode,idum,bid
@@ -497,7 +533,17 @@ end subroutine ssCheck
            if (l==0) exit
            cnum(l:l)='0'
         end do
-        cpath='out/ss'//cnum//'/'
+
+        ! rpt- Set default local output path
+        if (allocated(outpath)) then
+           l=len(outpath)
+           allocate(character(len=l+6) :: cpath)
+           cpath=outpath//'ss'//cnum//'/'
+        else
+           l=len(cpath0)
+           allocate(character(len=l+6) :: cpath)
+           cpath=cpath0//'ss'//cnum//'/'
+        end if
 
         selectcase(mblk);
         case(1)
