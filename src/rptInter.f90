@@ -429,9 +429,9 @@ end subroutine interSetUp
     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
      de(:,1)=rr(:,1); de(:,2)=rr(:,2); de(:,3)=rr(:,3)
  
-     allocate(xxi(0:ltomb-1),xet(0:ltomb-1),xze(0:ltomb-1))
-     allocate(yxi(0:ltomb-1),yet(0:ltomb-1),yze(0:ltomb-1))
-     allocate(zxi(0:ltomb-1),zet(0:ltomb-1),zze(0:ltomb-1))
+     allocate(xxi(0:lmx),xet(0:lmx),xze(0:lmx))
+     allocate(yxi(0:lmx),yet(0:lmx),yze(0:lmx))
+     allocate(zxi(0:lmx),zet(0:lmx),zze(0:lmx))
 
  !===== COMPUTE METRICS
      xim(:,1)=qa(:,2)*de(:,3)-de(:,2)*qa(:,3)
@@ -449,15 +449,15 @@ end subroutine interSetUp
                +qa(:,1)*xim(:,2)+qa(:,2)*etm(:,2)+qa(:,3)*zem(:,2)&
                +de(:,1)*xim(:,3)+de(:,2)*etm(:,3)+de(:,3)*zem(:,3))
 
-     varr=xim(:,1)*yaco(:); call joinBlock; xxi=lvarr
-     varr=etm(:,1)*yaco(:); call joinBlock; xet=lvarr
-     varr=zem(:,1)*yaco(:); call joinBlock; xze=lvarr
-     varr=xim(:,2)*yaco(:); call joinBlock; yxi=lvarr
-     varr=etm(:,2)*yaco(:); call joinBlock; yet=lvarr
-     varr=zem(:,2)*yaco(:); call joinBlock; yze=lvarr
-     varr=xim(:,3)*yaco(:); call joinBlock; zxi=lvarr
-     varr=etm(:,3)*yaco(:); call joinBlock; zet=lvarr
-     varr=zem(:,3)*yaco(:); call joinBlock; zze=lvarr
+     xxi=xim(:,1)*yaco(:);
+     xet=etm(:,1)*yaco(:);
+     xze=zem(:,1)*yaco(:);
+     yxi=xim(:,2)*yaco(:);
+     yet=etm(:,2)*yaco(:);
+     yze=zem(:,2)*yaco(:);
+     zxi=xim(:,3)*yaco(:);
+     zet=etm(:,3)*yaco(:);
+     zze=zem(:,3)*yaco(:);
 
  do nn=1,3; do ip=0,1; i=ip*ijk(1,nn)
  do k=0,ijk(3,nn); kp=k*(ijk(2,nn)+1)
@@ -706,31 +706,32 @@ end subroutine interSetUp
  implicit none
  integer, intent(in) :: n
 
-     if(.not.allocated(fetxi))allocate(f(0:ltomb-1))
-     if(.not.allocated(fxi))allocate(fxi(0:ltomb-1),fet(0:ltomb-1),fze(0:ltomb-1))
-     if(.not.allocated(fetxi))allocate(fetxi(0:ltomb-1))
-     if(.not.allocated(fzexi))allocate(fzexi(0:ltomb-1),fzeet(0:ltomb-1))
-     if(.not.allocated(fzeetxi))allocate(fzeetxi(0:ltomb-1))
+     if(.not.allocated(fetxi))allocate(f(0:lmx))
+     if(.not.allocated(fxi))allocate(fxi(0:lmx),fet(0:lmx),fze(0:lmx))
+     if(.not.allocated(fetxi))allocate(fetxi(0:lmx))
+     if(.not.allocated(fzexi))allocate(fzexi(0:lmx),fzeet(0:lmx))
+     if(.not.allocated(fzeetxi))allocate(fzeetxi(0:lmx))
 
-     varr=qo(:,n); call joinBlock; f=lvarr
-     rr(:,1)=qo(:,n)
-     m=1; call mpigo(ntdrv,nrone,n45go,m); call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
-     varr=rr(:,1); call joinBlock; fxi=lvarr
-     varr=rr(:,2); call joinBlock; fet=lvarr
-     varr=rr(:,3); call joinBlock; fze=lvarr
+     f=qo(:,n)
+     rr(:,1)=f
+     m=1; call mpigo(ntdrv,nrone,n45go,m);
+     call deriv(3,1,m); call deriv(2,1,m); call deriv(1,1,m)
+     fxi=rr(:,1); fet=rr(:,2); fze=rr(:,3)
  
      rr(:,1)=rr(:,2)
-     m=2; call mpigo(ntdrv,nrone,n45go,m); call deriv(1,1,m)
-     varr=rr(:,1); call joinBlock; fetxi=lvarr
+     m=2; call mpigo(ntdrv,nrone,n45go,m);
+     call deriv(1,1,m)
+     fetxi=rr(:,1)
  
      rr(:,1)=rr(:,3)
-     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(2,1,m); call deriv(1,1,m)
-     varr=rr(:,1); call joinBlock; fzexi=lvarr
-     varr=rr(:,2); call joinBlock; fzeet=lvarr
+     m=3; call mpigo(ntdrv,nrone,n45go,m);
+     call deriv(2,1,m); call deriv(1,1,m)
+     fzexi=rr(:,1); fzeet=rr(:,2)
 
      rr(:,1)=rr(:,2)
-     m=3; call mpigo(ntdrv,nrone,n45go,m); call deriv(1,1,m)
-     varr=rr(:,1); call joinBlock; fzeetxi=lvarr
+     m=3; call mpigo(ntdrv,nrone,n45go,m);
+     call deriv(1,1,m)
+     fzeetxi=rr(:,1)
 
  end subroutine getDeri
     
@@ -740,13 +741,17 @@ end subroutine interSetUp
 !====================================================================================
  subroutine interpolate(n,tol)
  implicit none
+ ! Variable index
  integer, intent(in) :: n
+ ! Distance error tolerance
  real(nr), intent(in) :: tol
+ ! Indices
  integer :: i,j,k
- real(nr),dimension(12) :: r
+ ! Dummy real where to store results
  real(nr) :: res
  integer :: m
  integer :: xi0,xi1,et0,et1,ze0,ze1
+ ! Vector indices
  integer :: l000,l010,l100,l110,l001,l011,l101,l111
  real(nr) :: x000,x010,x100,x110,x001,x011,x101,x111
  real(nr) :: xn00,xn10,xn0,xn01,xn11,xn1
@@ -761,10 +766,12 @@ end subroutine interSetUp
  end if
 
 do k = 0, lzei
-   !write(*,"('Block: ',i2,', plane:',i3)") myid,k
+   write(*,"('Block: ',i2,', plane:',i3)") myid,k
    do j = 0, leti
       do i = 0, lxii;l2=indx4(i,j,k,1)
+         ! Cordinates of interpolated grid
          xs(:)=(/xyz2(l2,1),xyz2(l2,2),xyz2(l2,3)/)
+         ! Check if the point is out of bounds
          if (xs(1)<bounds(0,1)) then
              qb(l2,n)=outside(n)
          elseif (xs(1)>bounds(1,1)) then
@@ -775,73 +782,52 @@ do k = 0, lzei
              qb(l2,n)=outside(n)
          else
            if (n==1) then
-                 if (i==0) then
-                    start(1)=0
-                 else
-                    l=indx4(i-1,j,k,1)
-                    start(1)=(ixis(l,1))
-                 end if
-                 start(1)=max(start(1),0.0_nr);
-                 start(1)=min(start(1),real(lxio,nr))
-                 if (j==0) then
-                    start(2)=(nint(real(leto*j/letio,nr)))
-                 else
-                    l=indx4(i,j-1,k,1)
-                    start(2)=(ixis(l,2))
-                 end if
-                 start(2)=max(start(2),0.0_nr);
-                 start(2)=min(start(2),real(leto,nr))
-                 if (k==0) then
-                    start(3)=(nint(real(lzeo*k/lzeio,nr)))
-                 else
-                    l=indx4(i,j,k-1,1)
-                    start(3)=(ixis(l,3))
-                 end if
-                 start(3)=max(start(3),0.0_nr);
-                 start(3)=min(start(3),real(lzeo,nr))
+              ! Estimate starting indices start(:)
+              call estimateIndx((/i,j,k/),start)
+              ! Set first iteration index=start(:)
               xin(:)=(/start(1),start(2),start(3)/)
               hxi(:)=(/0,0,0/)
               err1=1
               do while(err1>tol)
               xin=xin+hxi
               xin(:)=max(xin(:),(/0.0_nr,0.0_nr,0.0_nr/));
-              xin(:)=min(xin(:),(/real(lxio,nr),real(leto,nr),real(lzeo,nr)/))
+              xin(:)=min(xin(:),(/real(lxi,nr),real(let,nr),real(lze,nr)/))
               thisxi=xin(1);thiset=xin(2);thisze=xin(3)
               if (mod(thisxi,1.0_nr)==0) then
-                 if (thisxi==lxio) then
+                 if (thisxi==lxi) then
                     xi0=thisxi-1;xi1=thisxi;
                     else
                     xi0=thisxi;xi1=thisxi+1
                  end if
-                 else
+              else
                  xi0=floor(thisxi);xi1=ceiling(thisxi)
               end if
               if (mod(thiset,1.0_nr)==0) then
-                 if (thiset==leto) then
+                 if (thiset==let) then
                     et0=thiset-1;et1=thiset;
                     else
                     et0=thiset;et1=thiset+1
                  end if
-                 else
+              else
                  et0=floor(thiset);et1=ceiling(thiset)
               end if
               if (mod(thisze,1.0_nr)==0) then
-                 if (thisze==lzeo) then
+                 if (thisze==lze) then
                     ze0=thisze-1;ze1=thisze;
                     else
                     ze0=thisze;ze1=thisze+1
                  end if
-                 else
+              else
                  ze0=floor(thisze);ze1=ceiling(thisze)
               end if
-              l000=indx5(xi0,et0,ze0,1);
-              l010=indx5(xi0,et1,ze0,1);
-              l100=indx5(xi1,et0,ze0,1);
-              l110=indx5(xi1,et1,ze0,1);
-              l001=indx5(xi0,et0,ze1,1);
-              l101=indx5(xi1,et0,ze1,1);
-              l011=indx5(xi0,et1,ze1,1);
-              l111=indx5(xi1,et1,ze1,1);
+              l000=indx3(xi0,et0,ze0,1);
+              l010=indx3(xi0,et1,ze0,1);
+              l100=indx3(xi1,et0,ze0,1);
+              l110=indx3(xi1,et1,ze0,1);
+              l001=indx3(xi0,et0,ze1,1);
+              l101=indx3(xi1,et0,ze1,1);
+              l011=indx3(xi0,et1,ze1,1);
+              l111=indx3(xi1,et1,ze1,1);
               do m = 1, 12
                  selectcase(m)
                  case(1,2,3)
@@ -1016,28 +1002,6 @@ end do
 
 
   end subroutine rdIRstaCk
-!====================================================================================
-! ====JOIN BLOCK DATA
-!====================================================================================
- subroutine joinBlock
- implicit none
- integer :: i,j,k,l,lp
-
- if(.not.allocated(lvarr)) allocate(lvarr(0:ltomb-1),lvarr2(0:ltomb-1))
- lvarr=0_nr;lvarr2=0_nr
-
- do k = 0, lze
-    do j = 0, let
-       do i = 0, lxi; l=indx5(i,j,k,1) !RPT CHECK THIS!!!!!
-          lp=i+lio(j,k)+lpos(myid)
-          lvarr2(lp)=varr(l)
-       end do
-    end do
- end do
-
- CALL MPI_ALLREDUCE(lvarr2,lvarr,ltomb,MPI_REAL8,MPI_SUM,ncom,ierr)
-    
- end subroutine joinBlock
 
 !====================================================================================
 !=====COPY OVER SPAN
@@ -1101,18 +1065,84 @@ end do
  qb(:,:)=qb(:,:)*ra1
     
  end subroutine spanPhaseAvg
+!====================================================================================
+!==== Funtion returning closest indices for given 
+!     physical coordinates
+!====================================================================================
+ subroutine closeIndx(xs,indices)
+ real(nr), dimension(3), intent(in) :: xs
+ real(nr), dimension(3),intent(out) :: indices
+ integer :: lmin,i,j,k
+ 
+ varr(:)=(xyz(:,1)-xs(1))**2+(xyz(:,2)-xs(2))**2+(xyz(:,3)-xs(3))**2
+ lmin = minloc(varr,1)-1
+ i=mod(lmin,lxi+1)
+ lmin=(lmin-i)/(lxi+1)
+ j=mod(lmin,let+1)
+ k=(lmin-j)/(let+1)
+ indices=(/i,j,k/)
 
-!===== FUNCTION FOR MAIN INDEX TRANSFORMATION IN 3D
+ end subroutine closeIndx
+!====================================================================================
+!==== Funtion returning estimate indices for given 
+!     indices to interpolate
+!====================================================================================
+ subroutine estimateIndx2(indices0,indices)
+ integer, dimension(3), intent(in) :: indices0
+ real(nr), dimension(3),intent(out) :: indices
+ real(nr), dimension(3):: xs
+ integer :: l,i,j,k
+ 
+ i=indices0(1)
+ j=indices0(2)
+ k=indices0(3)
+ if (i==0) then
+    indices(1)=int(indices0(1)*lxi/lxii)
+ else
+    l=indx4(i-1,j,k,1)
+    indices(1)=(ixis(l,1))
+ end if
+ indices(1)=max(indices(1),0.0_nr);
+ indices(1)=min(indices(1),real(lxi,nr))
+ if (j==0) then
+    indices(2)=int(indices0(2)*let/leti)
+ else
+    l=indx4(i,j-1,k,1)
+    indices(2)=(ixis(l,2))
+ end if
+ indices(2)=max(indices(2),0.0_nr);
+ indices(2)=min(indices(2),real(let,nr))
+ if (k==0) then
+    indices(3)=int(indices0(3)*lze/lzei)
+ else
+    l=indx4(i,j,k-1,1)
+    indices(3)=(ixis(l,3))
+ end if
+ indices(3)=max(indices(3),0.0_nr);
+ indices(3)=min(indices(3),real(lze,nr))
+ l2=indx4(indices0(1),indices0(2),indices0(3),1)
+ indices=(/i,j,k/)
 
- function indx5(i,j,k,nn) result(lm)
+ end subroutine estimateIndx2
+!====================================================================================
+!==== Funtion returning estimate indices for given 
+!     indices to interpolate
+!====================================================================================
+ subroutine estimateIndx(indices0,indices)
+ integer, dimension(3), intent(in) :: indices0
+ real(nr), dimension(3),intent(out) :: indices
+ real(nr), dimension(3):: xs
+ integer :: l,i,j,k
+ 
+ i=int(indices0(1)*lxi/lxii)
+ j=int(indices0(2)*let/leti)
+ k=int(indices0(3)*lze/lzei)
+ l=indx3(i,j,k,1)
+ l2=indx4(indices0(1),indices0(2),indices0(3),1)
+ indices=(/i,j,k/)
 
- integer,intent(in) :: i,j,k,nn
- integer :: lm
+ end subroutine estimateIndx
 
- lm=i+lio(j,k)+lpos(myid)
-
-
- end function indx5
 !===== FUNCTION FOR MAIN INDEX TRANSFORMATION IN 3D
 
  function indx4(i,j,k,nn) result(lm)
@@ -1184,14 +1214,14 @@ end do
     else
     ze0=floor(ze);ze1=ceiling(ze)
  end if
- l000=indx5(xi0,et0,ze0,1);f000=f(l000)
- l010=indx5(xi0,et1,ze0,1);f010=f(l010)
- l100=indx5(xi1,et0,ze0,1);f100=f(l100)
- l110=indx5(xi1,et1,ze0,1);f110=f(l110)
- l001=indx5(xi0,et0,ze1,1);f001=f(l001)
- l101=indx5(xi1,et0,ze1,1);f101=f(l101)
- l011=indx5(xi0,et1,ze1,1);f011=f(l011)
- l111=indx5(xi1,et1,ze1,1);f111=f(l111)
+ l000=indx3(xi0,et0,ze0,1);f000=f(l000)
+ l010=indx3(xi0,et1,ze0,1);f010=f(l010)
+ l100=indx3(xi1,et0,ze0,1);f100=f(l100)
+ l110=indx3(xi1,et1,ze0,1);f110=f(l110)
+ l001=indx3(xi0,et0,ze1,1);f001=f(l001)
+ l101=indx3(xi1,et0,ze1,1);f101=f(l101)
+ l011=indx3(xi0,et1,ze1,1);f011=f(l011)
+ l111=indx3(xi1,et1,ze1,1);f111=f(l111)
  fxi000=fxi(l000);fet000=fet(l000);fze000=fze(l000);
  fxi010=fxi(l010);fet010=fet(l010);fze010=fze(l010);
  fxi100=fxi(l100);fet100=fet(l100);fze100=fze(l100);
@@ -1254,5 +1284,6 @@ end do
     y=a*k1+b*l*k2+c*k3+d*l*k4;
  
  end function fhermite
+ 
 
 end module rptinter

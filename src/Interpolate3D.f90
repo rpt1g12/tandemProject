@@ -10,6 +10,7 @@
  use problemcase
  use rpt
  use rptinter
+ use subsets
  implicit none
  real(nr) :: tol
 
@@ -34,6 +35,7 @@
 
    call interSetUp
    call setup(1)
+   call ssSetUp
 ! Store new arrays lengths
   lxii=lxi;leti=let;lzei=lze
   write(*,*) myid,lxi,let,lze
@@ -51,6 +53,9 @@
        !call wrIGrid
        call writeGrid
        call wrP3dG
+       do nss = 1, tss
+          call wrP3dG_ss(1,nss)
+       end do
    else
       !call rdIGrid
       call readGrid
@@ -70,18 +75,19 @@ if (iflag) then
    call prepareArrays
    call getGrid
    call MPI_COMM_SPLIT(icom,color,myid,ncom,ierr)
-        allocate(xyz(0:ltomb-1,3))
+        allocate(xyz(0:lmx,3))
         do i = 1, 3
-           varr=ss(:,i);call joinBlock
-           xyz(:,i)=lvarr
+           xyz(:,i)=ss(:,i)
         end do
    call getMetrics
    ra0 = minval(yaco,1)
    CALL MPI_ALLREDUCE(ra0,tol,1,MPI_REAL8,MPI_MIN,ncom,ierr)
-   tol=abs(1.0_nr/tol**(1.0_nr/3.0_nr))
+   !tol=abs(1.0_nr/tol**(1.0_nr/3.0_nr))
+   tol=1e-7
    call rdIRsta
    if (myid==0) then
    write(*,"('Last time step was at:',f10.4)") timo
+   write(*,"('Error tolerance is:',e12.5)") tol
    end if
 
    ! Get boundary values
@@ -98,11 +104,11 @@ if (iflag) then
    outside(1)=rhooo
    outside(2:4)=0.0_nr
    outside(5)=poo*hamm1/rhooo
-   do n = 1, 5
-      call getDeri(n)
-      call interpolate(n,tol)
-   end do
-   !call spanCopy
+   !do n = 1, 5
+   !   call getDeri(n)
+   !   call interpolate(n,tol)
+   !end do
+   call spanCopy
    !call spanAvg
    !call spanPhaseAvg
    CALL MPI_BARRIER(icom,ierr)
@@ -132,6 +138,9 @@ if (iflag) then
    p(:)=gamm1*(qa(:,5)-half*(qa(:,2)*de(:,2)+qa(:,3)*de(:,3)+qa(:,4)*de(:,4)))
    umf(:)=uoo(:)
    ndati=ndata;call wrP3dS
+       do nss = 1, tss
+          call wrP3dS_ss(1,nss)
+       end do
     if(myid==mo(mb)) then
        write(*,*) "Finished",mb
     end if
